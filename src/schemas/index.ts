@@ -18,6 +18,7 @@ export * from './stage.js';
 export * from './scalars.js';
 export * from './result.js';
 export * from './ref.js';
+export * from './hashing.js';
 export * from './progress-event.js';
 export * from './process-evidence.js';
 export * from './proof-assessment.js';

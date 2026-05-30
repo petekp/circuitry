@@ -1,6 +1,20 @@
 import type { AcceptanceCriteria } from '../../schemas/acceptance-criteria.js';
 import type { Axes } from '../../schemas/axes.js';
-import type { FanoutRubric } from '../../schemas/step.js';
+import type {
+  Check,
+  CheckpointSelectionCheck,
+  FanoutAggregateCheck,
+  ResultVerdictCheck,
+  SchemaSectionsCheck,
+} from '../../schemas/check.js';
+import type {
+  CheckpointPolicy,
+  FanoutBranches,
+  FanoutConcurrency,
+  FanoutFailurePolicy,
+  FanoutRubric,
+  StepBudgets,
+} from '../../schemas/step.js';
 import type { ExecutableStage, FlowId } from '../domain/flow.js';
 import type { Routes } from '../domain/route.js';
 import type { RunFileRef } from '../domain/run-file.js';
@@ -25,8 +39,8 @@ export interface BaseStep {
   readonly selection?: Selection;
   readonly skillSlots?: readonly unknown[];
   readonly routeFromReport?: { readonly path: readonly string[] };
-  readonly check?: unknown;
-  readonly budgets?: unknown;
+  readonly check: Check;
+  readonly budgets?: StepBudgets;
 }
 
 export interface ComposeStep extends BaseStep {
@@ -37,13 +51,14 @@ export interface ComposeStep extends BaseStep {
 
 export interface VerificationStep extends BaseStep {
   readonly kind: 'verification';
-  readonly check: unknown;
+  readonly check: SchemaSectionsCheck;
 }
 
 export interface CheckpointStep extends BaseStep {
   readonly kind: 'checkpoint';
   readonly choices: readonly string[];
-  readonly policy?: unknown;
+  readonly policy: CheckpointPolicy;
+  readonly check: CheckpointSelectionCheck;
 }
 
 export interface RelayStep extends BaseStep {
@@ -53,6 +68,7 @@ export interface RelayStep extends BaseStep {
   readonly connector?: string;
   readonly prompt?: string;
   readonly report?: RunFileRef;
+  readonly check: ResultVerdictCheck;
 }
 
 export interface SubRunStep extends BaseStep {
@@ -62,15 +78,16 @@ export interface SubRunStep extends BaseStep {
   readonly version?: string;
   readonly goal: string;
   readonly depth: string;
+  readonly check: ResultVerdictCheck;
 }
 
 export interface FanoutStep extends BaseStep {
   readonly kind: 'fanout';
-  readonly branches: unknown;
-  readonly join: unknown;
-  readonly concurrency?: unknown;
-  readonly onChildFailure?: string;
+  readonly branches: FanoutBranches;
+  readonly concurrency: FanoutConcurrency;
+  readonly onChildFailure?: FanoutFailurePolicy;
   readonly rubric?: FanoutRubric;
+  readonly check: FanoutAggregateCheck;
 }
 
 export type ExecutableStep =

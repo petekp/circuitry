@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../../helpers/runtime-fixtures.js';
 
 import {
   readRuntimeCompiledFlowManifestSnapshot,
@@ -29,11 +30,6 @@ const change_kind = {
 function baseRecordedAt(step: number): string {
   const base = Date.UTC(2026, 3, 20, 12, 0, 0);
   return new Date(base + step * 1000).toISOString();
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 async function writeBootstrap(trace: TraceStore) {

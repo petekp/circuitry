@@ -5,7 +5,7 @@ import {
   composePolicyHardConstraints,
   policyRefsForConfigLayers,
   projectConfigV1ToPolicyEnvelopeV2,
-} from '../../src/shared/policy-envelope.js';
+} from '../../src/policy/policy-envelope.js';
 
 const customConnector = {
   kind: 'custom' as const,

@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { withScopedEnv } from '../helpers/scoped-env.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { CompiledFlowId, SkillId } from '../../src/schemas/ids.js';
@@ -12,7 +14,6 @@ import {
   projectConfigPath,
   userGlobalConfigPath,
 } from '../../src/shared/config-loader.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 let root: string;
@@ -45,26 +46,6 @@ function writeSkill(id: string): void {
   writeFileSync(join(dir, 'SKILL.md'), `Skill ${id}`);
 }
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
-function captureStdout(): { restore: () => void; text: () => string } {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  return {
-    restore: () => {
-      process.stdout.write = origWrite;
-    },
-    text: () => captured,
-  };
-}
-
 async function runReviewWithCapturedOutput(input: {
   readonly relayer: RelayFn;
   readonly runFolder: string;
@@ -72,34 +53,23 @@ async function runReviewWithCapturedOutput(input: {
   readonly goal: string;
   readonly nowMs: number;
 }): Promise<Record<string, unknown>> {
-  const stdout = captureStdout();
-  const originalHome = process.env.HOME;
-  const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-  process.env.HOME = homeDir;
-  process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-  try {
-    const exit = await main(
-      ['run', 'review', '--goal', input.goal, '--run-folder', input.runFolder],
-      {
-        relayer: input.relayer,
-        now: deterministicNow(input.nowMs),
-        runId: input.runId,
-        configHomeDir: homeDir,
-        configCwd: cwdDir,
-      },
-    );
-    expect(exit).toBe(0);
-  } finally {
-    stdout.restore();
-    if (originalHome === undefined) {
-      Reflect.deleteProperty(process.env, 'HOME');
-    } else {
-      process.env.HOME = originalHome;
-    }
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-  }
+  const { stdout } = await captureStreams(() =>
+    withScopedEnv({ HOME: homeDir, CIRCUIT_GENERATED_FLOW_MIRROR_ROOT: undefined }, async () => {
+      const exit = await main(
+        ['run', 'review', '--goal', input.goal, '--run-folder', input.runFolder],
+        {
+          relayer: input.relayer,
+          now: deterministicNow(input.nowMs),
+          runId: input.runId,
+          configHomeDir: homeDir,
+          configCwd: cwdDir,
+        },
+      );
+      expect(exit).toBe(0);
+    }),
+  );
 
-  return JSON.parse(stdout.text()) as Record<string, unknown>;
+  return JSON.parse(stdout) as Record<string, unknown>;
 }
 
 beforeEach(() => {
@@ -245,68 +215,46 @@ circuits:
 `);
 
     const relayInputs: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         relayInputs.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'config-loader-receipt',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'config-loader-receipt' },
+    );
     const runFolder = join(root, 'run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalStrictRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalShowRuntimeDecision = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalCandidateRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalDisableRuntime = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
     for (const skill of ['tdd', 'api-design-patterns', 'react-doctor']) {
       writeSkill(skill);
     }
-    try {
-      const exit = await main(
-        [
-          'run',
-          'review',
-          '--goal',
-          'prove config reaches selection evidence',
-          '--run-folder',
-          runFolder,
-        ],
+    const { stdout } = await captureStreams(() =>
+      withScopedEnv(
         {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
-          runId: '86868686-8686-4686-8686-868686868686',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
+          HOME: homeDir,
+          CIRCUIT_SHOW_RUNTIME_DECISION: undefined,
+          CIRCUIT_GENERATED_FLOW_MIRROR_ROOT: undefined,
         },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
-      }
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalStrictRuntime;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalShowRuntimeDecision;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalCandidateRuntime;
-      process.env.CIRCUIT_SHOW_RUNTIME_DECISION = originalDisableRuntime;
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+        async () => {
+          const exit = await main(
+            [
+              'run',
+              'review',
+              '--goal',
+              'prove config reaches selection evidence',
+              '--run-folder',
+              runFolder,
+            ],
+            {
+              relayer,
+              now: deterministicNow(Date.UTC(2026, 3, 24, 23, 0, 0)),
+              runId: '86868686-8686-4686-8686-868686868686',
+              configHomeDir: homeDir,
+              configCwd: cwdDir,
+            },
+          );
+          expect(exit).toBe(0);
+        },
+      ),
+    );
 
     const expected: ResolvedSelection = {
       model: { provider: 'anthropic', model: 'claude-opus-4-7-project' },
@@ -344,7 +292,7 @@ circuits:
     const started = trace_entries.find((trace_entry) => trace_entry.kind === 'relay.started');
     expect(started?.resolved_selection).toEqual(expected);
 
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.flow_id).toBe('review');
     expect(output.outcome).toBe('complete');
   });
@@ -367,46 +315,36 @@ policy:
 `);
 
     const relayInputs: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         relayInputs.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'policy-v2-receipt',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'policy-v2-receipt' },
+    );
     const runFolder = join(root, 'policy-v2-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'prove policy refs reach guidance', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 45, 0)),
-          runId: '86868686-8686-4686-8686-868686868688',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
-      }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    const { stdout } = await captureStreams(() =>
+      withScopedEnv({ HOME: homeDir, CIRCUIT_GENERATED_FLOW_MIRROR_ROOT: undefined }, async () => {
+        const exit = await main(
+          [
+            'run',
+            'review',
+            '--goal',
+            'prove policy refs reach guidance',
+            '--run-folder',
+            runFolder,
+          ],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 45, 0)),
+            runId: '86868686-8686-4686-8686-868686868688',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      }),
+    );
 
     expect(relayInputs[0]?.resolvedSelection?.effort).toBe('low');
     const trace_entries = readFileSync(join(runFolder, 'trace.ndjson'), 'utf8')
@@ -425,7 +363,7 @@ policy:
         expect.objectContaining({ kind: 'policy', ref: projectConfigPath(cwdDir) }),
       ]),
     );
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('complete');
   });
 
@@ -439,49 +377,32 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-connector-rejected-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'policy should block connector', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 46, 0)),
-          runId: '86868686-8686-4686-8686-868686868689',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
-      }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    const { stdout } = await captureStreams(() =>
+      withScopedEnv({ HOME: homeDir, CIRCUIT_GENERATED_FLOW_MIRROR_ROOT: undefined }, async () => {
+        const exit = await main(
+          ['run', 'review', '--goal', 'policy should block connector', '--run-folder', runFolder],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 46, 0)),
+            runId: '86868686-8686-4686-8686-868686868689',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      }),
+    );
 
     expect(relayCalls).toBe(0);
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('aborted');
     const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
       string,
@@ -522,49 +443,32 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'codex',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { connectorName: 'codex', receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-provider-rejected-run');
-    const stdout = captureStdout();
-    const originalHome = process.env.HOME;
-    const originalGeneratedMirrorRoot = process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT;
-    process.env.HOME = homeDir;
-    process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = undefined;
-    try {
-      const exit = await main(
-        ['run', 'review', '--goal', 'policy should block provider', '--run-folder', runFolder],
-        {
-          relayer,
-          now: deterministicNow(Date.UTC(2026, 3, 24, 23, 47, 0)),
-          runId: '86868686-8686-4686-8686-868686868690',
-          configHomeDir: homeDir,
-          configCwd: cwdDir,
-        },
-      );
-      expect(exit).toBe(0);
-    } finally {
-      stdout.restore();
-      if (originalHome === undefined) {
-        Reflect.deleteProperty(process.env, 'HOME');
-      } else {
-        process.env.HOME = originalHome;
-      }
-      process.env.CIRCUIT_GENERATED_FLOW_MIRROR_ROOT = originalGeneratedMirrorRoot;
-    }
+    const { stdout } = await captureStreams(() =>
+      withScopedEnv({ HOME: homeDir, CIRCUIT_GENERATED_FLOW_MIRROR_ROOT: undefined }, async () => {
+        const exit = await main(
+          ['run', 'review', '--goal', 'policy should block provider', '--run-folder', runFolder],
+          {
+            relayer,
+            now: deterministicNow(Date.UTC(2026, 3, 24, 23, 47, 0)),
+            runId: '86868686-8686-4686-8686-868686868690',
+            configHomeDir: homeDir,
+            configCwd: cwdDir,
+          },
+        );
+        expect(exit).toBe(0);
+      }),
+    );
 
     expect(relayCalls).toBe(0);
-    const output = JSON.parse(stdout.text()) as Record<string, unknown>;
+    const output = JSON.parse(stdout) as Record<string, unknown>;
     expect(output.outcome).toBe('aborted');
     const result = JSON.parse(readFileSync(output.result_path as string, 'utf8')) as Record<
       string,
@@ -588,19 +492,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-effort-rejected-run');
     const output = await runReviewWithCapturedOutput({
       relayer,
@@ -638,19 +536,13 @@ policy:
 `);
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: REVIEW_RELAY_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return REVIEW_RELAY_BODY;
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
     const runFolder = join(root, 'policy-v2-skill-rejected-run');
     const output = await runReviewWithCapturedOutput({
       relayer,
@@ -673,19 +565,13 @@ policy:
     writeProjectConfig('schema_version: 1\nbad: [unterminated\n');
 
     let relayCalls = 0;
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input: RelayInput): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      () => {
         relayCalls += 1;
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'should-not-relay',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'should-not-relay' },
+    );
 
     await expect(
       main(['run', 'explore', '--goal', 'invalid config must stop before relay'], {

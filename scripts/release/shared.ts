@@ -3,6 +3,15 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { dirname, resolve } from 'node:path';
 import YAML from 'yaml';
 import type { z } from 'zod';
+// Type-only imports of the source modules whose compiled output is loaded
+// dynamically from `dist/` below. The runtime `import()` still targets the
+// built `.js`; these `import type` lines are erased by tsc and only supply the
+// module shape so the dist-import seam is typed instead of `any`. This mirrors
+// the pattern already used by emit-current-capabilities.ts and
+// yaml-schema-registry.ts.
+import type * as ReleaseChecksModule from '../../src/release/checks.js';
+import type * as ReleaseSchemasModule from '../../src/release/schemas.js';
+import { formatWithBiome as formatWithBiomeShared, stableJson } from '../shared/format.ts';
 
 export const projectRoot = resolve(new URL('../..', import.meta.url).pathname);
 
@@ -57,17 +66,13 @@ export function fileIsPresent(relPath: string): boolean {
   }
 }
 
-export function stableJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
+// Re-exported from scripts/shared/format.ts (the single source of truth shared
+// with the YAML-schema emitter). Kept exported here so the release scripts that
+// already import them from './shared.ts' need no change.
+export { stableJson };
 
 export function formatWithBiome(relPath: string, content: string): string {
-  return execFileSync('npx', ['biome', 'format', '--stdin-file-path', relPath], {
-    cwd: projectRoot,
-    input: content,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  return formatWithBiomeShared(relPath, content, projectRoot);
 }
 
 export function writeOrCheck(relPath: string, content: string, check: boolean): void {
@@ -92,14 +97,16 @@ export function formatMarkdown(content: string): string {
   return `${content.replace(/\n{3,}/g, '\n\n').trimEnd()}\n`;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamically imports built release schema module.
-export async function loadReleaseSchemas(): Promise<any> {
-  return import(resolve(projectRoot, 'dist/release/schemas.js'));
+export async function loadReleaseSchemas(): Promise<typeof ReleaseSchemasModule> {
+  return import(resolve(projectRoot, 'dist/release/schemas.js')) as Promise<
+    typeof ReleaseSchemasModule
+  >;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamically imports built release checks module.
-export async function loadReleaseChecks(): Promise<any> {
-  return import(resolve(projectRoot, 'dist/release/checks.js'));
+export async function loadReleaseChecks(): Promise<typeof ReleaseChecksModule> {
+  return import(resolve(projectRoot, 'dist/release/checks.js')) as Promise<
+    typeof ReleaseChecksModule
+  >;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamically imports built catalog module.

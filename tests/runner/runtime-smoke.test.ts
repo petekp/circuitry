@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
@@ -9,7 +10,6 @@ import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { ManifestSnapshot } from '../../src/schemas/manifest.js';
 import { RunResult } from '../../src/schemas/result.js';
 
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Runner smoke test exercising one compose + one relay step
@@ -29,11 +29,6 @@ function loadFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIXTURE_PATH) };
 }
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 // Deterministic stub relayer so the runner smoke doesn't spawn a
 // real `claude` subprocess. The capability-boundary assertion at
 // parseClaudeCodeStdout is a real-subprocess-only concern; the stub satisfies
@@ -47,24 +42,14 @@ function deterministicNow(startMs: number): () => Date {
 // `runner-relay-connector-identity.test.ts` exercises the
 // `connectorName: 'codex'` branch.
 function stubRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-proof',
-      result_body: '{"verdict":"ok"}',
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer('{"verdict":"ok"}', { receipt_id: 'stub-receipt-runtime-proof' });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
   return {
     compose: async (step, context) => {
       if (step.kind !== 'compose') throw new Error('expected compose step');
-      const attempt =
-        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const attempt = { attempt: context.activeStepAttempt ?? 1 };
       const report = step.writes?.report;
       if (report !== undefined) {
         const reportPath = context.files.resolve(report);
@@ -76,7 +61,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
           step_id: step.id,
           ...attempt,
           report_path: report.path,
-          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+          report_schema: report.schema ?? 'runtime.compose',
         });
       }
       await context.trace.append({
@@ -282,21 +267,12 @@ describe('runtime-proof runner smoke', () => {
       // The env-check IS the subprocess-boundary contract.
       const runFolder = join(runFolderBase, 'cli-run');
       const { main } = await import('../../src/cli/circuit.js');
-      let captured = '';
-      const origWrite = process.stdout.write;
-      process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-        captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-        return true;
-      }) as typeof process.stdout.write;
-      let exit = -1;
-      try {
-        exit = await main(['runtime-proof', '--goal', 'smoke via CLI', '--run-folder', runFolder], {
+      const { result: exit, stdout: captured } = await captureStreams(() =>
+        main(['runtime-proof', '--goal', 'smoke via CLI', '--run-folder', runFolder], {
           configHomeDir: join(runFolderBase, 'empty-home'),
           configCwd: join(runFolderBase, 'empty-cwd'),
-        });
-      } finally {
-        process.stdout.write = origWrite;
-      }
+        }),
+      );
       expect(exit).toBe(0);
       const parsed: unknown = JSON.parse(captured);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {

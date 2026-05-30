@@ -3,6 +3,13 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  captureJson,
+  captureStreams,
+  deterministicNow,
+  makeStubRelayer,
+} from '../helpers/runtime-fixtures.js';
+import { withScopedEnv } from '../helpers/scoped-env.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
@@ -22,16 +29,11 @@ import type { ChangeKindDeclaration } from '../../src/schemas/change-kind.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { SkillId } from '../../src/schemas/ids.js';
-import { type RelayResult, sha256Hex } from '../../src/shared/connector-relay.js';
+import { sha256Hex } from '../../src/shared/connector-relay.js';
 import { manifestSnapshotPath, writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
 import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const INVALID_RUN_FOLDER_MESSAGE = 'run folder is not a resumable Circuit run folder';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function change_kind(): ChangeKindDeclaration {
   return {
@@ -153,18 +155,8 @@ async function captureStdout(fn: () => Promise<number>): Promise<{
   readonly code: number;
   readonly output: Record<string, unknown>;
 }> {
-  const originalWrite = process.stdout.write;
-  let stdout = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const code = await fn();
-    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
-  } finally {
-    process.stdout.write = originalWrite;
-  }
+  const { result, json } = await captureJson<Record<string, unknown>>(fn);
+  return { code: result, output: json };
 }
 
 async function captureOutput(fn: () => Promise<number>): Promise<{
@@ -172,25 +164,8 @@ async function captureOutput(fn: () => Promise<number>): Promise<{
   readonly stdout: string;
   readonly stderr: string;
 }> {
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  let stdout = '';
-  let stderr = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await fn();
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+  const { result, stdout, stderr } = await captureStreams(fn);
+  return { code: result, stdout, stderr };
 }
 
 function checkpointCompiledFlow(options: {
@@ -708,9 +683,7 @@ describe('Build checkpoint execution substrate', () => {
       runId: 'b3000000-0000-0000-0000-000000000018',
       goal: 'Resume invalid checkpoint with runtime enabled',
     });
-    const oldStrict = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
       const { code, stdout, stderr } = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 30, 0)),
@@ -721,13 +694,7 @@ describe('Build checkpoint execution substrate', () => {
       expect(code).toBe(2);
       expect(stdout).toBe('');
       expect(stderr.trim()).toBe(`error: ${INVALID_RUN_FOLDER_MESSAGE}`);
-    } finally {
-      if (oldStrict === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldStrict;
-      }
-    }
+    });
   });
 
   it('fails closed for invalid checkpoint folders in status and resume', async () => {
@@ -753,11 +720,7 @@ describe('Build checkpoint execution substrate', () => {
       },
     });
 
-    const oldDisabled = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const oldDiagnostics = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
       const resumed = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 45, 0)),
@@ -768,18 +731,7 @@ describe('Build checkpoint execution substrate', () => {
       expect(resumed.code).toBe(2);
       expect(resumed.stdout).toBe('');
       expect(resumed.stderr.trim()).toBe(`error: ${INVALID_RUN_FOLDER_MESSAGE}`);
-    } finally {
-      if (oldDisabled === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDisabled;
-      }
-      if (oldDiagnostics === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDiagnostics;
-      }
-    }
+    });
   });
 
   it('rejects checkpoint resume choices outside the declared allow list', async () => {
@@ -1062,19 +1014,13 @@ describe('Build checkpoint execution substrate', () => {
     const { flow, bytes } = checkpointToRelayCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-relay-context');
     const captured: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         captured.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'resume-relay-context',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-test',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'resume-relay-context' },
+    );
 
     await runCompiledFlow({
       runFolder,
@@ -1151,19 +1097,13 @@ describe('Build checkpoint execution substrate', () => {
     const { flow, bytes } = checkpointToRelayCompiledFlow();
     const runFolder = join(runFolderBase, 'resume-empty-relay-context');
     const captured: RelayInput[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
+    const relayer: RelayFn = makeStubRelayer(
+      (input) => {
         captured.push(input);
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'resume-empty-relay-context',
-          result_body: '{"verdict":"accept"}',
-          duration_ms: 1,
-          cli_version: '0.0.0-test',
-        };
+        return '{"verdict":"accept"}';
       },
-    };
+      { receipt_id: 'resume-empty-relay-context' },
+    );
 
     await runCompiledFlow({
       runFolder,

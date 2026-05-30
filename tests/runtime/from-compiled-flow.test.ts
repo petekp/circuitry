@@ -162,13 +162,11 @@ describe('fromCompiledFlow', () => {
       kind: 'dynamic',
       source_report: 'reports/decision-options.json',
     });
-    expect(fanout.join).toMatchObject({
-      aggregate: {
-        path: 'reports/tournament-aggregate.json',
-        schema: 'explore.tournament-aggregate@v1',
-      },
-      on_child_failure: 'continue-others',
+    expect(fanout.writes?.aggregate).toMatchObject({
+      path: 'reports/tournament-aggregate.json',
+      schema: 'explore.tournament-aggregate@v1',
     });
+    expect(fanout.onChildFailure).toBe('continue-others');
     expect(fanout.check).toMatchObject({ join: { policy: 'aggregate-survivors' } });
   });
 

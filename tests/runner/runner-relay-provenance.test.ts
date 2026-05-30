@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { materializeRelay } from '../../src/connectors/relay-materializer.js';
 import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
@@ -81,6 +82,11 @@ function relayGuidanceExecution(input: {
     id: step.id,
     kind: 'relay',
     role: step.role,
+    check: {
+      kind: 'result_verdict',
+      source: { kind: 'relay_result', ref: 'result' },
+      pass: ['accept'],
+    },
     routes: { pass: { kind: 'terminal', target: '@complete' } },
     ...(selection === undefined ? {} : { selection }),
     ...(step.connector === undefined ? {} : { connector: step.connector }),
@@ -110,30 +116,15 @@ function relayGuidanceExecution(input: {
   }).relayExecution;
 }
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 function stubRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt',
-      result_body: '{"verdict":"ok"}',
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer('{"verdict":"ok"}', { receipt_id: 'stub-receipt' });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
   return {
     compose: async (step, context) => {
       if (step.kind !== 'compose') throw new Error('expected compose step');
-      const attempt =
-        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const attempt = { attempt: context.activeStepAttempt ?? 1 };
       const report = step.writes?.report;
       if (report !== undefined) {
         const reportPath = context.files.resolve(report);
@@ -145,7 +136,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
           step_id: step.id,
           ...attempt,
           report_path: report.path,
-          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+          report_schema: report.schema ?? 'runtime.compose',
         });
       }
       await context.trace.append({

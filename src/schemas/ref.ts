@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { CompiledFlowId, RunId, StepId } from './ids.js';
 
+// Canonical 64-char lowercase hex SHA-256 scalar. Single source of truth for
+// every hex-digest check in the codebase: ManifestHash, ContentHash, the
+// user-skill sha256 field, and the history source/run-folder hashes all alias
+// this schema rather than re-declaring the regex.
 export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, {
   message: 'must be a 64-character lowercase hex SHA-256 digest',
 });
@@ -57,7 +61,7 @@ export const Ref = z
   .superRefine((ref, ctx) => {
     if (ContentRefKinds.has(ref.kind) && ref.sha256 === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['sha256'],
         message: `${ref.kind} refs require sha256`,
       });
@@ -65,7 +69,7 @@ export const Ref = z
 
     if (ref.kind === 'work_contract' && ref.flow_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['flow_id'],
         message: 'work_contract refs require flow_id',
       });
@@ -74,14 +78,14 @@ export const Ref = z
     if (ref.kind !== 'trace') return;
     if (ref.run_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['run_id'],
         message: 'trace refs require run_id',
       });
     }
     if (ref.sequence === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['sequence'],
         message: 'trace refs require sequence',
       });
@@ -90,7 +94,7 @@ export const Ref = z
     const expected = `trace.ndjson#sequence=${ref.sequence}`;
     if (ref.ref !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['ref'],
         message: `trace refs must use ${expected}`,
       });

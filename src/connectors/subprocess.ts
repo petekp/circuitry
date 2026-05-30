@@ -66,6 +66,48 @@ function appendCapped(
   };
 }
 
+// Human-readable verb for a spawn failure, shared by every connector's
+// `catch (error) { if (isConnectorSubprocessSpawnError(error)) ... }` block.
+// `spawn-failed` is a synchronous throw from `spawn()`; `spawn-error` is an
+// async `'error'` event (e.g. ENOENT surfaced after the call returned).
+export function spawnErrorVerb(
+  error: ConnectorSubprocessSpawnError,
+): 'spawn failed' | 'spawn error' {
+  return error.phase === 'spawn-failed' ? 'spawn failed' : 'spawn error';
+}
+
+// Trailing annotation appended to a stream sample when capture hit its byte
+// cap, so a truncated tail in an error message is never mistaken for the
+// stream's true end. `stream` names which stream the sample came from.
+export function cappedSuffix(capped: boolean, stream: 'stdout' | 'stderr'): string {
+  return capped ? ` [${stream} capped]` : '';
+}
+
+// Split a connector's stdout into NDJSON objects: one JSON object per
+// non-empty line. `label` prefixes per-line parse errors so callers can tell
+// which stream failed (e.g. 'stream-json' for claude-code, 'codex --json' for
+// codex). The empty-stdout guard stays in each connector because the exact
+// wording is pinned by contract tests and varies per connector.
+export function parseNdjsonObjects(stdout: string, label: string): Array<Record<string, unknown>> {
+  const lines = stdout.split('\n').filter((line) => line.length > 0);
+  const objects: Array<Record<string, unknown>> = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(
+        `${label} line ${idx + 1} is not valid JSON: ${(err as Error).message}; line[:200]=${line.slice(0, 200)}`,
+      );
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error(`${label} line ${idx + 1} is not a JSON object`);
+    }
+    objects.push(parsed as Record<string, unknown>);
+  }
+  return objects;
+}
+
 export async function runConnectorSubprocess(
   input: RunConnectorSubprocessInput,
 ): Promise<ConnectorSubprocessResult> {

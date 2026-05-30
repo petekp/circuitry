@@ -72,7 +72,7 @@ export const MemoryInputV0 = z
       memory.source.sha256 !== memory.source.ref.sha256
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source', 'sha256'],
         message: 'source.sha256 must match source.ref.sha256 when both are present',
       });
@@ -80,7 +80,7 @@ export const MemoryInputV0 = z
 
     if (memory.kind === 'continuity' && memory.source.ref.kind !== 'report') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source', 'ref', 'kind'],
         message: 'continuity memory must point at a continuity report ref',
       });
@@ -90,7 +90,7 @@ export const MemoryInputV0 = z
       !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source', 'ref', 'ref'],
         message: 'continuity memory must point at continuity/records/<record>.json',
       });
@@ -102,7 +102,7 @@ export const MemoryInputV0 = z
       memory.source.ref.kind !== 'context_packet'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source', 'ref', 'kind'],
         message: 'handoff brief memory must point at report or context_packet refs',
       });
@@ -113,7 +113,7 @@ export const MemoryInputV0 = z
       !memory.staleness.reason_codes.includes('memory_unverified')
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['staleness', 'reason_codes'],
         message: 'unknown memory staleness requires memory_unverified reason code',
       });
@@ -124,7 +124,7 @@ export const MemoryInputV0 = z
       !memory.staleness.reason_codes.includes('memory_stale')
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['staleness', 'reason_codes'],
         message: 'stale memory requires memory_stale reason code',
       });
@@ -134,7 +134,7 @@ export const MemoryInputV0 = z
     for (const [index, hint] of memory.hints.entries()) {
       if (seenHints.has(hint.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['hints', index, 'id'],
           message: `duplicate memory hint id: ${hint.id}`,
         });

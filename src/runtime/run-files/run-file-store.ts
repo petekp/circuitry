@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { resolveRunFilePath } from '../../shared/run-file-paths.js';
 import type { RunFileRef } from '../domain/run-file.js';
-import { resolveRunFilePath } from './paths.js';
 import type { ReportValidator } from './report-validator.js';
 
 export class RunFileStore {

@@ -2,7 +2,7 @@ import {
   assertConnectorSelectionCompatible,
   resolveConnectorForGuidanceInput,
   resolveConnectorReference,
-} from '../../../runtime/connectors/resolver.js';
+} from '../../../connectors/resolver.js';
 import type {
   CircuitVariantModels,
   LayeredConfig as LayeredConfigValue,

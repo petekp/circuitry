@@ -16,6 +16,7 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
+import { readRouteFromReport } from './shared.js';
 
 type ComposeExecutionContext = StepExecutionContext<'compose'>;
 
@@ -100,24 +101,6 @@ async function writeRegisteredComposeReport(
   throw new Error(
     `no compose report writer registered for schema '${report.schema}' at compose step '${step.id}'`,
   );
-}
-
-function readRouteFromReport(body: unknown, path: readonly string[]): string {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) {
-      throw new Error(
-        `route_from_report path '${path.join('.')}' descended into a non-object at '${segment}'`,
-      );
-    }
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-  if (typeof cursor !== 'string' || cursor.length === 0) {
-    throw new Error(
-      `route_from_report path '${path.join('.')}' must resolve to a non-empty string`,
-    );
-  }
-  return cursor;
 }
 
 export async function executeComposeResult(

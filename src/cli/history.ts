@@ -1,4 +1,4 @@
-import { Command, CommanderError } from 'commander';
+import { Command } from 'commander';
 import {
   HistoryCommandError,
   type HistoryPathOptions,
@@ -7,10 +7,11 @@ import {
   readHistoryManifest,
   rebuildHistoryIndex,
   resolveHistoryPaths,
-} from '../history/indexer.js';
-import { historyMemoryInputPreview } from '../history/memory-preview.js';
-import { queryHistory } from '../history/query.js';
+} from '../app/history/indexer.js';
+import { historyMemoryInputPreview } from '../app/history/memory-preview.js';
+import { queryHistory } from '../app/history/query.js';
 import { HistoryDocumentKindV1 } from '../schemas/index.js';
+import { commanderErrorMessage, configureCommanderProgram } from './commander-support.js';
 
 type ParsedHistoryArgs =
   | {
@@ -71,11 +72,6 @@ function operationalError(error: unknown): number {
   return 1;
 }
 
-function commanderErrorMessage(err: unknown): string {
-  if (err instanceof CommanderError) return err.message.replace(/^error: /, '');
-  return err instanceof Error ? err.message : String(err);
-}
-
 function parsePositiveInteger(
   value: string | undefined,
   optionName: string,
@@ -88,9 +84,7 @@ function parsePositiveInteger(
 
 function parseHistoryArgs(argv: readonly string[]): ParsedHistoryArgs | string {
   let parsed: ParsedHistoryArgs | undefined;
-  const program = new Command('circuit history')
-    .exitOverride()
-    .configureOutput({ writeErr: () => {} });
+  const program = configureCommanderProgram(new Command('circuit history'));
 
   program
     .command('rebuild')

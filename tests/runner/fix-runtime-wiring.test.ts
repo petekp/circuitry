@@ -12,6 +12,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import {
   FixBaselineSnapshot,
@@ -38,11 +39,6 @@ function loadDefaultFixture(): { bytes: Buffer } {
 
 function loadLiteFixture(): { bytes: Buffer } {
   return { bytes: readFileSync(FIX_LITE_FIXTURE_PATH) };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 // Custom compose executor for the e2e test: overrides fix-frame to

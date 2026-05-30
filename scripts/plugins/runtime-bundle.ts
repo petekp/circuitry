@@ -30,6 +30,16 @@ const ASSET_SIDECARS: Array<{ src: string; outs: readonly string[] }> = [
       'dist/flows/fix/writers/git-state.ts',
     ],
   },
+  // The host wrappers (plugins/{claude,codex}/scripts/circuit.ts) import the
+  // shared launcher core relatively at runtime, the same way the Claude wrapper
+  // imports ./auto-open-policy.ts. plugins/shared/launcher-core.ts is the single
+  // source; mirror it next to each wrapper so the relative import resolves. The
+  // wrappers run from scripts/ (not dist/), so no dist/ out is needed; both
+  // committed copies are drift-checked.
+  {
+    src: 'plugins/shared/launcher-core.ts',
+    outs: ['plugins/claude/scripts/launcher-core.ts', 'plugins/codex/scripts/launcher-core.ts'],
+  },
 ];
 
 function readVersion(): string {

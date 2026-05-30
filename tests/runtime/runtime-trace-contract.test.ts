@@ -7,8 +7,8 @@ import { runCompiledFlowWithWaiting } from '../../src/runtime/run/compiled-flow-
 import { LayeredConfig } from '../../src/schemas/config.js';
 import { RunTrace } from '../../src/schemas/run.js';
 import { TraceEntry } from '../../src/schemas/trace-entry.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -18,22 +18,8 @@ const REVIEW_RELAY_BODY = JSON.stringify({
   confidence_limitations: [],
 });
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 function relayerWithBody(body: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-trace-contract',
-      result_body: body,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+  return makeStubRelayer(body, { receipt_id: 'stub-receipt-runtime-trace-contract' });
 }
 
 function readTrace(runFolder: string): unknown[] {

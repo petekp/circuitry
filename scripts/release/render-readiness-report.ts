@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import type { CurrentCapabilitySnapshot, ProofScenarioIndex } from '../../src/release/schemas.js';
 import {
   formatMarkdown,
   loadJsonWithSchema,
@@ -16,9 +17,6 @@ const program = new Command('render-readiness-report').option('--check');
 program.parse(process.argv.slice(2), { from: 'user' });
 const check = program.opts<{ check?: boolean }>().check === true;
 
-// biome-ignore lint/suspicious/noExplicitAny: release schemas are loaded dynamically from built output.
-type AnyRecord = Record<string, any>;
-
 function bullet(items: readonly unknown[]): string {
   if (items.length === 0) return '- None';
   return items.map((item) => `- ${item}`).join('\n');
@@ -31,14 +29,14 @@ function table(headers: string[], rows: unknown[][]): string {
   return [headerLine, sep, ...body].join('\n');
 }
 
-function proofVerified(proofs: AnyRecord, id: string): boolean {
-  return (proofs.scenarios as AnyRecord[]).some(
-    (scenario: AnyRecord) => scenario.id === id && scenario.status === 'verified_current',
+function proofVerified(proofs: ProofScenarioIndex, id: string): boolean {
+  return proofs.scenarios.some(
+    (scenario) => scenario.id === id && scenario.status === 'verified_current',
   );
 }
 
-function capabilityStatus(current: AnyRecord, id: string): string | undefined {
-  return (current.capabilities as AnyRecord[]).find((capability) => capability.id === id)?.status;
+function capabilityStatus(current: CurrentCapabilitySnapshot, id: string): string | undefined {
+  return current.capabilities.find((capability) => capability.id === id)?.status;
 }
 
 async function main() {
@@ -47,23 +45,20 @@ async function main() {
   const original = loadYamlWithSchema(
     'docs/release/parity/original-circuit.yaml',
     schemas.OriginalCapabilitySnapshot,
-  ) as AnyRecord;
+  );
   const current = loadJsonWithSchema(
     'generated/release/current-capabilities.json',
     schemas.CurrentCapabilitySnapshot,
-  ) as AnyRecord;
+  );
   const exceptions = loadYamlWithSchema(
     'docs/release/parity/exceptions.yaml',
     schemas.ParityExceptionLedger,
-  ) as AnyRecord;
+  );
   const claims = loadYamlWithSchema(
     'docs/release/claims/public-claims.yaml',
     schemas.PublicClaimLedger,
-  ) as AnyRecord;
-  const proofs = loadYamlWithSchema(
-    'docs/release/proofs/index.yaml',
-    schemas.ProofScenarioIndex,
-  ) as AnyRecord;
+  );
+  const proofs = loadYamlWithSchema('docs/release/proofs/index.yaml', schemas.ProofScenarioIndex);
 
   const parity = checks.compareParity({ original, current, exceptions });
   const claimCheck = checks.validatePublicClaims({

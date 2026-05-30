@@ -31,7 +31,7 @@ export const FlowAxes = z
     for (const [index, rigor] of axes.allowed_rigors.entries()) {
       if (seenRigors.has(rigor)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['allowed_rigors', index],
           message: `duplicate allowed rigor: ${rigor}`,
         });
@@ -40,35 +40,35 @@ export const FlowAxes = z
     }
     if (!seenRigors.has(axes.default.rigor)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['default', 'rigor'],
         message: `default rigor '${axes.default.rigor}' is not in allowed_rigors`,
       });
     }
     if (axes.default.tournament && !axes.supports_tournament) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['default', 'tournament'],
         message: 'default tournament cannot be true when supports_tournament is false',
       });
     }
     if (axes.default.autonomous && !axes.supports_autonomous) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['default', 'autonomous'],
         message: 'default autonomous cannot be true when supports_autonomous is false',
       });
     }
     if (axes.supports_tournament && axes.tournament_fan_out_stage === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['tournament_fan_out_stage'],
         message: 'tournament_fan_out_stage is required when supports_tournament is true',
       });
     }
     if (!axes.supports_tournament && axes.tournament_fan_out_stage !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['tournament_fan_out_stage'],
         message: 'tournament_fan_out_stage is only allowed when supports_tournament is true',
       });

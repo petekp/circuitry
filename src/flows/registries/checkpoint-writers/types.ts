@@ -16,7 +16,6 @@
 // path entirely (the runner only invokes a builder when
 // step.writes.report is defined).
 
-import type { RelayRole } from '../../../schemas/step.js';
 import type { RuntimeIndexedCheckpointStep } from '../runtime-index.js';
 
 export type CheckpointStep = RuntimeIndexedCheckpointStep;
@@ -73,6 +72,3 @@ export interface CheckpointBriefBuilder {
 export function checkpointChoiceIds(step: CheckpointStep): string[] {
   return step.policy.choices?.map((choice) => choice.id) ?? [];
 }
-
-// Re-export for builder convenience.
-export type { RelayRole };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { canonicalJson } from './hashing.js';
 import { Snapshot, type SnapshotStatus } from './snapshot.js';
 import {
   type RunBootstrappedTraceEntry,
@@ -19,7 +20,7 @@ import {
 const RunTraceBody = z.array(TraceEntry).min(1);
 
 const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: string) => {
-  ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: 'custom', path, message });
 };
 
 type ParsedTraceEntry = z.infer<typeof TraceEntry>;
@@ -37,17 +38,8 @@ function isGuidanceDecision(entry: ParsedTraceEntry): entry is GuidanceTraceEntr
   return entry.kind === 'guidance.decision';
 }
 
-function stableJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(
-      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  });
-}
-
 function sameJson(a: unknown, b: unknown): boolean {
-  return stableJson(a) === stableJson(b);
+  return canonicalJson(a) === canonicalJson(b);
 }
 
 function selectedRecord(entry: GuidanceTraceEntry): Record<string, unknown> {

@@ -2,13 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
+import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/app/run-envelope/shadow-record.js';
+import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/app/run-envelope/source-record.js';
 import { main } from '../../src/cli/circuit.js';
-import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/run-envelope/shadow-record.js';
-import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord, RunEnvelopeShadowRecord } from '../../src/schemas/run-envelope.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -28,21 +27,9 @@ afterEach(() => {
   rmSync(tempDir, { recursive: true, force: true });
 });
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
-const relayer: RelayFn = {
-  connectorName: 'claude-code',
-  relay: async (input: RelayInput): Promise<RelayResult> => ({
-    request_payload: input.prompt,
-    receipt_id: 'stub-receipt-run-envelope-shadow',
-    result_body: REVIEW_RELAY_BODY,
-    duration_ms: 1,
-    cli_version: '0.0.0-stub',
-  }),
-};
+const relayer = makeStubRelayer(REVIEW_RELAY_BODY, {
+  receipt_id: 'stub-receipt-run-envelope-shadow',
+});
 
 async function runMainJson(argv: readonly string[]): Promise<Record<string, unknown>> {
   return runMainJsonInProject(argv, process.cwd());
@@ -52,24 +39,16 @@ async function runMainJsonInProject(
   argv: readonly string[],
   configCwd: string,
 ): Promise<Record<string, unknown>> {
-  let stdout = '';
-  const originalStdout = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 4, 28, 5, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(tempDir, 'empty-home'),
       configCwd,
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = originalStdout;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 

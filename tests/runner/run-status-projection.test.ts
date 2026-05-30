@@ -2,11 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { projectRunStatusFromRunFolder } from '../../src/app/run-status/run-folder-projector.js';
 import { main } from '../../src/cli/circuit.js';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import { writeManifestSnapshot } from '../../src/shared/manifest-snapshot.js';
+import { captureStreams } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -205,25 +206,8 @@ async function captureMain(argv: readonly string[]): Promise<{
   readonly stdout: string;
   readonly stderr: string;
 }> {
-  let stdout = '';
-  let stderr = '';
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await main(argv);
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+  const { result, stdout, stderr } = await captureStreams(() => main(argv));
+  return { code: result, stdout, stderr };
 }
 
 afterEach(() => {

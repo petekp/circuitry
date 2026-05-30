@@ -11,8 +11,10 @@ import type { ConnectorRelayInput, RelayResult } from '../shared/connector-relay
 import { extractJsonObject } from '../shared/json-extraction.js';
 import {
   type ConnectorSubprocessResult,
+  cappedSuffix,
   isConnectorSubprocessSpawnError,
   runConnectorSubprocess,
+  spawnErrorVerb,
 } from './subprocess.js';
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -77,8 +79,9 @@ export async function relayCustom(input: CustomRelayInput): Promise<RelayResult>
       });
     } catch (error) {
       if (isConnectorSubprocessSpawnError(error)) {
-        const verb = error.phase === 'spawn-failed' ? 'spawn failed' : 'spawn error';
-        throw new Error(`custom connector '${descriptor.name}' ${verb}: ${error.message}`);
+        throw new Error(
+          `custom connector '${descriptor.name}' ${spawnErrorVerb(error)}: ${error.message}`,
+        );
       }
       throw error;
     }
@@ -103,8 +106,8 @@ export async function relayCustom(input: CustomRelayInput): Promise<RelayResult>
         cli_version: `custom:${descriptor.name}`,
       };
     } catch (error) {
-      const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+      const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
       throw new Error(
         `custom connector '${descriptor.name}': ${(error as Error).message}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`,
       );

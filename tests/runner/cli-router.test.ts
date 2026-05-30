@@ -3,12 +3,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { ReviewIntake } from '../../src/flows/review/reports.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 const EXPLORE_SYNTHESIS_BODY = JSON.stringify({
   verdict: 'accept',
@@ -85,11 +85,6 @@ const REVIEW_RELAY_BODY = JSON.stringify({
   confidence_limitations: [],
 });
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 function createProofProject(name: string): string {
   const projectRoot = join(runFolderBase, name);
   mkdirSync(projectRoot, { recursive: true });
@@ -110,27 +105,21 @@ function createProofProject(name: string): string {
 }
 
 function relayerWithBody(body: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-cli-router',
-      result_body:
-        input.prompt.includes('Step: act-step') && body === '{"verdict":"accept"}'
-          ? BUILD_IMPLEMENTATION_BODY
-          : input.prompt.includes('Step: review-step') &&
-              input.prompt.includes('build.review@v1') &&
-              body === '{"verdict":"accept"}'
-            ? BUILD_REVIEW_BODY
-            : input.prompt.includes('Step: synthesize-step') && body === '{"verdict":"accept"}'
-              ? EXPLORE_SYNTHESIS_BODY
-              : input.prompt.includes('Step: review-step') && body === '{"verdict":"accept"}'
-                ? EXPLORE_REVIEW_VERDICT_BODY
-                : body,
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer(
+    (input) =>
+      input.prompt.includes('Step: act-step') && body === '{"verdict":"accept"}'
+        ? BUILD_IMPLEMENTATION_BODY
+        : input.prompt.includes('Step: review-step') &&
+            input.prompt.includes('build.review@v1') &&
+            body === '{"verdict":"accept"}'
+          ? BUILD_REVIEW_BODY
+          : input.prompt.includes('Step: synthesize-step') && body === '{"verdict":"accept"}'
+            ? EXPLORE_SYNTHESIS_BODY
+            : input.prompt.includes('Step: review-step') && body === '{"verdict":"accept"}'
+              ? EXPLORE_REVIEW_VERDICT_BODY
+              : body,
+    { receipt_id: 'stub-receipt-cli-router' },
+  );
 }
 
 const PASSING_RUBRIC_MODEL_JUDGMENTS = {
@@ -145,81 +134,44 @@ const PASSING_RUBRIC_MODEL_JUDGMENTS = {
 } as const;
 
 function tournamentRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      const proposal = (option_id: string, option_label: string, case_summary: string) => ({
-        verdict: 'accept',
-        option_id,
-        option_label,
-        case_summary,
-        assumptions: ['The operator accepts the stated tradeoff.'],
-        evidence_refs: ['reports/decision-options.json'],
-        risks: ['The proof fixture only covers synthetic decision evidence.'],
-        next_action: `Run a Build plan for ${option_label}.`,
-        rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
-      });
-      if (input.prompt.includes('Step: proposal-fanout-step-option-1')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-tournament-option-1',
-          result_body: JSON.stringify(
-            proposal('option-1', 'React', 'Choose React for ecosystem depth.'),
-          ),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-      if (input.prompt.includes('Step: proposal-fanout-step-option-2')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-tournament-option-2',
-          result_body: JSON.stringify(
-            proposal('option-2', 'Vue', 'Choose Vue for iteration speed.'),
-          ),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-      if (input.prompt.includes('Step: proposal-fanout-step-option-3')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-tournament-option-3',
-          result_body: JSON.stringify(
-            proposal('option-3', 'Hybrid path', 'Prototype both paths before choosing.'),
-          ),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-      if (input.prompt.includes('Step: proposal-fanout-step-option-4')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-tournament-option-4',
-          result_body: JSON.stringify(
-            proposal('option-4', 'Defer pending evidence', 'Gather missing constraints first.'),
-          ),
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-      return {
-        request_payload: input.prompt,
-        receipt_id: 'stub-tournament-review',
-        result_body: JSON.stringify({
-          verdict: 'recommend',
-          recommended_option_id: 'option-1',
-          comparison: 'React carries ecosystem depth while Vue carries speed.',
-          objections: ['The choice lacks a spike.'],
-          missing_evidence: ['No production spike exists.'],
-          tradeoff_question: 'Choose ecosystem depth or iteration speed.',
-          confidence: 'medium',
-        }),
-        duration_ms: 1,
-        cli_version: '0.0.0-stub',
-      };
-    },
-  };
+  const proposal = (option_id: string, option_label: string, case_summary: string) => ({
+    verdict: 'accept',
+    option_id,
+    option_label,
+    case_summary,
+    assumptions: ['The operator accepts the stated tradeoff.'],
+    evidence_refs: ['reports/decision-options.json'],
+    risks: ['The proof fixture only covers synthetic decision evidence.'],
+    next_action: `Run a Build plan for ${option_label}.`,
+    rubric_model_judgments: PASSING_RUBRIC_MODEL_JUDGMENTS,
+  });
+  return makeStubRelayer((input) => {
+    if (input.prompt.includes('Step: proposal-fanout-step-option-1')) {
+      return JSON.stringify(proposal('option-1', 'React', 'Choose React for ecosystem depth.'));
+    }
+    if (input.prompt.includes('Step: proposal-fanout-step-option-2')) {
+      return JSON.stringify(proposal('option-2', 'Vue', 'Choose Vue for iteration speed.'));
+    }
+    if (input.prompt.includes('Step: proposal-fanout-step-option-3')) {
+      return JSON.stringify(
+        proposal('option-3', 'Hybrid path', 'Prototype both paths before choosing.'),
+      );
+    }
+    if (input.prompt.includes('Step: proposal-fanout-step-option-4')) {
+      return JSON.stringify(
+        proposal('option-4', 'Defer pending evidence', 'Gather missing constraints first.'),
+      );
+    }
+    return JSON.stringify({
+      verdict: 'recommend',
+      recommended_option_id: 'option-1',
+      comparison: 'React carries ecosystem depth while Vue carries speed.',
+      objections: ['The choice lacks a spike.'],
+      missing_evidence: ['No production spike exists.'],
+      tradeoff_question: 'Choose ecosystem depth or iteration speed.',
+      confidence: 'medium',
+    });
+  });
 }
 
 function runtimeVetoedTournamentRelayer(): RelayFn {
@@ -242,32 +194,15 @@ function runtimeVetoedTournamentRelayer(): RelayFn {
 }
 
 function pursueCliRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      if (input.prompt.includes('Step: batch-step')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-pursuit-batch',
-          result_body: PURSUIT_BATCH_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      if (input.prompt.includes('Step: review-step')) {
-        return {
-          request_payload: input.prompt,
-          receipt_id: 'stub-cli-pursuit-review',
-          result_body: PURSUIT_REVIEW_BODY,
-          duration_ms: 1,
-          cli_version: '0.0.0-stub',
-        };
-      }
-
-      throw new Error(`unexpected pursue CLI relay prompt: ${input.prompt.slice(0, 240)}`);
-    },
-  };
+  return makeStubRelayer((input) => {
+    if (input.prompt.includes('Step: batch-step')) {
+      return PURSUIT_BATCH_BODY;
+    }
+    if (input.prompt.includes('Step: review-step')) {
+      return PURSUIT_REVIEW_BODY;
+    }
+    throw new Error(`unexpected pursue CLI relay prompt: ${input.prompt.slice(0, 240)}`);
+  });
 }
 
 function traceEntryLog(runFolder: string): Array<Record<string, unknown>> {
@@ -283,24 +218,16 @@ async function runMainJson(
   relayBody: string,
   options: { readonly configCwd?: string } = {},
 ): Promise<Record<string, unknown>> {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout: captured } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody(relayBody),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const parsed: unknown = JSON.parse(captured);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -314,24 +241,16 @@ async function runMainJsonWithRelayer(
   relayer: RelayFn,
   options: { readonly configCwd?: string } = {},
 ): Promise<Record<string, unknown>> {
-  let captured = '';
-  const origWrite = process.stdout.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    captured += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stdout: captured } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
   return JSON.parse(captured) as Record<string, unknown>;
 }
 
@@ -340,31 +259,20 @@ async function runMainJsonWithRelayerAndProgress(
   relayer: RelayFn,
   options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
-  let stdout = '';
-  let stderr = '';
-  const origStdoutWrite = process.stdout.write;
-  const origStderrWrite = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const {
+    result: exit,
+    stdout,
+    stderr,
+  } = await captureStreams(() =>
+    main(argv, {
       relayer,
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const output = JSON.parse(stdout) as Record<string, unknown>;
   const progress = stderr
@@ -380,31 +288,20 @@ async function runMainJsonWithProgress(
   relayBody: string,
   options: { readonly configCwd?: string } = {},
 ): Promise<{ output: Record<string, unknown>; progress: Array<ProgressEvent> }> {
-  let stdout = '';
-  let stderr = '';
-  const origStdoutWrite = process.stdout.write;
-  const origStderrWrite = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const {
+    result: exit,
+    stdout,
+    stderr,
+  } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody(relayBody),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000001',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    expect(exit).toBe(0);
-  } finally {
-    process.stdout.write = origStdoutWrite;
-    process.stderr.write = origStderrWrite;
-  }
+    }),
+  );
+  expect(exit).toBe(0);
 
   const output = JSON.parse(stdout) as Record<string, unknown>;
   const progress = stderr
@@ -416,24 +313,16 @@ async function runMainJsonWithProgress(
 }
 
 async function runMainExit(argv: readonly string[]): Promise<{ exit: number; stderr: string }> {
-  let stderr = '';
-  const origWrite = process.stderr.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const exit = await main(argv, {
+  const { result: exit, stderr } = await captureStreams(() =>
+    main(argv, {
       relayer: relayerWithBody('{"verdict":"accept"}'),
       now: deterministicNow(Date.UTC(2026, 3, 24, 15, 0, 0)),
       runId: '84000000-0000-0000-0000-000000000099',
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: process.cwd(),
-    });
-    return { exit, stderr };
-  } finally {
-    process.stderr.write = origWrite;
-  }
+    }),
+  );
+  return { exit, stderr };
 }
 
 async function withStrictruntime<T>(operation: () => Promise<T>): Promise<T> {

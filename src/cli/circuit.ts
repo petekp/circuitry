@@ -20,32 +20,38 @@ import {
 import { RunResult } from '../schemas/result.js';
 import { Rigor, type Rigor as RigorValue } from '../schemas/rigor.js';
 
-import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
-import { classifyCompiledFlowTask } from '../flows/router.js';
 import {
   HISTORY_RECALL_REPORT_PATH,
   prepareRunStartHistoryRecall,
-} from '../history/run-start-recall.js';
+} from '../app/history/run-start-recall.js';
 import {
   projectCheckpointWaitingProcessEvidence,
   projectClosedProcessEvidence,
-  writeProcessEvidenceProjection,
-} from '../process-evidence/projection.js';
-import { runAutonomousContinuation } from '../run-envelope/autonomous-run.js';
-import { writeRunEnvelopeShadowRecord } from '../run-envelope/shadow-record.js';
-import { writeRunEnvelopeRecord as writeSourceRunEnvelopeRecord } from '../run-envelope/source-record.js';
+} from '../app/process-evidence/projection.js';
+import { runAutonomousContinuation } from '../app/run-envelope/autonomous-run.js';
+import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
+import { classifyCompiledFlowTask } from '../flows/router.js';
+import { validateCompiledFlowKindPolicy } from '../policy/flow-kind-policy.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
-import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
 import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
+import { CLI_COMMAND_NAMES, type CliCommandName } from './command-vocabulary.js';
+import { parseCommanderOrThrow } from './commander-support.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runHistoryCommand } from './history.js';
 import {
+  type PostRunArtifactContext,
+  type PostRunArtifactWarning,
+  emitPostRunArtifacts,
+  postRunArtifactWarningOutputFields,
+} from './post-run-artifacts.js';
+import {
   operatorSummaryOutputFields,
   routeOutputFields,
   runEnvelopeOutputFields,
+  selectedProcessFields,
 } from './run-output.js';
 import { runRunsCommand } from './runs.js';
 import {
@@ -96,14 +102,13 @@ interface ParsedArgs {
   includeUntrackedContent: boolean;
 }
 
-type TopLevelInvocation =
-  | { readonly command: 'run'; readonly argv: readonly string[] }
-  | { readonly command: 'resume'; readonly argv: readonly string[] }
-  | { readonly command: 'handoff'; readonly argv: readonly string[] }
-  | { readonly command: 'history'; readonly argv: readonly string[] }
-  | { readonly command: 'create'; readonly argv: readonly string[] }
-  | { readonly command: 'runs'; readonly argv: readonly string[] }
-  | { readonly command: 'version'; readonly argv: readonly string[] };
+// The TopLevelInvocation union is keyed off the shared CLI_COMMAND_NAMES
+// tuple (src/cli/command-vocabulary.ts), so adding a command word there
+// is a type error here until it is handled in main()'s dispatch.
+type TopLevelInvocation = {
+  readonly command: CliCommandName;
+  readonly argv: readonly string[];
+};
 
 interface ResolvedCompiledFlowRoute {
   flowName: string;
@@ -124,45 +129,6 @@ interface AxisSupport {
   allowedRigors: readonly RigorValue[];
   supportsTournament: boolean;
   supportsAutonomous: boolean;
-}
-
-type PostRunArtifactWarning = {
-  readonly label: string;
-  readonly message: string;
-};
-
-type PostRunArtifactContext = {
-  readonly progressJsonl: boolean;
-  readonly warnings: PostRunArtifactWarning[];
-};
-
-function tryPostRunArtifact<T>(
-  label: string,
-  context: PostRunArtifactContext,
-  write: () => T,
-): T | undefined {
-  try {
-    return write();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    context.warnings.push({ label, message });
-    if (!context.progressJsonl) {
-      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}\n`);
-    }
-    return undefined;
-  }
-}
-
-function postRunArtifactWarningOutputFields(
-  warnings: readonly PostRunArtifactWarning[],
-): Record<string, unknown> {
-  if (warnings.length === 0) return {};
-  return {
-    post_run_artifact_warnings: warnings.map((warning) => ({
-      label: warning.label,
-      message: warning.message,
-    })),
-  };
 }
 
 export interface CliMainOptions {
@@ -269,23 +235,10 @@ function runVersionCommand(argv: readonly string[]): number {
   return 0;
 }
 
-function parseCommander(program: Command, argv: readonly string[]): void {
-  try {
-    program
-      .exitOverride()
-      .configureOutput({ writeErr: () => {} })
-      .parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
-}
-
 function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   let invocation: TopLevelInvocation | undefined;
   const program = new Command('circuit').exitOverride().configureOutput({ writeErr: () => {} });
-  const addForwardingCommand = (name: TopLevelInvocation['command']) => {
+  const addForwardingCommand = (name: CliCommandName) => {
     program
       .command(name)
       .allowUnknownOption(true)
@@ -295,21 +248,9 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
         invocation = { command: name, argv: args };
       });
   };
-  addForwardingCommand('run');
-  addForwardingCommand('resume');
-  addForwardingCommand('handoff');
-  addForwardingCommand('history');
-  addForwardingCommand('create');
-  addForwardingCommand('runs');
-  addForwardingCommand('version');
+  for (const name of CLI_COMMAND_NAMES) addForwardingCommand(name);
 
-  try {
-    program.parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
+  parseCommanderOrThrow(program, argv);
 
   if (invocation === undefined) {
     throw new Error('missing command: use run, resume, handoff, history, create, runs, or version');
@@ -335,7 +276,7 @@ function addExecutionOptions(program: Command): Command {
 
 function parseExecutionArgs(command: 'run' | 'resume', argv: readonly string[]): ParsedArgs {
   const program = addExecutionOptions(new Command(`circuit ${command}`).argument('[flow-name]'));
-  parseCommander(program, argv);
+  parseCommanderOrThrow(program, argv);
 
   const opts = program.opts<{
     goal?: string;
@@ -714,13 +655,11 @@ function historyRecallOutputFields(input: {
 
 function runEnvelopeMemoryContext(
   report: ReturnType<typeof prepareRunStartHistoryRecall> | undefined,
-): Record<string, unknown> {
-  if (report === undefined) return {};
+): { readonly used: boolean; readonly memoryInputIds: readonly string[] } | undefined {
+  if (report === undefined) return undefined;
   return {
-    memoryContext: {
-      used: report.status === 'used',
-      memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id),
-    },
+    used: report.status === 'used',
+    memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id),
   };
 }
 
@@ -770,6 +709,13 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     return 2;
   }
 
+  if (args.command === 'resume') {
+    return runResumeCommand(args, options);
+  }
+  return runExecutionCommand(args, options);
+}
+
+async function runResumeCommand(args: ParsedArgs, options: CliMainOptions): Promise<number> {
   if (
     args.command === 'resume' &&
     args.runFolder !== undefined &&
@@ -795,60 +741,44 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
         progressJsonl: args.progress === 'jsonl',
         warnings: postRunArtifactWarnings,
       };
-      const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
-        writeOperatorSummary({
-          runFolder,
-          runResult,
-          route: {
-            selectedFlow: runResult.flow_id as unknown as string,
-            ...(priorRoute.routedBy === undefined ? {} : { routedBy: priorRoute.routedBy }),
-            ...(priorRoute.routerReason === undefined
-              ? {}
-              : { routerReason: priorRoute.routerReason }),
-          },
-        }),
-      );
       const recordedAt = (options.now ?? (() => new Date()))().toISOString();
-      const selectedProcess = {
-        process_id: runResult.flow_id as unknown as string,
-        ...(priorRoute.routedBy === undefined ? {} : { routed_by: priorRoute.routedBy }),
-        router_reason: priorRoute.routerReason ?? 'checkpoint resume',
-      };
-      tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
-        writeRunEnvelopeShadowRecord({
-          runFolder,
-          operatorIntent: runResult.goal,
-          selectedProcess,
-          child: {
-            kind: 'closed',
+      const selectedProcess = selectedProcessFields({
+        processId: runResult.flow_id as unknown as string,
+        ...(priorRoute.routedBy === undefined ? {} : { routedBy: priorRoute.routedBy }),
+        routerReason: priorRoute.routerReason ?? 'checkpoint resume',
+      });
+      const { operatorSummary, runEnvelope } = emitPostRunArtifacts({
+        context: postRunArtifactContext,
+        runFolder,
+        operatorIntent: runResult.goal,
+        recordedAt,
+        selectedProcess,
+        child: {
+          kind: 'closed',
+          runResult,
+          resultPath: runtimeResult.resultPath,
+        },
+        writeOperatorSummary: () =>
+          writeOperatorSummary({
+            runFolder,
             runResult,
-            resultPath: runtimeResult.resultPath,
-          },
-          recordedAt,
-        }),
-      );
-      const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
-        writeProcessEvidenceProjection({
-          runFolder,
-          projection: projectClosedProcessEvidence({
+            route: {
+              selectedFlow: runResult.flow_id as unknown as string,
+              ...(priorRoute.routedBy === undefined ? {} : { routedBy: priorRoute.routedBy }),
+              ...(priorRoute.routerReason === undefined
+                ? {}
+                : { routerReason: priorRoute.routerReason }),
+            },
+          }),
+        buildProcessEvidenceProjection: () =>
+          projectClosedProcessEvidence({
             runFolder,
             runResult,
             resultPath: runtimeResult.resultPath,
           }),
-        }),
-      );
-      const runEnvelope =
-        processEvidence === undefined
-          ? undefined
-          : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
-              writeSourceRunEnvelopeRecord({
-                runFolder,
-                operatorIntent: runResult.goal,
-                selectedProcess,
-                processEvidence,
-                recordedAt,
-              }),
-            );
+        // Resume reuses the saved run; it records no fresh memory context.
+        memoryContext: undefined,
+      });
       const resumeRuntimeFields = showRuntimeDecision()
         ? {
             runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume,
@@ -880,7 +810,14 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     process.stderr.write('error: run folder is not a resumable Circuit run folder\n');
     return 2;
   }
+  // Defensive fallback: parseExecutionArgs guarantees a resume command carries a
+  // run folder and checkpoint choice, so this delegation is unreachable in
+  // practice. It preserves the original control flow, where a malformed resume
+  // fell through to the execution path's goal-undefined guard.
+  return runExecutionCommand(args, options);
+}
 
+async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): Promise<number> {
   if (args.goal === undefined) {
     throw new Error('internal error: --goal missing outside checkpoint resume mode');
   }
@@ -916,6 +853,12 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
     label: `Selected ${route.flowName}`,
     display: progressDisplay(`Circuit: ${selectedStatusText}`, 'major', 'info'),
     presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
+    // These route facets mirror routeOutputFields, but the route.selected event
+    // is a typed discriminated-union member (ProgressEvent), not the loosely
+    // typed stdout JSON. Spreading a Record<string, unknown> builder here erases
+    // the literal property types and breaks the union parse, so the fields stay
+    // inline. The shared shape is the selectedProcessFields builder used by the
+    // three selected_process literals below.
     selected_flow: flow.id,
     routed_by: route.source,
     router_reason: route.reason,
@@ -1004,55 +947,50 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
           allowed_choices: runtimeResult.checkpoint.allowedChoices,
         },
       };
-      const selectedProcess = {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
+      const selectedProcess = selectedProcessFields({
+        processId: flow.id,
+        routedBy: route.source,
+        routerReason: route.reason,
         ...(entryModeSelection.entryModeName === undefined
           ? {}
-          : { entry_mode: entryModeSelection.entryModeName }),
-      };
+          : { entryMode: entryModeSelection.entryModeName }),
+      });
       const postRunArtifactWarnings: PostRunArtifactWarning[] = [];
       const postRunArtifactContext: PostRunArtifactContext = {
         progressJsonl: args.progress === 'jsonl',
         warnings: postRunArtifactWarnings,
       };
-      const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
-        writeOperatorSummary({
-          runFolder,
-          runResult: waitingResult,
-          route: {
-            selectedFlow: route.flowName,
-            routedBy: route.source,
-            routerReason: route.reason,
-          },
-        }),
-      );
       const recordedAt = now().toISOString();
-      tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
-        writeRunEnvelopeShadowRecord({
-          runFolder,
-          operatorIntent: operatorGoal,
-          selectedProcess,
-          child: {
-            kind: 'checkpoint_waiting',
-            run_id: waitingResult.run_id,
-            flow_id: waitingResult.flow_id,
-            trace_entries_observed: waitingResult.trace_entries_observed,
-            manifest_hash: waitingResult.manifest_hash,
-            checkpoint: {
-              step_id: waitingResult.checkpoint.step_id,
-              request_path: runtimeResult.checkpoint.requestPath,
-              allowed_choices: waitingResult.checkpoint.allowed_choices,
-            },
+      const { operatorSummary, runEnvelope } = emitPostRunArtifacts({
+        context: postRunArtifactContext,
+        runFolder,
+        operatorIntent: operatorGoal,
+        recordedAt,
+        selectedProcess,
+        child: {
+          kind: 'checkpoint_waiting',
+          run_id: waitingResult.run_id,
+          flow_id: waitingResult.flow_id,
+          trace_entries_observed: waitingResult.trace_entries_observed,
+          manifest_hash: waitingResult.manifest_hash,
+          checkpoint: {
+            step_id: waitingResult.checkpoint.step_id,
+            request_path: runtimeResult.checkpoint.requestPath,
+            allowed_choices: waitingResult.checkpoint.allowed_choices,
           },
-          recordedAt,
-        }),
-      );
-      const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
-        writeProcessEvidenceProjection({
-          runFolder,
-          projection: projectCheckpointWaitingProcessEvidence({
+        },
+        writeOperatorSummary: () =>
+          writeOperatorSummary({
+            runFolder,
+            runResult: waitingResult,
+            route: {
+              selectedFlow: route.flowName,
+              routedBy: route.source,
+              routerReason: route.reason,
+            },
+          }),
+        buildProcessEvidenceProjection: () =>
+          projectCheckpointWaitingProcessEvidence({
             runFolder,
             runId: waitingResult.run_id,
             flowId: waitingResult.flow_id,
@@ -1064,21 +1002,8 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
               allowedChoices: waitingResult.checkpoint.allowed_choices,
             },
           }),
-        }),
-      );
-      const runEnvelope =
-        processEvidence === undefined
-          ? undefined
-          : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
-              writeSourceRunEnvelopeRecord({
-                runFolder,
-                operatorIntent: operatorGoal,
-                selectedProcess,
-                processEvidence,
-                recordedAt,
-                ...runEnvelopeMemoryContext(historyRecall),
-              }),
-            );
+        memoryContext: runEnvelopeMemoryContext(historyRecall),
+      });
       process.stdout.write(
         `${JSON.stringify(
           {
@@ -1121,67 +1046,49 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
       return 0;
     }
     const runResult = RunResult.parse(JSON.parse(readFileSync(runtimeResult.resultPath, 'utf8')));
-    const selectedProcess = {
-      process_id: flow.id,
-      routed_by: route.source,
-      router_reason: route.reason,
+    const selectedProcess = selectedProcessFields({
+      processId: flow.id,
+      routedBy: route.source,
+      routerReason: route.reason,
       ...(entryModeSelection.entryModeName === undefined
         ? {}
-        : { entry_mode: entryModeSelection.entryModeName }),
-    };
+        : { entryMode: entryModeSelection.entryModeName }),
+    });
     const postRunArtifactWarnings: PostRunArtifactWarning[] = [];
     const postRunArtifactContext: PostRunArtifactContext = {
       progressJsonl: args.progress === 'jsonl',
       warnings: postRunArtifactWarnings,
     };
-    const operatorSummary = tryPostRunArtifact('operator-summary', postRunArtifactContext, () =>
-      writeOperatorSummary({
-        runFolder,
-        runResult,
-        route: {
-          selectedFlow: route.flowName,
-          routedBy: route.source,
-          routerReason: route.reason,
-        },
-      }),
-    );
     const recordedAt = now().toISOString();
-    tryPostRunArtifact('run-envelope-shadow', postRunArtifactContext, () =>
-      writeRunEnvelopeShadowRecord({
-        runFolder,
-        operatorIntent: operatorGoal,
-        selectedProcess,
-        child: {
-          kind: 'closed',
+    const { operatorSummary, processEvidence, runEnvelope } = emitPostRunArtifacts({
+      context: postRunArtifactContext,
+      runFolder,
+      operatorIntent: operatorGoal,
+      recordedAt,
+      selectedProcess,
+      child: {
+        kind: 'closed',
+        runResult,
+        resultPath: runtimeResult.resultPath,
+      },
+      writeOperatorSummary: () =>
+        writeOperatorSummary({
+          runFolder,
           runResult,
-          resultPath: runtimeResult.resultPath,
-        },
-        recordedAt,
-      }),
-    );
-    const processEvidence = tryPostRunArtifact('process-evidence', postRunArtifactContext, () =>
-      writeProcessEvidenceProjection({
-        runFolder,
-        projection: projectClosedProcessEvidence({
+          route: {
+            selectedFlow: route.flowName,
+            routedBy: route.source,
+            routerReason: route.reason,
+          },
+        }),
+      buildProcessEvidenceProjection: () =>
+        projectClosedProcessEvidence({
           runFolder,
           runResult,
           resultPath: runtimeResult.resultPath,
         }),
-      }),
-    );
-    const runEnvelope =
-      processEvidence === undefined
-        ? undefined
-        : tryPostRunArtifact('run-envelope', postRunArtifactContext, () =>
-            writeSourceRunEnvelopeRecord({
-              runFolder,
-              operatorIntent: operatorGoal,
-              selectedProcess,
-              processEvidence,
-              recordedAt,
-              ...runEnvelopeMemoryContext(historyRecall),
-            }),
-          );
+      memoryContext: runEnvelopeMemoryContext(historyRecall),
+    });
     // S10: in autonomous mode, drive the continuation loop. Attempt 1 reuses the
     // primary run above; follow-up attempts run the routed recovery flow for real
     // in a sub-folder. The loop owns the completion decision and never closes

@@ -1,9 +1,10 @@
-import { Command, CommanderError } from 'commander';
+import { Command } from 'commander';
 import {
   RunStatusFolderError,
   projectRunStatusFromRunFolder,
-} from '../run-status/run-folder-projector.js';
+} from '../app/run-status/run-folder-projector.js';
 import { type EngineErrorCodeV1, EngineErrorV1 } from '../schemas/run-status.js';
+import { commanderErrorMessage, configureCommanderProgram } from './commander-support.js';
 
 function engineError(input: {
   readonly code: EngineErrorCodeV1;
@@ -36,16 +37,9 @@ function invalidInvocation(message: string, runFolder?: string): number {
   return 2;
 }
 
-function commanderErrorMessage(err: unknown): string {
-  if (err instanceof CommanderError) return err.message.replace(/^error: /, '');
-  return err instanceof Error ? err.message : String(err);
-}
-
 function parseShowArgs(argv: readonly string[]): { readonly runFolder: string } | string {
   let showOptions: { json?: boolean; runFolder?: string } | undefined;
-  const program = new Command('circuit runs')
-    .exitOverride()
-    .configureOutput({ writeErr: () => {} });
+  const program = configureCommanderProgram(new Command('circuit runs'));
   const show = program
     .command('show')
     .option('--json')

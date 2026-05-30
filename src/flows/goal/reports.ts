@@ -114,21 +114,21 @@ export const GoalClarifiedTask = z
   .superRefine((task, ctx) => {
     if (!task.proof_needed.some((proof) => proof.required)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['proof_needed'],
         message: 'Goal Clarify requires at least one required proof entry',
       });
     }
     if (task.verdict === 'ask' && task.missing_information.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['missing_information'],
         message: 'Goal Clarify ask verdict requires missing information',
       });
     }
     if (task.verdict === 'stop' && task.stop_conditions.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['stop_conditions'],
         message: 'Goal Clarify stop verdict requires a stop condition',
       });
@@ -159,7 +159,7 @@ export const GoalClarifiedTask = z
       /before completion[\s\S]{0,120}adversarially review|two consecutive(?:\s+\w+){0,3}\s+(?:reviews?|passes?)|two[-\s]+clean[-\s]+reviews?|medium-or-above\s+(?:gate|completion|finding ceremony|gate finding)/i;
     if (clarifyAuthoredText.some((text) => forbiddenReviewText.test(text))) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['clarified_prompt'],
         message: 'Goal Clarify must not include the adversarial review loop',
       });
@@ -186,7 +186,7 @@ const GoalDoneClaim = z
   .superRefine((claim, ctx) => {
     if (!claim.required_evidence.some((entry) => entry.required)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['required_evidence'],
         message: 'each done_when item must include at least one required evidence entry',
       });
@@ -230,7 +230,7 @@ export const GoalContract = z
   .superRefine((contract, ctx) => {
     if (!contract.allowed_flow_targets.includes(contract.selected_flow_target)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['selected_flow_target'],
         message: 'selected_flow_target must be present in allowed_flow_targets',
       });
@@ -273,21 +273,21 @@ export const GoalEvidenceEvaluation = z
     const allProved = evaluation.claim_results.every((claim) => claim.status === 'proved');
     if (evaluation.verdict === 'satisfied' && !allProved) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['claim_results'],
         message: "verdict 'satisfied' requires every claim result to be proved",
       });
     }
     if (evaluation.next_route === 'completion-gate' && evaluation.verdict !== 'satisfied') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: "next_route 'completion-gate' is allowed only when verdict is satisfied",
       });
     }
     if (evaluation.verdict === 'satisfied' && evaluation.next_route !== 'completion-gate') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: "verdict 'satisfied' must route to completion-gate",
       });
@@ -298,7 +298,7 @@ export const GoalEvidenceEvaluation = z
       );
       if (!hasGap) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['claim_results'],
           message: 'missing-evidence must name at least one missing claim gap',
         });
@@ -309,7 +309,7 @@ export const GoalEvidenceEvaluation = z
       evaluation.next_route === 'completion-gate'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: `${evaluation.verdict} must not route directly to completion-gate`,
       });
@@ -386,7 +386,7 @@ export const GoalGate = z
     for (const [index, pass] of gate.passes.entries()) {
       if (attackLenses.has(pass.attack_lens)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['passes', index, 'attack_lens'],
           message: 'gate passes in the same report must use distinct attack lenses',
         });
@@ -395,77 +395,77 @@ export const GoalGate = z
     }
     if (gate.clean_streak > cleanPassCount) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['clean_streak'],
         message: 'clean_streak must not exceed the number of recorded gate-pass passes',
       });
     }
     if (gate.blocking_findings.length > 0 && gate.clean_streak !== 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['clean_streak'],
         message: 'any blocking finding resets clean_streak to 0',
       });
     }
     if (gate.verdict === 'gate-pass' && gate.blocking_findings.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['blocking_findings'],
         message: 'gate-pass requires no blocking findings',
       });
     }
     if (gate.verdict === 'blocked' && gate.blocking_findings.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['blocking_findings'],
         message: 'blocked requires at least one blocking finding',
       });
     }
     if (gate.verdict === 'blocked' && gate.next_route !== 'recover') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: "blocked gate verdict must route to 'recover'",
       });
     }
     if (gate.verdict === 'gate-pass' && gate.next_route === 'recover') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: 'gate-pass must not route to recover',
       });
     }
     if (gate.next_route === 'close' && gate.clean_streak < gate.required_passes) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['clean_streak'],
         message: 'close requires clean_streak >= required_passes',
       });
     }
     if (gate.next_route === 'close' && cleanPassCount < gate.required_passes) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['passes'],
         message: 'close requires recorded gate-pass passes to meet required_passes',
       });
     }
     if (gate.next_route === 'close' && gate.verdict !== 'gate-pass') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: "close requires final gate verdict 'gate-pass'",
       });
     }
     if (gate.next_route === 'run-next-gate-pass' && gate.verdict !== 'gate-pass') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: 'run-next-gate-pass requires a gate-pass verdict',
       });
     }
     if (gate.next_route === 'run-next-gate-pass' && gate.clean_streak >= gate.required_passes) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['next_route'],
         message: 'run-next-gate-pass is allowed only before the required pass streak is met',
       });
@@ -501,7 +501,7 @@ export const GoalResultEvidenceLink = z
     const expected = GOAL_RESULT_SCHEMA_BY_REPORT_ID[link.report_id];
     if (link.schema !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['schema'],
         message: `schema must be '${expected}' for report_id '${link.report_id}'`,
       });
@@ -533,21 +533,21 @@ export const GoalResult = z
     if (result.outcome === 'complete') {
       if (result.missing_or_weak_claims.length > 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['missing_or_weak_claims'],
           message: 'complete requires no missing or weak claims',
         });
       }
       if (result.gate.clean_streak < result.gate.required_passes) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['gate', 'clean_streak'],
           message: 'complete requires gate.clean_streak >= 2',
         });
       }
       if (result.gate.final_verdict !== 'gate-pass') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['gate', 'final_verdict'],
           message: "complete requires final gate verdict 'gate-pass'",
         });
@@ -558,7 +558,7 @@ export const GoalResult = z
         result.summary.toLowerCase().includes(result.outcome) || result.rerun_commands.length > 0;
       if (!hasUsefulAction) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['summary'],
           message: `${result.outcome} must include a reason or next useful operator action`,
         });

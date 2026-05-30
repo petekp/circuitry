@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { CompiledFlowId, RunId } from './ids.js';
+import { Sha256 } from './ref.js';
 
 // MANIFEST-I1 — A ManifestSnapshot is the byte-for-byte copy of the
 // flow manifest taken at run bootstrap. `bytes_base64` carries the
@@ -17,11 +18,9 @@ import { CompiledFlowId, RunId } from './ids.js';
 // MANIFEST-I3 — `run_id`/`flow_id` must match the run.bootstrapped
 // trace_entry at re-entry. Enforced at run-projection level, not here.
 
-const HEX64 = /^[0-9a-f]{64}$/;
-
-export const ManifestHash = z.string().regex(HEX64, {
-  message: 'must be a 64-character lowercase hex SHA-256 digest',
-});
+// ManifestHash is the canonical 64-hex SHA-256 scalar (src/schemas/ref.ts).
+// Re-exported under the manifest-domain name its callers expect.
+export const ManifestHash = Sha256;
 export type ManifestHash = z.infer<typeof ManifestHash>;
 
 const BASE64 = /^[A-Za-z0-9+/=\r\n]*$/;
@@ -45,7 +44,7 @@ export const ManifestSnapshot = z
       decoded = Buffer.from(snap.bytes_base64, 'base64');
     } catch {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['bytes_base64'],
         message: 'bytes_base64 failed to decode as base64',
       });
@@ -54,7 +53,7 @@ export const ManifestSnapshot = z
     const computed = createHash('sha256').update(decoded).digest('hex');
     if (computed !== snap.hash) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['hash'],
         message: `manifest hash mismatch: declared=${snap.hash} computed=${computed} (sha256 over decoded bytes_base64)`,
       });

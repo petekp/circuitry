@@ -1,6 +1,6 @@
+import { combineRubricResult } from '../policy/rubric.js';
 import type { RubricJudgment, RubricResult, RubricRuntimeSignal } from '../schemas/rubric.js';
 import type { FanoutRubric } from '../schemas/step.js';
-import { combineRubricResult } from './rubric.js';
 
 export interface FanoutAggregateBranch<ChildOutcome extends string = string> {
   readonly branch_id: string;

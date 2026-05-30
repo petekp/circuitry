@@ -12,7 +12,7 @@ import {
   combineRubricDim,
   combineRubricResult,
   rankRubricCandidates,
-} from '../../src/shared/rubric.js';
+} from '../../src/policy/rubric.js';
 
 const SHORT_TIE_BREAK_ORDER = ['evidence_rigor', 'actionability', 'coverage_adequacy'] as const;
 

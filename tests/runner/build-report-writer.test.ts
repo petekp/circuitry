@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import {
   BuildBrief,
@@ -16,11 +17,6 @@ import { executeCompose } from '../../src/runtime/executors/compose.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function writeJson(root: string, rel: string, body: unknown): void {
   const abs = join(root, rel);
@@ -443,7 +439,7 @@ function seedThenDefaultWriter(
         run_id: context.runId,
         kind: 'step.report_written',
         step_id: step.id,
-        ...(context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt }),
+        attempt: context.activeStepAttempt ?? 1,
         report_path: report.path,
         report_schema: report.schema,
       });

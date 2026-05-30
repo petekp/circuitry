@@ -1,8 +1,22 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 function read(path: string): string {
   return readFileSync(path, 'utf8');
+}
+
+function collectTsFiles(dir: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectTsFiles(full));
+    } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+      files.push(full);
+    }
+  }
+  return files;
 }
 
 describe('architecture boundary ratchets', () => {
@@ -46,5 +60,23 @@ describe('architecture boundary ratchets', () => {
     expect(executor).not.toContain('spawnSync');
     expect(executor).not.toContain('resolveProjectRelativeCwd');
     expect(executor).not.toContain('packageScriptInvocation');
+  });
+
+  it('keeps flow packages from importing the runtime engine', () => {
+    const runtimeImport = /from ['"][^'"]*runtime\//;
+    const offenders = collectTsFiles('src/flows').filter((file) => runtimeImport.test(read(file)));
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps shared/html free of flow imports', () => {
+    // The generic render leaves in shared/html (components, page, multi-variant,
+    // projector) must stay flow-agnostic. Flow-specific projectors live in their
+    // flow packages and register into the shared registry (CSR-3). Guard against
+    // a regression that re-introduces the shared/html -> flows cycle.
+    const flowImport = /from ['"][^'"]*\/flows\//;
+    const offenders = collectTsFiles('src/shared/html').filter((file) =>
+      flowImport.test(read(file)),
+    );
+    expect(offenders).toEqual([]);
   });
 });

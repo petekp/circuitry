@@ -8,8 +8,8 @@
 
 import { readFileSync } from 'node:fs';
 import { resolveRunRelative } from '../../../shared/run-relative-path.js';
-import { reportPathForSchemaInRuntimeFlow } from '../../registries/close-writers/shared.js';
 import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
+import { reportPathForSchemaInRuntimeFlow } from '../../registries/runtime-index.js';
 import {
   ExploreBrief,
   ExploreCompose,

@@ -1,4 +1,4 @@
-import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../policy/rubric.js';
 import { expandBlockStepUse } from '../block-step-expansion.js';
 import type { FlowData } from '../flow-definition.js';
 import type { CompiledFlowSignal } from '../types.js';

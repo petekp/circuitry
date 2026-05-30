@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { detectNoProgress } from '../../src/run-envelope/no-progress.js';
+import { detectNoProgress } from '../../src/app/run-envelope/no-progress.js';
 
 describe('Run no-progress / oscillation detection (S6)', () => {
   it('does not escalate with fewer than two attempts', () => {

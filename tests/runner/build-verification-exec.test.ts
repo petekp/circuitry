@@ -11,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { BuildPlan, BuildVerification } from '../../src/flows/build/reports.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
@@ -19,11 +20,6 @@ import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
 import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
 import { RunTrace } from '../../src/schemas/run.js';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function writeJson(root: string, rel: string, body: unknown): void {
   const abs = join(root, rel);
@@ -161,9 +157,9 @@ function planWriter(plan: unknown): Pick<ExecutorRegistry, 'compose'> {
         run_id: context.runId,
         kind: 'step.report_written',
         step_id: step.id,
-        ...(context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt }),
+        attempt: context.activeStepAttempt ?? 1,
         report_path: report.path,
-        ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+        report_schema: report.schema ?? 'runtime.compose',
       });
       return { route: 'pass', details: { report: report.path } };
     },

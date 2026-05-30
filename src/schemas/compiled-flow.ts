@@ -40,7 +40,7 @@ const CompiledFlowBody = z
   .strict();
 
 const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: string) => {
-  ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: 'custom', path, message });
 };
 
 const TOURNAMENT_FANOUT_CONTRACT_MESSAGE =

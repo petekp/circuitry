@@ -8,16 +8,15 @@
 import { randomUUID } from 'node:crypto';
 import { findCompiledFlowPackageById } from '../../flows/catalog.js';
 import type { Axes } from '../../schemas/axes.js';
-import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
+import type { ChangeKindDeclaration, StandardChangeKind } from '../../schemas/change-kind.js';
+import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
-import type {
-  RecoveryFailureCause,
-  RecoveryRouteBindingV0,
-} from '../../schemas/recovery-route-kind.js';
+import type { RecoveryRouteBindingV0 } from '../../schemas/recovery-route-kind.js';
 import type { Ref } from '../../schemas/ref.js';
+import type { ProofAssessedTraceEntry } from '../../schemas/trace-entry.js';
 import { isProofPlanBlockedError } from '../../shared/proof-plan.js';
-import { type AcceptanceRetryFeedback, isAcceptanceRetryFeedback } from '../acceptance-criteria.js';
+import { isAcceptanceRetryFeedback } from '../acceptance-criteria.js';
 import type { RouteTarget, TerminalTarget } from '../domain/route.js';
 import type { RunClosedOutcome } from '../domain/run.js';
 import { isWaitingCheckpointStepOutcome } from '../domain/step.js';
@@ -29,6 +28,12 @@ import { assertExecutableFlow } from '../manifest/validate-executable-flow.js';
 import type { RuntimeExecutionCapabilities } from './capabilities.js';
 import { appendFlowSelectionGuidance, appendRecoveryRouteGuidance } from './guidance.js';
 import { writeRuntimeManifestSnapshot } from './manifest-snapshot.js';
+import {
+  type RecoveryFailureEvidence,
+  recoveryBindingVerdict,
+  recoveryCauseAllowed,
+} from './recovery-binding-verdict.js';
+import { RecoveryCorridor } from './recovery-corridor.js';
 import { type RuntimeRunResult, writeRuntimeRunResult } from './result-writer.js';
 import { openRunBoundary } from './run-boundary.js';
 import type { RunContext } from './run-context.js';
@@ -102,19 +107,6 @@ export function isGraphRejectedOutcome(
   return 'kind' in result && result.kind === 'rejected';
 }
 
-interface RecoveryFailureEvidence {
-  readonly ref: Ref;
-  readonly cause: RecoveryFailureCause;
-}
-
-interface ActiveRecovery {
-  readonly originStepId: string;
-  readonly route: string;
-  readonly reason?: string;
-  readonly failure?: RecoveryFailureEvidence;
-  readonly acceptanceFeedback?: AcceptanceRetryFeedback;
-}
-
 function defaultManifestHash(flow: ExecutableFlow): string {
   return `runtime:${flow.id}@${flow.version}`;
 }
@@ -137,7 +129,10 @@ function runOutcomeForPrimaryResultOutcome(outcome: string): RunClosedOutcome | 
   return 'stopped';
 }
 
-async function terminalOutcomeBoundToPrimaryResult(
+// Exported for characterization (terminal-outcome-bound-primary-result.test.ts):
+// the close-time bound read must fail open (return undefined, never throw) so a
+// missing or corrupt primary result falls through to the proof-derived outcome.
+export async function terminalOutcomeBoundToPrimaryResult(
   context: RunContext,
   outcome: RunClosedOutcome,
 ): Promise<{ readonly outcome: RunClosedOutcome; readonly reason: string } | undefined> {
@@ -147,7 +142,17 @@ async function terminalOutcomeBoundToPrimaryResult(
   const primaryResultPath = pkg.runtimeSurface?.primaryResult?.path;
   if (primaryResultPath === undefined) return undefined;
 
-  const primaryResult = await context.files.readJson(primaryResultPath);
+  // The primary result is read at close time to bind the run outcome. Reading it
+  // can throw (the file may be absent, or hold malformed JSON), and a throw here
+  // would turn an otherwise-successful @complete close into a runtime exception.
+  // Fail open: if the bound read cannot be completed, fall through to the
+  // proof-derived outcome rather than crashing the close path.
+  let primaryResult: unknown;
+  try {
+    primaryResult = await context.files.readJson(primaryResultPath);
+  } catch {
+    return undefined;
+  }
   if (typeof primaryResult !== 'object' || primaryResult === null) return undefined;
   const primaryOutcome = (primaryResult as { readonly outcome?: unknown }).outcome;
   if (typeof primaryOutcome !== 'string') return undefined;
@@ -254,8 +259,10 @@ function latestRecoveryFailureEvidence(input: {
   readonly details: Record<string, unknown>;
 }): RecoveryFailureEvidence | undefined {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.kind !== 'check.evaluated' && entry.kind !== 'relay.failed') continue;
     if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
-    if (entry.kind === 'check.evaluated' && entry.outcome === 'fail') {
+    if (entry.kind === 'check.evaluated') {
+      if (entry.outcome !== 'fail') continue;
       return {
         ref: traceRefForEntry({
           context: input.context,
@@ -268,17 +275,15 @@ function latestRecoveryFailureEvidence(input: {
           : 'failed_check',
       };
     }
-    if (entry.kind === 'relay.failed') {
-      return {
-        ref: traceRefForEntry({
-          context: input.context,
-          stepId: input.stepId,
-          attempt: input.attempt,
-          sequence: entry.sequence,
-        }),
-        cause: 'relay_connector_failed',
-      };
-    }
+    return {
+      ref: traceRefForEntry({
+        context: input.context,
+        stepId: input.stepId,
+        attempt: input.attempt,
+        sequence: entry.sequence,
+      }),
+      cause: 'relay_connector_failed',
+    };
   }
   return undefined;
 }
@@ -289,8 +294,8 @@ function latestStepReportOrRelayRef(input: {
   readonly attempt: number;
 }): Ref | undefined {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
-    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
     if (entry.kind !== 'step.report_written' && entry.kind !== 'relay.result') continue;
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt) continue;
     return traceRefForEntry({
       context: input.context,
       stepId: input.stepId,
@@ -315,121 +320,6 @@ function reportSelectedCheckpointBoundaryEvidence(input: {
   return ref === undefined ? undefined : { ref, cause: 'checkpoint_boundary' };
 }
 
-function activeRecoveryCorridorCause(input: {
-  readonly activeRecovery: ActiveRecovery;
-  readonly binding: RecoveryRouteBindingV0 | undefined;
-}): RecoveryFailureCause {
-  if (
-    input.binding?.kind === 'checkpoint_authority' &&
-    input.binding.allowed_failure_causes.includes('checkpoint_boundary')
-  ) {
-    return 'checkpoint_boundary';
-  }
-  return input.activeRecovery.failure?.cause ?? 'unknown_failure';
-}
-
-function latestActiveRecoveryCorridorEvidence(input: {
-  readonly context: RunContext;
-  readonly stepId: string;
-  readonly attempt: number;
-  readonly binding: RecoveryRouteBindingV0 | undefined;
-  readonly activeRecovery: ActiveRecovery | undefined;
-}): RecoveryFailureEvidence | undefined {
-  if (input.activeRecovery?.failure === undefined) return undefined;
-  const ref = latestStepReportOrRelayRef(input);
-  if (ref === undefined) return undefined;
-  return {
-    ref,
-    cause: activeRecoveryCorridorCause({
-      activeRecovery: input.activeRecovery,
-      binding: input.binding,
-    }),
-  };
-}
-
-function recoveryCauseAllowed(
-  binding: RecoveryRouteBindingV0,
-  cause: RecoveryFailureCause,
-): boolean {
-  return binding.allowed_failure_causes.includes(cause);
-}
-
-function missingRecoveryBindingReason(input: {
-  readonly stepId: string;
-  readonly route: string;
-  readonly cause: RecoveryFailureCause;
-}): string {
-  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
-}
-
-function recoveryCauseNotAllowedReason(input: {
-  readonly stepId: string;
-  readonly route: string;
-  readonly cause: RecoveryFailureCause;
-  readonly binding: RecoveryRouteBindingV0;
-}): string {
-  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(', ')}`;
-}
-
-function isActiveRecoveryRoute(
-  activeRecovery: ActiveRecovery | undefined,
-  route: string | undefined,
-): boolean {
-  return route !== undefined && activeRecovery?.route === route;
-}
-
-function canReachStepViaNonRecoveryRoutes(input: {
-  readonly steps: ReadonlyMap<string, ExecutableStep>;
-  readonly bindings: readonly RecoveryRouteBindingV0[] | undefined;
-  readonly fromStepId: string;
-  readonly targetStepId: string;
-}): boolean {
-  if (input.fromStepId === input.targetStepId) return true;
-  const seen = new Set<string>();
-  const queue = [input.fromStepId];
-
-  for (let index = 0; index < queue.length; index += 1) {
-    const stepId = queue[index];
-    if (stepId === undefined || seen.has(stepId)) continue;
-    seen.add(stepId);
-    const step = input.steps.get(stepId);
-    if (step === undefined) continue;
-    for (const [route, target] of Object.entries(step.routes)) {
-      if (
-        isRecoveryRouteForMechanics({ bindings: input.bindings, step, route }) ||
-        target.kind !== 'step'
-      ) {
-        continue;
-      }
-      if (target.stepId === input.targetStepId) return true;
-      queue.push(target.stepId);
-    }
-  }
-
-  return false;
-}
-
-function isRecoveryReturnCorridor(input: {
-  readonly steps: ReadonlyMap<string, ExecutableStep>;
-  readonly bindings: readonly RecoveryRouteBindingV0[] | undefined;
-  readonly activeRecovery: ActiveRecovery | undefined;
-  readonly stepId: string;
-  readonly route: string | undefined;
-}): boolean {
-  if (
-    input.activeRecovery === undefined ||
-    isActiveRecoveryRoute(input.activeRecovery, input.route)
-  ) {
-    return false;
-  }
-  return canReachStepViaNonRecoveryRoutes({
-    steps: input.steps,
-    bindings: input.bindings,
-    fromStepId: input.stepId,
-    targetStepId: input.activeRecovery.originStepId,
-  });
-}
-
 function configuredMaxAttempts(step: ExecutableStep): number | undefined {
   const budgets = step.budgets;
   if (budgets === undefined || budgets === null || typeof budgets !== 'object') return undefined;
@@ -441,6 +331,17 @@ function configuredMaxAttempts(step: ExecutableStep): number | undefined {
 
 function maxAttemptsForRoute(step: ExecutableStep, recoveryRoute: boolean): number {
   return configuredMaxAttempts(step) ?? (recoveryRoute ? 2 : 1);
+}
+
+function standardChangeKindDeclaration(
+  changeKind: StandardChangeKind['change_kind'],
+): ChangeKindDeclaration {
+  return {
+    change_kind: changeKind,
+    failure_mode: 'runtime execution cannot produce required reports',
+    acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
+    alternate_framing: 'start a fresh flow with a narrower goal',
+  };
 }
 
 function bootstrapChangeKind(input: {
@@ -456,19 +357,9 @@ function bootstrapChangeKind(input: {
     defaultKind !== 'discovery' &&
     defaultKind !== 'disposable'
   ) {
-    return {
-      change_kind: 'ratchet-advance',
-      failure_mode: 'runtime execution cannot produce required reports',
-      acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
-      alternate_framing: 'start a fresh flow with a narrower goal',
-    };
+    return standardChangeKindDeclaration('ratchet-advance');
   }
-  return {
-    change_kind: defaultKind,
-    failure_mode: 'runtime execution cannot produce required reports',
-    acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
-    alternate_framing: 'start a fresh flow with a narrower goal',
-  };
+  return standardChangeKindDeclaration(defaultKind);
 }
 
 function completedStepCountsFromTrace(entries: readonly TraceEntry[]): Map<string, number> {
@@ -501,11 +392,13 @@ function routeSelectedFromReport(details: Record<string, unknown>): boolean {
   return details.route_source === 'report';
 }
 
-function traceScope(entry: TraceEntry): Record<string, unknown> {
+function traceScope(
+  entry: GuidanceDecisionTraceEntryBody | ProofAssessedTraceEntry,
+): Record<string, unknown> {
   return recordValue(entry.scope);
 }
 
-function proofPolicyRequirementKey(entry: TraceEntry): string {
+function proofPolicyRequirementKey(entry: GuidanceDecisionTraceEntryBody): string {
   const scope = traceScope(entry);
   const selected = recordValue(entry.selected);
   return JSON.stringify({
@@ -521,7 +414,7 @@ function completeCloseProofGap(context: RunContext): string | undefined {
   const entries = context.trace.getAll();
   const latestRequiredProofByRequirement = new Map<
     string,
-    { readonly entry: TraceEntry; readonly index: number }
+    { readonly entry: GuidanceDecisionTraceEntryBody; readonly index: number }
   >();
   for (const [index, entry] of entries.entries()) {
     if (entry.kind !== 'guidance.decision' || entry.subject !== 'proof_policy') continue;
@@ -695,9 +588,16 @@ async function executeExecutableFlowOutcomeUnsafe(
 
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken: string | undefined;
-  let activeRecovery: ActiveRecovery | undefined;
   const recoveryRouteBindings =
     options.recoveryRouteBindings ?? (options.workContractRef === undefined ? undefined : []);
+  const corridor = new RecoveryCorridor({
+    steps,
+    bindings: recoveryRouteBindings,
+    routeHasRecoveryMechanics: ({ step, route }) =>
+      isRecoveryRouteForMechanics({ bindings: recoveryRouteBindings, step, route }),
+    latestStepReportOrRelayRef: ({ stepId, attempt }) =>
+      latestStepReportOrRelayRef({ context, stepId, attempt }),
+  });
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
     if (step === undefined) {
@@ -711,12 +611,9 @@ async function executeExecutableFlowOutcomeUnsafe(
 
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
-    const incomingIsActiveRecovery = isActiveRecoveryRoute(activeRecovery, incomingRouteTaken);
+    const incomingIsActiveRecovery = corridor.isActiveRoute(incomingRouteTaken);
     const maxAttempts = maxAttemptsForRoute(step, incomingIsActiveRecovery);
-    const isRecoveryOriginReentry = isRecoveryReturnCorridor({
-      steps,
-      bindings: recoveryRouteBindings,
-      activeRecovery,
+    const isRecoveryOriginReentry = corridor.isReturnToOrigin({
       stepId: step.id,
       route: incomingRouteTaken,
     });
@@ -727,10 +624,7 @@ async function executeExecutableFlowOutcomeUnsafe(
       !isRecoveryOriginReentry &&
       (!incomingIsActiveRecovery || completedCount >= maxAttempts)
     ) {
-      const recoverySuffix =
-        activeRecovery?.reason === undefined
-          ? ''
-          : `; last recovery reason: ${activeRecovery.reason}`;
+      const recoverySuffix = corridor.lastReasonSuffix();
       const reason =
         incomingRouteTaken === undefined
           ? `route cycle detected at step '${step.id}'; aborting before re-entering an already completed step`
@@ -752,11 +646,10 @@ async function executeExecutableFlowOutcomeUnsafe(
     let route: string;
     let details: Record<string, unknown>;
     try {
-      const acceptanceRetryFeedback =
-        activeRecovery?.originStepId === step.id &&
-        isActiveRecoveryRoute(activeRecovery, incomingRouteTaken)
-          ? activeRecovery.acceptanceFeedback
-          : undefined;
+      const acceptanceRetryFeedback = corridor.acceptanceFeedbackForReentry({
+        stepId: step.id,
+        incomingRoute: incomingRouteTaken,
+      });
       const stepContext: RunContext = {
         ...context,
         activeStepAttempt: attempt,
@@ -835,64 +728,31 @@ async function executeExecutableFlowOutcomeUnsafe(
     const recoveryFailure =
       directRecoveryFailure ??
       (routeHasRecoveryMechanics
-        ? latestActiveRecoveryCorridorEvidence({
-            context,
+        ? corridor.evidenceFor({
             stepId: step.id,
             attempt,
             binding: recoveryBinding,
-            activeRecovery,
           })
         : undefined);
 
-    if (
-      context.workContractRef !== undefined &&
-      step.kind !== 'checkpoint' &&
-      routeHasRecoveryMechanics &&
-      recoveryFailure === undefined
-    ) {
-      const reason = `step '${step.id}' selected recovery route '${route}' without failure evidence`;
+    const bindingVerdict = recoveryBindingVerdict({
+      workContractRef: context.workContractRef,
+      stepId: step.id,
+      stepKind: step.kind,
+      route,
+      routeHasRecoveryMechanics,
+      recoveryFailure,
+      recoveryBinding,
+    });
+    if (bindingVerdict.kind === 'abort') {
       await trace.append({
         run_id: runId,
         kind: 'step.aborted',
         step_id: step.id,
         attempt,
-        reason,
+        reason: bindingVerdict.reason,
       });
-      return await closeRun(context, 'aborted', undefined, reason);
-    }
-
-    if (context.workContractRef !== undefined && recoveryFailure !== undefined) {
-      if (recoveryBinding === undefined) {
-        const reason = missingRecoveryBindingReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause,
-        });
-        await trace.append({
-          run_id: runId,
-          kind: 'step.aborted',
-          step_id: step.id,
-          attempt,
-          reason,
-        });
-        return await closeRun(context, 'aborted', undefined, reason);
-      }
-      if (!recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
-        const reason = recoveryCauseNotAllowedReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause,
-          binding: recoveryBinding,
-        });
-        await trace.append({
-          run_id: runId,
-          kind: 'step.aborted',
-          step_id: step.id,
-          attempt,
-          reason,
-        });
-        return await closeRun(context, 'aborted', undefined, reason);
-      }
+      return await closeRun(context, 'aborted', undefined, bindingVerdict.reason);
     }
 
     if (target.kind === 'step' && target.stepId === step.id && route === 'pass') {
@@ -910,10 +770,7 @@ async function executeExecutableFlowOutcomeUnsafe(
     if (target.kind === 'step') {
       const targetCompletedCount = completedStepCounts.get(target.stepId) ?? 0;
       const targetStep = steps.get(target.stepId);
-      const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
-        steps,
-        bindings: recoveryRouteBindings,
-        activeRecovery,
+      const isRecoveryReturnToOrigin = corridor.isReturnToOrigin({
         stepId: target.stepId,
         route,
       });
@@ -926,10 +783,7 @@ async function executeExecutableFlowOutcomeUnsafe(
         !isRecoveryReturnToOrigin &&
         (!routeHasRecoveryMechanics || targetCompletedCount >= targetMaxAttempts)
       ) {
-        const recoverySuffix =
-          activeRecovery?.reason === undefined
-            ? ''
-            : `; last recovery reason: ${activeRecovery.reason}`;
+        const recoverySuffix = corridor.lastReasonSuffix();
         const reason = routeHasRecoveryMechanics
           ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}`
           : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
@@ -945,25 +799,15 @@ async function executeExecutableFlowOutcomeUnsafe(
     }
 
     if (routeHasRecoveryMechanics) {
-      const recoveryReason = details.reason;
-      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback)
-        ? details.acceptance_feedback
-        : undefined;
-      activeRecovery =
-        typeof recoveryReason === 'string'
-          ? {
-              originStepId: step.id,
-              route,
-              reason: recoveryReason,
-              ...(recoveryFailure === undefined ? {} : { failure: recoveryFailure }),
-              ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
-            }
-          : {
-              originStepId: step.id,
-              route,
-              ...(recoveryFailure === undefined ? {} : { failure: recoveryFailure }),
-              ...(acceptanceFeedback === undefined ? {} : { acceptanceFeedback }),
-            };
+      corridor.enter({
+        originStepId: step.id,
+        route,
+        recoveryReason: details.reason,
+        recoveryFailure,
+        acceptanceFeedback: isAcceptanceRetryFeedback(details.acceptance_feedback)
+          ? details.acceptance_feedback
+          : undefined,
+      });
     }
 
     if (recoveryBinding !== undefined) {
@@ -983,13 +827,7 @@ async function executeExecutableFlowOutcomeUnsafe(
       }
     }
 
-    if (
-      activeRecovery !== undefined &&
-      activeRecovery.originStepId === step.id &&
-      !routeHasRecoveryMechanics
-    ) {
-      activeRecovery = undefined;
-    }
+    corridor.clearIfExitingOrigin({ stepId: step.id, routeHasRecoveryMechanics });
 
     await trace.append({
       run_id: runId,

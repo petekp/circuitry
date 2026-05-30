@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import {
   executeCheckpoint,
@@ -17,11 +18,7 @@ import { RunFileStore } from '../../src/runtime/run-files/run-file-store.js';
 import { nodeExternalFileReader } from '../../src/runtime/run/external-files.js';
 import type { RunContext } from '../../src/runtime/run/run-context.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
+import type { CheckpointPolicy } from '../../src/schemas/step.js';
 
 function contextFor(
   flow: ExecutableFlow,
@@ -68,14 +65,18 @@ function verificationFlow(): ExecutableFlow {
         writes: {
           report: { path: 'reports/verification.json', schema: 'fixture.verification@v1' },
         },
-        check: { kind: 'schema_sections' },
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
       },
     ],
   };
 }
 
 function checkpointFlow(
-  policy: Record<string, unknown>,
+  policy: CheckpointPolicy,
   depth: string,
 ): {
   readonly flow: ExecutableFlow;

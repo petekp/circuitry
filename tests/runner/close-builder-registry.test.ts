@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { findCloseBuilder } from '../../src/flows/registries/close-writers/registry.js';
 import type { CloseBuilder } from '../../src/flows/registries/close-writers/types.js';
@@ -46,11 +47,6 @@ const syntheticBuilder: CloseBuilder = {
     });
   },
 };
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function syntheticCloseCompiledFlow(): CompiledFlow {
   return CompiledFlow.parse({

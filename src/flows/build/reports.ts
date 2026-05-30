@@ -4,6 +4,7 @@ import {
   VerificationCommandResult,
   VerificationResult,
 } from '../../schemas/verification.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'build.brief': 'build.brief@v1',
@@ -90,7 +91,7 @@ export const BuildCheckpointPacket = z
     const choiceIds = new Set(packet.choices.map((choice) => choice.id));
     if (!choiceIds.has(packet.recommendation.choice_id)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['recommendation', 'choice_id'],
         message: 'recommendation.choice_id must reference a declared checkpoint choice',
       });
@@ -173,7 +174,7 @@ export const BuildReview = z
   .superRefine((review, ctx) => {
     if (review.verdict !== 'accept' && review.findings.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['findings'],
         message: `findings must be non-empty when verdict is '${review.verdict}'`,
       });
@@ -190,23 +191,10 @@ export const BuildResultReportId = z.enum([
 ]);
 export type BuildResultReportId = z.infer<typeof BuildResultReportId>;
 
-export const BuildResultReportPointer = z
-  .object({
-    report_id: BuildResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const BuildResultReportPointer = resultReportPointer(
+  BuildResultReportId,
+  BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID,
+);
 export type BuildResultReportPointer = z.infer<typeof BuildResultReportPointer>;
 
 export const BuildResult = z
@@ -223,7 +211,7 @@ export const BuildResult = z
     for (const [index, pointer] of result.evidence_links.entries()) {
       if (seen.has(pointer.report_id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_links', index, 'report_id'],
           message: `duplicate report_id '${pointer.report_id}'`,
         });
@@ -233,7 +221,7 @@ export const BuildResult = z
     for (const reportId of BuildResultReportId.options) {
       if (!seen.has(reportId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_links'],
           message: `missing report_id '${reportId}'`,
         });
@@ -242,14 +230,14 @@ export const BuildResult = z
     if (result.outcome === 'complete') {
       if (result.verification_status !== 'passed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['verification_status'],
           message: "verification_status must be 'passed' when outcome is 'complete'",
         });
       }
       if (result.review_verdict !== 'accept') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_verdict'],
           message: "review_verdict must be 'accept' when outcome is 'complete'",
         });
@@ -258,14 +246,14 @@ export const BuildResult = z
     if (result.outcome === 'needs_attention') {
       if (result.verification_status !== 'passed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['verification_status'],
           message: "verification_status must be 'passed' when outcome is 'needs_attention'",
         });
       }
       if (result.review_verdict !== 'accept-with-fixes') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_verdict'],
           message: "review_verdict must be 'accept-with-fixes' when outcome is 'needs_attention'",
         });

@@ -15,7 +15,15 @@ import {
 } from '../domain/route.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { Selection } from '../domain/selection.js';
-import type { BaseStep, ExecutableFlow, ExecutableStep } from './executable-flow.js';
+import type {
+  BaseStep,
+  CheckpointStep,
+  ExecutableFlow,
+  ExecutableStep,
+  FanoutStep,
+  RelayStep,
+  SubRunStep,
+} from './executable-flow.js';
 import { assertExecutableFlow } from './validate-executable-flow.js';
 
 type CompiledStep = CompiledFlow['steps'][number];
@@ -86,6 +94,13 @@ function baseStep(step: CompiledStep): BaseStep {
   };
 }
 
+// `baseStep` copies `step.check` verbatim into the base object, so every spread
+// below already carries the correct check value at runtime. The base type only
+// knows the wide `Check` union, though. Kinds whose executors read a specific
+// check shape (checkpoint/sub-run/fanout) narrow `check` to that shape via a
+// type-only assertion: the runtime object is unchanged, and the `Step` schema
+// pins `check` to exactly one variant per `kind`, which `baseStep` already placed
+// here. Compose/relay keep the wide `Check` (their executors never read it).
 function convertStep(step: CompiledStep): ExecutableStep {
   const base = baseStep(step);
   if (step.kind === 'compose') {
@@ -100,7 +115,7 @@ function convertStep(step: CompiledStep): ExecutableStep {
       kind: 'checkpoint',
       choices: step.policy.choices?.map((choice) => choice.id) ?? [],
       policy: step.policy,
-    };
+    } as CheckpointStep;
   }
   if (step.kind === 'relay') {
     return {
@@ -112,7 +127,7 @@ function convertStep(step: CompiledStep): ExecutableStep {
         ? {}
         : { acceptanceCriteria: step.acceptance_criteria }),
       ...(step.writes.report === undefined ? {} : { report: toRunFileRef(step.writes.report) }),
-    };
+    } as RelayStep;
   }
   if (step.kind === 'sub-run') {
     return {
@@ -123,20 +138,16 @@ function convertStep(step: CompiledStep): ExecutableStep {
       ...(step.flow_ref.version === undefined ? {} : { version: step.flow_ref.version }),
       goal: step.goal,
       depth: step.depth,
-    };
+    } as SubRunStep;
   }
   return {
     ...base,
     kind: 'fanout',
     branches: step.branches,
-    join: {
-      aggregate: toRunFileRef(step.writes.aggregate),
-      on_child_failure: step.on_child_failure,
-    },
     concurrency: step.concurrency,
     onChildFailure: step.on_child_failure,
     ...(step.rubric === undefined ? {} : { rubric: step.rubric }),
-  };
+  } as FanoutStep;
 }
 
 export function fromCompiledFlow(flow: CompiledFlow): ExecutableFlow {

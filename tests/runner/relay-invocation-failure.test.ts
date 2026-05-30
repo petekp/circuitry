@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
@@ -15,11 +16,6 @@ function loadFixture(): { flow: CompiledFlow; bytes: Buffer } {
   const bytes = readFileSync(FIXTURE_PATH);
   const raw: unknown = JSON.parse(bytes.toString('utf8'));
   return { flow: CompiledFlow.parse(raw), bytes };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function throwingRelayer(): RelayFn {

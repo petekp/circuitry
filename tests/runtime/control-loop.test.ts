@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TerminalTarget } from '../../src/runtime/domain/route.js';
@@ -16,20 +15,11 @@ import {
 } from '../../src/schemas/proof-assessment.js';
 import { type RunResult as ParsedRunResult, RunResult } from '../../src/schemas/result.js';
 import { RunTrace } from '../../src/schemas/run.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { NO_VERDICT_SENTINEL } from '../../src/shared/relay-support.js';
+import { makeStubRelayer, withTempRun } from '../helpers/runtime-fixtures.js';
 
 type RichCheckpointRoute = 'ask' | 'retry' | 'revise' | 'stop' | 'handoff' | 'escalate';
-
-async function withTempRun<T>(prefix: string, fn: (runDir: string) => Promise<T>): Promise<T> {
-  const runDir = await mkdtemp(join(tmpdir(), prefix));
-  try {
-    return await fn(runDir);
-  } finally {
-    await rm(runDir, { recursive: true, force: true });
-  }
-}
 
 function terminalFlow(target: TerminalTarget): ExecutableFlow {
   return {
@@ -42,6 +32,11 @@ function terminalFlow(target: TerminalTarget): ExecutableFlow {
         id: 'close',
         kind: 'compose',
         writer: 'terminal-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         body: { target },
         writes: { report: { path: 'reports/terminal.json' } },
         routes: { pass: { kind: 'terminal', target } },
@@ -481,36 +476,21 @@ function verificationFlowBytes(reportSchema = 'never-registered.verification@v1'
 }
 
 function relayerWith(resultBody: string, connectorName = 'claude-code'): RelayFn {
-  return {
+  return makeStubRelayer(resultBody, {
     connectorName,
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'runtime-control-loop-relay',
-      result_body: resultBody,
-      duration_ms: 0,
-      cli_version: 'test-relayer',
-    }),
-  };
+    receipt_id: 'runtime-control-loop-relay',
+  });
 }
 
 function sequenceRelayerWith(resultBodies: readonly string[]): RelayFn {
   let call = 0;
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => {
-      const resultBody = resultBodies[call++];
-      if (resultBody === undefined) {
-        throw new Error(`sequence relayer exhausted at call ${call}`);
-      }
-      return {
-        request_payload: input.prompt,
-        receipt_id: `runtime-control-loop-relay-${call}`,
-        result_body: resultBody,
-        duration_ms: 0,
-        cli_version: 'test-relayer',
-      };
-    },
-  };
+  return makeStubRelayer(() => {
+    const resultBody = resultBodies[call++];
+    if (resultBody === undefined) {
+      throw new Error(`sequence relayer exhausted at call ${call}`);
+    }
+    return resultBody;
+  });
 }
 
 async function runRuntimeProofRelayCase(input: {
@@ -671,6 +651,11 @@ describe('runtime control-loop parity twins', () => {
           id: 'close-step',
           kind: 'compose',
           writer: 'test-close',
+          check: {
+            kind: 'schema_sections',
+            source: { kind: 'report', ref: 'report' },
+            required: ['summary'],
+          },
           body: {},
           writes: { report: { path: 'reports/close.json' } },
           routes: { pass: { kind: 'terminal', target: '@complete' } },
@@ -1031,7 +1016,8 @@ describe('runtime control-loop parity twins', () => {
     expect(result.reason).toBe("route 'retry' for step 'checkpoint-step' exhausted max_attempts=2");
     expect(resultJson.reason).toBe(result.reason);
     const completedRetries = trace.filter(
-      (entry) => entry.kind === 'step.completed' && entry.route_taken === 'retry',
+      (entry): entry is Extract<(typeof trace)[number], { kind: 'step.completed' }> =>
+        entry.kind === 'step.completed' && entry.route_taken === 'retry',
     );
     expect(completedRetries).toHaveLength(2);
     expect(completedRetries.map((entry) => entry.attempt)).toEqual([1, 2]);
@@ -1729,23 +1715,12 @@ describe('runtime control-loop parity twins', () => {
   it('retries relay acceptance criteria with feedback but does not close weak report-field proof', async () => {
     const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
     const prompts: string[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
-        prompts.push(input.prompt);
-        const resultBody =
-          prompts.length === 1
-            ? '{"verdict":"ok","evidence":[]}'
-            : '{"verdict":"ok","evidence":["fixed"]}';
-        return {
-          request_payload: input.prompt,
-          receipt_id: `runtime-control-loop-relay-${prompts.length}`,
-          result_body: resultBody,
-          duration_ms: 0,
-          cli_version: 'test-relayer',
-        };
-      },
-    };
+    const relayer: RelayFn = makeStubRelayer((input) => {
+      prompts.push(input.prompt);
+      return prompts.length === 1
+        ? '{"verdict":"ok","evidence":[]}'
+        : '{"verdict":"ok","evidence":["fixed"]}';
+    });
 
     const { result, trace, resultJson, inspection } = await runRuntimeProofRelayCase({
       flowBytes: relayFlowBytes({
@@ -1863,19 +1838,10 @@ describe('runtime control-loop parity twins', () => {
   it('bounds relay acceptance retries with the existing max_attempts budget', async () => {
     const report = { path: 'reports/relay-canonical.json', schema: 'runtime-proof-canonical@v1' };
     const prompts: string[] = [];
-    const relayer: RelayFn = {
-      connectorName: 'claude-code',
-      relay: async (input): Promise<RelayResult> => {
-        prompts.push(input.prompt);
-        return {
-          request_payload: input.prompt,
-          receipt_id: `runtime-control-loop-relay-${prompts.length}`,
-          result_body: '{"verdict":"ok","evidence":[]}',
-          duration_ms: 0,
-          cli_version: 'test-relayer',
-        };
-      },
-    };
+    const relayer: RelayFn = makeStubRelayer((input) => {
+      prompts.push(input.prompt);
+      return '{"verdict":"ok","evidence":[]}';
+    });
 
     const { result, trace, resultJson } = await runRuntimeProofRelayCase({
       flowBytes: relayFlowBytes({
@@ -1908,7 +1874,8 @@ describe('runtime control-loop parity twins', () => {
     expect(
       trace
         .filter(
-          (entry) => entry.kind === 'check.evaluated' && entry.check_kind === 'acceptance_criteria',
+          (entry): entry is Extract<(typeof trace)[number], { kind: 'check.evaluated' }> =>
+            entry.kind === 'check.evaluated' && entry.check_kind === 'acceptance_criteria',
         )
         .map((entry) => ({ attempt: entry.attempt, outcome: entry.outcome })),
     ).toEqual([

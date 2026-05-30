@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({
   verdict: 'NO_ISSUES_FOUND',
@@ -23,72 +23,38 @@ const BUILD_RELAY_BODY = JSON.stringify({
 });
 const RUNTIME_SURFACE_SOAK_TIMEOUT_MS = 15_000;
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 function relayerWithBody(body: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-soak',
-      result_body: body,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+  return makeStubRelayer(body, { receipt_id: 'stub-receipt-runtime-soak' });
 }
 
 function buildRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-runtime-soak-build',
-      result_body: input.prompt.includes('Step: review-step')
+  return makeStubRelayer(
+    (input) =>
+      input.prompt.includes('Step: review-step')
         ? JSON.stringify({
             verdict: 'accept',
             summary: 'No blocking issue found',
             findings: [],
           })
         : BUILD_RELAY_BODY,
-      duration_ms: 1,
-      cli_version: 'stub',
-    }),
-  };
+    { receipt_id: 'stub-receipt-runtime-soak-build' },
+  );
 }
 
 async function captureMain(
   argv: readonly string[],
   options: { readonly relayer?: RelayFn; readonly configCwd?: string } = {},
 ): Promise<{ readonly code: number; readonly stdout: string; readonly stderr: string }> {
-  let stdout = '';
-  let stderr = '';
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await main(argv, {
+  const { result, stdout, stderr } = await captureStreams(() =>
+    main(argv, {
       ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
       now: deterministicNow(Date.UTC(2026, 4, 3, 21, 0, 0)),
       runId: randomUUID(),
       configHomeDir: join(runFolderBase, 'empty-home'),
       configCwd: options.configCwd ?? process.cwd(),
-    });
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+    }),
+  );
+  return { code: result, stdout, stderr };
 }
 
 function writeProjectRoot(

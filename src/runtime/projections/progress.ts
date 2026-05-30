@@ -1,16 +1,12 @@
 import { join } from 'node:path';
 import type { CompiledFlowProgressStep, CompiledFlowProgressSurface } from '../../flows/types.js';
-import {
-  BUILTIN_CONNECTOR_CAPABILITIES,
-  type FilesystemCapability,
-  type ResolvedConnector,
-} from '../../schemas/connector.js';
-import type { CompiledFlowId, RunId as ProgressRunId, StepId } from '../../schemas/ids.js';
+import type { CompiledFlowId, RunId as ProgressRunId } from '../../schemas/ids.js';
 import type {
   ProgressPresentation,
   ProgressTask,
   ProgressTaskStatus,
 } from '../../schemas/progress-event.js';
+import type { StepReportWrittenTraceEntry } from '../../schemas/trace-entry.js';
 import {
   progressDisplay,
   progressPresentation,
@@ -24,43 +20,22 @@ import {
 } from '../../shared/write-capable-worker-disclosure.js';
 import type { TraceEntry } from '../domain/trace.js';
 import type { ExecutableFlow } from '../manifest/executable-flow.js';
+import {
+  type ProgressRelayRole,
+  connectorFilesystemCapability,
+  connectorFromTrace,
+  fanoutBranchKind,
+  fanoutPolicy,
+  optionalRunClosedOutcome,
+  relayRoleFromTrace,
+  runOutcome,
+  runReason,
+  stringArrayValue,
+} from '../trace/trace-fields.js';
 import { tournamentCheckpointPresentation } from './tournament-checkpoint-context.js';
 
 export interface ProgressProjectionFiles {
   readText(path: string): string | undefined;
-}
-
-function connectorFilesystemCapability(connector: ResolvedConnector): FilesystemCapability {
-  return connector.kind === 'builtin'
-    ? BUILTIN_CONNECTOR_CAPABILITIES[connector.name].filesystem
-    : connector.capabilities.filesystem;
-}
-
-function connectorFromTrace(entry: TraceEntry): ResolvedConnector | undefined {
-  const connector = entry.connector;
-  if (connector === undefined || connector === null || typeof connector !== 'object') {
-    return undefined;
-  }
-  const record = connector as Record<string, unknown>;
-  if (record.kind === 'builtin' && (record.name === 'claude-code' || record.name === 'codex')) {
-    return { kind: 'builtin', name: record.name };
-  }
-  if (
-    record.kind === 'custom' &&
-    typeof record.name === 'string' &&
-    Array.isArray(record.command) &&
-    record.capabilities !== undefined
-  ) {
-    return connector as ResolvedConnector;
-  }
-  return undefined;
-}
-
-type ProgressRelayRole = 'researcher' | 'reviewer' | 'implementer';
-
-function relayRoleFromTrace(entry: TraceEntry): ProgressRelayRole | undefined {
-  const role = entry.role;
-  return role === 'researcher' || role === 'reviewer' || role === 'implementer' ? role : undefined;
 }
 
 function stepTitle(input: {
@@ -213,16 +188,9 @@ function reportEvidenceProgress(input: {
   readonly flowId: CompiledFlowId;
   readonly runId: ProgressRunId;
   readonly recordedAt: string;
-  readonly traceEntry: TraceEntry;
+  readonly traceEntry: StepReportWrittenTraceEntry;
   readonly files: ProgressProjectionFiles;
 }): void {
-  if (
-    input.traceEntry.step_id === undefined ||
-    input.traceEntry.report_path === undefined ||
-    input.traceEntry.report_schema === undefined
-  ) {
-    return;
-  }
   let body: unknown;
   try {
     body = readJsonReport(input.files, input.runDir, input.traceEntry.report_path);
@@ -256,7 +224,7 @@ function reportEvidenceProgress(input: {
             `Collected evidence with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}.`,
           )
         : suppressStatus(input.runId),
-    step_id: input.traceEntry.step_id as StepId,
+    step_id: input.traceEntry.step_id,
     report_path: input.traceEntry.report_path,
     report_schema: input.traceEntry.report_schema,
     warning_count: warnings.length,
@@ -271,40 +239,13 @@ function reportEvidenceProgress(input: {
       label: 'Evidence warning',
       display: progressDisplay(`Circuit: Evidence warning: ${warning.message}`, 'major', 'warning'),
       presentation: appendStatus(input.runId, `Evidence warning: ${warning.message}`),
-      step_id: input.traceEntry.step_id as StepId,
+      step_id: input.traceEntry.step_id,
       report_path: input.traceEntry.report_path,
       warning_kind: warning.kind,
       message: warning.message,
       ...(warning.path === undefined ? {} : { path: warning.path }),
     });
   }
-}
-
-function runOutcome(
-  entry: TraceEntry,
-): 'complete' | 'stopped' | 'handoff' | 'escalated' | 'aborted' {
-  const outcome = entry.outcome;
-  if (
-    outcome === 'complete' ||
-    outcome === 'stopped' ||
-    outcome === 'handoff' ||
-    outcome === 'escalated' ||
-    outcome === 'aborted'
-  ) {
-    return outcome;
-  }
-  return 'aborted';
-}
-
-function runReason(entry: TraceEntry): string | undefined {
-  const reason = entry.reason;
-  return typeof reason === 'string' && reason.length > 0 ? reason : undefined;
-}
-
-function stringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const entries = value.filter((entry): entry is string => typeof entry === 'string');
-  return entries.length === value.length && entries.length > 0 ? entries : undefined;
 }
 
 function checkpointPrompt(files: ProgressProjectionFiles, requestPath: string): string {
@@ -332,40 +273,6 @@ function checkpointChoiceLabel(choice: string): string {
 
 function checkpointRequestPath(runDir: string, requestPath: string): string {
   return requestPath.startsWith('/') ? requestPath : join(runDir, requestPath);
-}
-
-function fanoutChildOutcome(
-  value: unknown,
-): 'complete' | 'aborted' | 'handoff' | 'stopped' | 'escalated' | undefined {
-  if (
-    value === 'complete' ||
-    value === 'aborted' ||
-    value === 'handoff' ||
-    value === 'stopped' ||
-    value === 'escalated'
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-function fanoutPolicy(
-  value: unknown,
-): 'pick-winner' | 'disjoint-merge' | 'aggregate-only' | 'aggregate-survivors' | undefined {
-  if (
-    value === 'pick-winner' ||
-    value === 'disjoint-merge' ||
-    value === 'aggregate-only' ||
-    value === 'aggregate-survivors'
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-function fanoutBranchKind(value: unknown): 'relay' | 'sub-run' | undefined {
-  if (value === 'relay' || value === 'sub-run') return value;
-  return undefined;
 }
 
 function shouldWarnAboutWriteCapableWorker(flow: ExecutableFlow): boolean {
@@ -480,7 +387,7 @@ export function createProgressProjector(input: {
           label: display.title,
           display: progressDisplay(`Circuit: ${display.activeText}...`, 'major', 'info'),
           presentation: appendStatus(runId, `${display.activeText}...`),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
         });
@@ -515,7 +422,7 @@ export function createProgressProjector(input: {
           label: `Running ${role} relay with ${connector.name}`,
           display: progressDisplay(circuitDisplayText(statusText), 'major', 'info'),
           presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
           role,
@@ -546,7 +453,7 @@ export function createProgressProjector(input: {
           label: `Relay completed with ${entry.verdict}`,
           display: progressDisplay(circuitDisplayText(statusText), 'major', 'success'),
           presentation: replaceStatus(runId, `${stepId}:relay`, statusText),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: activeAttempts.get(stepId) ?? entry.attempt ?? 1,
           verdict: entry.verdict,
@@ -568,7 +475,7 @@ export function createProgressProjector(input: {
       }
       case 'fanout.started': {
         const stepId = entry.step_id;
-        const branchIds = stringArray(entry.branch_ids);
+        const branchIds = stringArrayValue(entry.branch_ids);
         if (stepId === undefined || branchIds === undefined) break;
         const title = stepTitle({ flow: input.flow, stepId });
         reportProgress(input.progress, {
@@ -588,7 +495,7 @@ export function createProgressProjector(input: {
             `${stepId}:fanout`,
             `Comparing ${branchIds.length} option${branchIds.length === 1 ? '' : 's'}...`,
           ),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_count: branchIds.length,
           branch_ids: branchIds,
@@ -611,7 +518,7 @@ export function createProgressProjector(input: {
           label: `Started branch ${entry.branch_id}`,
           display: progressDisplay(`Circuit: Started branch ${entry.branch_id}.`, 'detail', 'info'),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
           branch_kind: branchKind,
@@ -624,7 +531,7 @@ export function createProgressProjector(input: {
       }
       case 'fanout.branch_completed': {
         const stepId = entry.step_id;
-        const childOutcome = fanoutChildOutcome(entry.child_outcome);
+        const childOutcome = optionalRunClosedOutcome(entry.child_outcome);
         const branchKind = fanoutBranchKind(entry.branch_kind);
         if (
           stepId === undefined ||
@@ -650,7 +557,7 @@ export function createProgressProjector(input: {
             childOutcome === 'complete' ? 'success' : 'error',
           ),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           branch_id: entry.branch_id,
           branch_kind: branchKind,
@@ -685,7 +592,7 @@ export function createProgressProjector(input: {
           label: `Joined ${title}`,
           display: progressDisplay('Circuit: Finished comparing the options.', 'major', 'success'),
           presentation: replaceStatus(runId, `${stepId}:fanout`, 'Finished comparing the options.'),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: title,
           policy,
           aggregate_path: entry.aggregate_path,
@@ -699,7 +606,7 @@ export function createProgressProjector(input: {
       }
       case 'checkpoint.requested': {
         const stepId = entry.step_id;
-        const allowedChoices = stringArray(entry.options);
+        const allowedChoices = stringArrayValue(entry.options);
         if (
           stepId === undefined ||
           entry.request_path === undefined ||
@@ -743,7 +650,7 @@ export function createProgressProjector(input: {
             'checkpoint',
           ),
           presentation: appendStatus(runId, 'Waiting for your choice...'),
-          step_id: stepId as StepId,
+          step_id: stepId,
           request_path: requestPath,
           allowed_choices: allowedChoices,
         });
@@ -757,7 +664,7 @@ export function createProgressProjector(input: {
           display: progressDisplay(presentation.prompt, 'major', 'checkpoint'),
           presentation: suppressStatus(runId),
           checkpoint: {
-            step_id: stepId as StepId,
+            step_id: stepId,
             request_path: requestPath,
             allowed_choices: allowedChoices,
           },
@@ -818,7 +725,7 @@ export function createProgressProjector(input: {
             'success',
           ),
           presentation: suppressStatus(runId),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
           route_taken: entry.route_taken,
@@ -857,7 +764,7 @@ export function createProgressProjector(input: {
             'error',
           ),
           presentation: appendStatus(runId, `Marked ${display.taskTitle} as failed.`),
-          step_id: stepId as StepId,
+          step_id: stepId,
           step_title: display.title,
           attempt: entry.attempt,
           reason: entry.reason,

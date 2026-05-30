@@ -15,7 +15,7 @@ import {
 } from './guidance-decision.js';
 import { CompiledFlowId, InvocationId, RunId, SkillId, SkillSlotId, StepId } from './ids.js';
 import { ProofAssessmentId, ProofStatus } from './proof-assessment.js';
-import { Ref } from './ref.js';
+import { Ref, Sha256 } from './ref.js';
 import { ResolvedSelection } from './selection-policy.js';
 import { FanoutFailurePolicy, RelayRole } from './step.js';
 
@@ -26,13 +26,10 @@ const TraceEntryBase = z.object({
   run_id: RunId,
 });
 
-// SHA-256 over raw bytes, 64-char lowercase hex. Mirrors the convention
-// used by `ManifestHash` in src/schemas/manifest.ts so durable transcript
-// hashes are shape-compatible with manifest hashes at audit time.
-const HEX64 = /^[0-9a-f]{64}$/;
-const ContentHash = z.string().regex(HEX64, {
-  message: 'must be a 64-character lowercase hex SHA-256 digest',
-});
+// SHA-256 over raw bytes, 64-char lowercase hex. Reuses the canonical
+// `Sha256` scalar (src/schemas/ref.ts) so durable transcript hashes are
+// shape-compatible with every other content hash at audit time.
+const ContentHash = Sha256;
 
 export const RunBootstrappedTraceEntry = TraceEntryBase.extend({
   kind: z.literal('run.bootstrapped'),
@@ -136,7 +133,7 @@ const ProofScope = z
   .superRefine((scope, ctx) => {
     if ((scope.step_id === undefined) !== (scope.attempt === undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['attempt'],
         message: 'proof assessment scope must include step_id and attempt together',
       });
@@ -165,7 +162,7 @@ const SafeApplyScope = z
   .superRefine((scope, ctx) => {
     if ((scope.step_id === undefined) !== (scope.attempt === undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['attempt'],
         message: 'safe apply scope must include step_id and attempt together',
       });
@@ -202,20 +199,20 @@ export const CheckpointRequestedTraceEntry = TraceEntryBase.extend({
   .superRefine((entry, ctx) => {
     if (entry.boundary_ref.sha256 !== entry.boundary_hash) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_hash'],
         message: 'checkpoint boundary_hash must match boundary_ref.sha256',
       });
     }
     if (entry.boundary_ref.step_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'step_id'],
         message: 'checkpoint boundary_ref.step_id is required',
       });
     } else if (entry.boundary_ref.step_id !== entry.step_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'step_id'],
         message: 'checkpoint boundary_ref.step_id must match step_id',
       });
@@ -442,7 +439,7 @@ const FanoutExecutionPolicy = z
   .superRefine((policy, ctx) => {
     if (policy.writable_relay_branches_serialized && policy.reason === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['reason'],
         message: 'serialized writable relay fanouts require a reason',
       });
@@ -560,7 +557,7 @@ export const TraceEntry = z
       const expected = ev.exit_code === 0 ? 'passed' : 'failed';
       if (ev.status !== expected) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['status'],
           message: `status must be '${expected}' when exit_code is ${ev.exit_code}`,
         });
@@ -570,14 +567,14 @@ export const TraceEntry = z
     if (ev.kind === 'proof.assessed') {
       if (ev.scope.run_id !== ev.run_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['scope', 'run_id'],
           message: 'proof assessment scope.run_id must match run_id',
         });
       }
       if (ev.close_allowed && ev.overall_status !== 'proven') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['close_allowed'],
           message: 'proof assessment close_allowed requires overall_status proven',
         });
@@ -587,7 +584,7 @@ export const TraceEntry = z
     if (ev.kind === 'safe_apply.result') {
       if (ev.scope.run_id !== ev.run_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['scope', 'run_id'],
           message: 'safe apply scope.run_id must match run_id',
         });
@@ -612,28 +609,28 @@ export const TraceEntry = z
       ] as const) {
         if (ref.run_id !== ev.run_id) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [...path, 'run_id'],
             message: `${label} run_id must match run_id`,
           });
         }
         if (ref.flow_id !== ev.scope.flow_id) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [...path, 'flow_id'],
             message: `${label} flow_id must match scope.flow_id`,
           });
         }
         if (ref.step_id !== ev.scope.step_id) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [...path, 'step_id'],
             message: `${label} step_id must match scope.step_id`,
           });
         }
         if (ref.attempt !== ev.scope.attempt) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [...path, 'attempt'],
             message: `${label} attempt must match scope.attempt`,
           });
@@ -641,7 +638,7 @@ export const TraceEntry = z
       }
       if (ev.action === 'rejected' && ev.outcome !== 'fail') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['outcome'],
           message: 'rejected safe apply trace results require fail outcome',
         });
@@ -649,14 +646,14 @@ export const TraceEntry = z
       if (ev.action === 'applied') {
         if (ev.outcome !== 'pass') {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['outcome'],
             message: 'applied safe apply trace results require pass outcome',
           });
         }
         if (ev.final_verification_ref === undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['final_verification_ref'],
             message: 'applied safe apply trace results require final verification refs',
           });
@@ -667,7 +664,7 @@ export const TraceEntry = z
     if (ev.kind !== 'relay.started' && ev.kind !== 'relay.failed') return;
     if (ev.resolved_from.source === 'role' && ev.resolved_from.role !== ev.role) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['resolved_from', 'role'],
         message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`,
       });

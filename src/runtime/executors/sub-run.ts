@@ -23,7 +23,7 @@ import {
 } from './result.js';
 
 function checkPassVerdicts(step: SubRunStep): readonly string[] {
-  const pass = (step.check as { readonly pass?: unknown }).pass;
+  const pass = step.check.pass;
   return Array.isArray(pass)
     ? pass.filter((entry): entry is string => typeof entry === 'string')
     : [];

@@ -4,8 +4,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { projectRunStatusFromRunFolder } from '../../src/app/run-status/run-folder-projector.js';
 import { main } from '../../src/cli/circuit.js';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import type { StepOutcome } from '../../src/runtime/domain/step.js';
 import type { TraceEntry } from '../../src/runtime/domain/trace.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
@@ -21,7 +21,9 @@ import { PolicyLayer } from '../../src/schemas/policy-envelope.js';
 import { ProgressEvent } from '../../src/schemas/progress-event.js';
 import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { captureJson, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { withScopedEnv } from '../helpers/scoped-env.js';
 
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -40,11 +42,6 @@ function writeBuildProofPackage(root: string): void {
       2,
     )}\n`,
   );
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 function checkpointFixtureFlow(
@@ -245,19 +242,13 @@ function fixtureBytes(flow: unknown = checkpointFixtureFlow()): Buffer {
 }
 
 function fixtureRelayer(): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput) => ({
-      request_payload: input.prompt,
-      receipt_id: 'checkpoint-fixture-receipt',
-      result_body: JSON.stringify({
-        verdict: 'accept',
-        summary: 'Resumed relay accepted the checkpoint selection.',
-      }),
-      duration_ms: 1,
-      cli_version: '0.0.0-test',
+  return makeStubRelayer(
+    JSON.stringify({
+      verdict: 'accept',
+      summary: 'Resumed relay accepted the checkpoint selection.',
     }),
-  };
+    { receipt_id: 'checkpoint-fixture-receipt' },
+  );
 }
 
 function fixtureExecutors(
@@ -410,24 +401,6 @@ async function createWaitingFixture(input: {
   return result;
 }
 
-async function captureStdout(fn: () => Promise<number>): Promise<{
-  readonly code: number;
-  readonly output: Record<string, unknown>;
-}> {
-  const originalWrite = process.stdout.write;
-  let stdout = '';
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  try {
-    const code = await fn();
-    return { code, output: JSON.parse(stdout) as Record<string, unknown> };
-  } finally {
-    process.stdout.write = originalWrite;
-  }
-}
-
 describe('runtime checkpoint pause/resume fixture', () => {
   let tempDir: string;
 
@@ -471,7 +444,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
       request_path: 'reports/checkpoints/checkpoint-step-request.json',
       options: ['continue'],
     });
-    expect(requested?.report_path).toBeUndefined();
+    expect((requested as Record<string, unknown> | undefined)?.report_path).toBeUndefined();
 
     expect(projectRunStatusFromRunFolder(runDir)).toMatchObject({
       engine_state: 'waiting_checkpoint',
@@ -984,7 +957,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
         auto_resolved: false,
         resolution_source: 'operator',
         response_path: 'reports/checkpoints/checkpoint-step-response.json',
-      },
+      } as TraceEntry,
     ]);
 
     await expect(
@@ -1009,7 +982,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
         kind: 'run.closed',
         outcome: 'aborted',
         reason: 'closed for rejection coverage',
-      },
+      } as TraceEntry,
     ]);
 
     await expect(
@@ -1095,10 +1068,8 @@ describe('runtime checkpoint pause/resume fixture', () => {
   it('routes CLI resume by saved runtime engine marker even when default runtime routing is disabled', async () => {
     const runDir = join(tempDir, 'cli-resume');
     await createWaitingFixture({ runDir });
-    const oldDisable = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
-      const { code, output } = await captureStdout(() =>
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
+      const { result: code, json: output } = await captureJson<Record<string, unknown>>(() =>
         main(['resume', '--run-folder', runDir, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 0, 4)),
           relayer: fixtureRelayer(),
@@ -1115,12 +1086,6 @@ describe('runtime checkpoint pause/resume fixture', () => {
       });
       expect(output).not.toHaveProperty('runtime');
       expect(typeof output.result_path).toBe('string');
-    } finally {
-      if (oldDisable === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDisable;
-      }
-    }
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { exploreTournamentProjector } from '../../../../src/shared/html/explore-tournament.js';
+import { exploreTournamentProjector } from '../../../../src/flows/explore/index.js';
 import type { HtmlProjectorContext, JsonObject } from '../../../../src/shared/html/projector.js';
 
 function buildContext(overrides: {

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { main } from '../../src/cli/circuit.js';
 import { MemoryInputV0 } from '../../src/index.js';
+import { captureStreams } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const RUN_ID = '22222222-2222-4222-8222-222222222222';
@@ -20,25 +21,8 @@ afterEach(() => {
 });
 
 async function captureMain(argv: readonly string[]) {
-  const originalStdoutWrite = process.stdout.write;
-  const originalStderrWrite = process.stderr.write;
-  let stdout = '';
-  let stderr = '';
-  try {
-    process.stdout.write = ((chunk: string | Uint8Array) => {
-      stdout += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
-      return true;
-    }) as typeof process.stdout.write;
-    process.stderr.write = ((chunk: string | Uint8Array) => {
-      stderr += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
-      return true;
-    }) as typeof process.stderr.write;
-    const code = await main(argv);
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdoutWrite;
-    process.stderr.write = originalStderrWrite;
-  }
+  const { result, stdout, stderr } = await captureStreams(() => main(argv));
+  return { code: result, stdout, stderr };
 }
 
 function writeJson(path: string, value: unknown): void {

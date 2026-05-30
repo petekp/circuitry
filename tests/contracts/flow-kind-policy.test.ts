@@ -10,11 +10,11 @@ import {
   EXEMPT_FLOW_IDS,
   FLOW_KIND_CANONICAL_SETS,
   checkCompiledFlowKindCanonicalPolicy,
-} from '../../src/shared/flow-kind-policy-core.js';
+} from '../../src/policy/flow-kind-policy-core.js';
 import {
   type ValidateCompiledFlowKindPolicyResult,
   validateCompiledFlowKindPolicy,
-} from '../../src/shared/flow-kind-policy.js';
+} from '../../src/policy/flow-kind-policy.js';
 
 // validateCompiledFlowKindPolicy helper unit tests cover the shared
 // canonical-set check AND the TS wrapper that adds CompiledFlow.safeParse.

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../policy/rubric.js';
 import { ConnectorReference } from '../../schemas/config.js';
 import { RelayResolutionSource } from '../../schemas/connector.js';
 import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
@@ -8,7 +9,7 @@ import {
   VerificationCommandResult,
   VerificationResult,
 } from '../../schemas/verification.js';
-import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const NonEmptyStringArray = z.array(z.string().min(1)).min(1);
 const StringArray = z.array(z.string().min(1));
@@ -49,7 +50,7 @@ function addPathIssue(
   message: string,
 ): void {
   ctx.addIssue({
-    code: z.ZodIssueCode.custom,
+    code: 'custom',
     path: [...path],
     message,
   });
@@ -252,7 +253,7 @@ function refineExactPrototypeRubricDims(
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `missing rubric dim '${dimId}'`,
       });
@@ -261,7 +262,7 @@ function refineExactPrototypeRubricDims(
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`,
       });
@@ -726,23 +727,10 @@ export const PrototypeResultReportId = z.enum([
 ]);
 export type PrototypeResultReportId = z.infer<typeof PrototypeResultReportId>;
 
-export const PrototypeResultReportPointer = z
-  .object({
-    report_id: PrototypeResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const PrototypeResultReportPointer = resultReportPointer(
+  PrototypeResultReportId,
+  PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID,
+);
 export type PrototypeResultReportPointer = z.infer<typeof PrototypeResultReportPointer>;
 
 const PrototypeResultBase = z.object({

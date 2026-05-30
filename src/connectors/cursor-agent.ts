@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { CURSOR_AGENT_SUPPORTED_EFFORTS } from '../schemas/connector.js';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import {
@@ -9,12 +10,17 @@ import {
 import { extractJsonObject } from '../shared/json-extraction.js';
 import {
   type ConnectorSubprocessResult,
+  cappedSuffix,
   isConnectorSubprocessSpawnError,
   runConnectorSubprocess,
+  spawnErrorVerb,
 } from './subprocess.js';
 
 export const CURSOR_AGENT_EXECUTABLE = 'cursor-agent';
-export const CURSOR_AGENT_SUPPORTED_EFFORTS = ['none'] as const;
+// Re-exported from the built-in connector registry (the single source of
+// truth); kept under this name for the connector's own effort guard and for
+// call sites bound to the cursor-agent connector.
+export { CURSOR_AGENT_SUPPORTED_EFFORTS };
 export const CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
   '--print',
   '--output-format',
@@ -108,21 +114,20 @@ export async function relayCursorAgent(input: CursorAgentRelayInput): Promise<Re
     });
   } catch (error) {
     if (isConnectorSubprocessSpawnError(error)) {
-      const verb = error.phase === 'spawn-failed' ? 'spawn failed' : 'spawn error';
-      throw new Error(`cursor-agent subprocess ${verb}: ${error.message}`);
+      throw new Error(`cursor-agent subprocess ${spawnErrorVerb(error)}: ${error.message}`);
     }
     throw error;
   }
   if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-    const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+    const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
     throw new Error(
       `cursor-agent subprocess timed out after ${timeoutMs}ms; group-kill ${result.killGroupSucceeded ? 'sent' : 'failed'}; final signal=${result.signal ?? 'none'}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`,
     );
   }
   if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-    const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+    const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
     throw new Error(
       `cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ''}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`,
     );

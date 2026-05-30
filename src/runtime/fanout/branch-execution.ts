@@ -9,6 +9,7 @@ import { CompiledFlow as CompiledFlowSchema } from '../../schemas/compiled-flow.
 import { Depth } from '../../schemas/depth.js';
 import { RunResult } from '../../schemas/result.js';
 import type { RelayStep as CompiledRelayStepV1 } from '../../shared/relay-support.js';
+import type { TraceEntry } from '../domain/trace.js';
 import {
   type ProductionRelayAttemptValidationInput,
   type RelayConnector,
@@ -26,9 +27,48 @@ import {
   type ResolvedSubRunBranch,
 } from './types.js';
 
-function admitList(step: FanoutStep): readonly string[] {
-  const admit = (step.check as { readonly verdicts?: { readonly admit?: unknown } }).verdicts
-    ?.admit;
+// The read-side `TraceEntry` union carries literal `kind` discriminants (so
+// `Extract` narrows by kind) plus branded ids and the auto-filled base fields.
+// Append sites build entries from already well-typed runtime values, so drop the
+// base fields that `context.trace.append` fills (`schema_version`, `sequence`,
+// `recorded_at`) along with `run_id`/`kind`, and de-brand string/enum fields back
+// to the loose append contract the call sites here actually pass (plain
+// `step.id`, `randomUUID()` ids, string verdicts/outcomes).
+type DebrandAppendValue<T> = T extends string ? string : T;
+type FanoutBranchFields<K extends TraceEntry['kind']> = {
+  [P in keyof Omit<
+    Extract<TraceEntry, { kind: K }>,
+    'run_id' | 'kind' | 'schema_version' | 'sequence' | 'recorded_at'
+  >]: DebrandAppendValue<Extract<TraceEntry, { kind: K }>[P]>;
+};
+
+type FanoutBranchStartedFields = FanoutBranchFields<'fanout.branch_started'>;
+type FanoutBranchCompletedFields = FanoutBranchFields<'fanout.branch_completed'>;
+
+async function appendFanoutBranchStarted(
+  context: RunContext,
+  fields: FanoutBranchStartedFields,
+): Promise<void> {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'fanout.branch_started',
+    ...fields,
+  });
+}
+
+async function appendFanoutBranchCompleted(
+  context: RunContext,
+  fields: FanoutBranchCompletedFields,
+): Promise<void> {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: 'fanout.branch_completed',
+    ...fields,
+  });
+}
+
+function admitList(step: FanoutStep): string[] {
+  const admit = step.check.verdicts?.admit;
   return Array.isArray(admit)
     ? admit.filter((entry): entry is string => typeof entry === 'string')
     : [];
@@ -218,9 +258,7 @@ export async function executeRelayFanoutBranch(
   const childRunId = randomUUID();
   const resultPath = `${branchDirRel}/result.json`;
   const reportPath = `${branchDirRel}/report.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'fanout.branch_started',
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -271,9 +309,7 @@ export async function executeRelayFanoutBranch(
                 admitted: false,
                 failure_reason: relayAttempt.evaluation.reason,
               };
-      await context.trace.append({
-        run_id: context.runId,
-        kind: 'fanout.branch_completed',
+      await appendFanoutBranchCompleted(context, {
         step_id: step.id,
         attempt,
         branch_id: branch.branch_id,
@@ -322,9 +358,7 @@ export async function executeRelayFanoutBranch(
       `stub relay receipt for ${branch.branch_id}\n`,
     );
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'fanout.branch_completed',
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -349,9 +383,7 @@ export async function executeRelayFanoutBranch(
     };
   } catch (error) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'fanout.branch_completed',
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -388,9 +420,7 @@ export async function executeSubRunFanoutBranch(
   const attempt = context.activeStepAttempt ?? 1;
   const childRunId = randomUUID();
   const resultPath = `${branchDirRel}/result.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: 'fanout.branch_started',
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -402,9 +432,7 @@ export async function executeSubRunFanoutBranch(
   if (context.childCompiledFlowResolver === undefined || context.childRunner === undefined) {
     const failureReason = `fanout step '${step.id}': child resolver and child runner are required for sub-run branches`;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'fanout.branch_completed',
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -476,9 +504,7 @@ export async function executeSubRunFanoutBranch(
     const evaluation = branchResult(childResult, admitList(step));
     const admitted = childResult.outcome === 'complete' && evaluation.admitted;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'fanout.branch_completed',
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -502,9 +528,7 @@ export async function executeSubRunFanoutBranch(
     };
   } catch (error) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: 'fanout.branch_completed',
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,

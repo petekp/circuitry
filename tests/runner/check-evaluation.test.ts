@@ -2,12 +2,12 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import { runCompiledFlow } from '../../src/runtime/run/compiled-flow-runner.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 
 // Relay verdict truth.
@@ -34,30 +34,15 @@ function loadFixture(): { bytes: Buffer } {
   return { bytes };
 }
 
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
-
 function relayerWith(resultBody: string): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input): Promise<RelayResult> => ({
-      request_payload: input.prompt,
-      receipt_id: 'stub-receipt-check-eval',
-      result_body: resultBody,
-      duration_ms: 1,
-      cli_version: '0.0.0-stub',
-    }),
-  };
+  return makeStubRelayer(resultBody, { receipt_id: 'stub-receipt-check-eval' });
 }
 
 function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
   return {
     compose: async (step, context) => {
       if (step.kind !== 'compose') throw new Error('expected compose step');
-      const attempt =
-        context.activeStepAttempt === undefined ? {} : { attempt: context.activeStepAttempt };
+      const attempt = { attempt: context.activeStepAttempt ?? 1 };
       const report = step.writes?.report;
       if (report !== undefined) {
         const reportPath = context.files.resolve(report);
@@ -69,7 +54,7 @@ function composeExecutor(): Pick<ExecutorRegistry, 'compose'> {
           step_id: step.id,
           ...attempt,
           report_path: report.path,
-          ...(report.schema === undefined ? {} : { report_schema: report.schema }),
+          report_schema: report.schema ?? 'runtime.compose',
         });
       }
       await context.trace.append({

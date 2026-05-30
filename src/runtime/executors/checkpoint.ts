@@ -4,13 +4,14 @@
 import { ZodError } from 'zod';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
+import { policyRefsForRuntimeInputs } from '../../policy/policy-envelope.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId } from '../../schemas/ids.js';
 import type { OperatorAutoResolution } from '../../schemas/operator-summary.js';
 import type { Ref } from '../../schemas/ref.js';
-import type { CheckpointChoiceSource } from '../../schemas/runtime-source.js';
 import {
   type AutoResolutionPolicy,
+  type CheckpointPolicy,
   CheckpointStep as SchemaCheckpointStep,
 } from '../../schemas/step.js';
 import { resolveHighestScoreAutoResolution } from '../../shared/checkpoint-auto-resolution.js';
@@ -20,7 +21,6 @@ import {
 } from '../../shared/checkpoint-boundary.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import { resolveDottedPath } from '../../shared/fanout-branch-template.js';
-import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import {
   type CheckpointChoice,
   resolveCheckpointChoicesSource,
@@ -56,17 +56,17 @@ type CheckpointRouteResolution =
 
 type CheckpointBoundaryProjection = ReturnType<typeof projectCheckpointBoundaryV0>;
 
-function policy(step: CheckpointStep) {
+// Unified materialized-choice shape. Static choices come from the strict
+// CheckpointPolicy schema (`label?`/`description?` carry Zod's `| undefined`);
+// dynamic choices come from resolveCheckpointChoicesSource as CheckpointChoice.
+// The schema element type is the wider of the two, so both flow into it.
+type MaterializedChoice = NonNullable<CheckpointPolicy['choices']>[number];
+
+function policy(step: CheckpointStep): CheckpointPolicy {
   if (step.policy === undefined || step.policy === null || typeof step.policy !== 'object') {
     throw new Error(`checkpoint step '${step.id}' is missing checkpoint policy`);
   }
-  return step.policy as {
-    readonly prompt: string;
-    readonly safe_default_choice?: string;
-    readonly choices?: readonly CheckpointChoice[];
-    readonly choices_from?: CheckpointChoiceSource;
-    readonly auto_resolution?: AutoResolutionPolicy;
-  };
+  return step.policy;
 }
 
 async function materializePolicy(
@@ -75,7 +75,7 @@ async function materializePolicy(
 ): Promise<{
   readonly prompt: string;
   readonly safe_default_choice?: string;
-  readonly choices: readonly CheckpointChoice[];
+  readonly choices: readonly MaterializedChoice[];
   readonly choice_source: 'static' | 'dynamic';
   readonly auto_resolution?: AutoResolutionPolicy;
 }> {
@@ -434,7 +434,7 @@ export async function executeCheckpointResult(
       return stepExecutionFailed(effectiveResolution.reason);
     }
 
-    const allowed = (step.check as { readonly allow?: unknown }).allow;
+    const allowed = step.check.allow;
     const effectiveAllowed = Array.isArray(allowed)
       ? allowed
       : stepPolicy.choices.map((choice) => choice.id);

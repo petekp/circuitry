@@ -13,7 +13,7 @@ import {
   type OperatorSummaryWarning,
 } from '../schemas/operator-summary.js';
 import type { RunResult } from '../schemas/result.js';
-import { HTML_PROJECTORS, type HtmlProjectorContext } from './html/index.js';
+import { type HtmlProjectorContext, getHtmlProjector } from './html/index.js';
 import {
   type JsonObject,
   arrayField,
@@ -310,7 +310,7 @@ export function writeOperatorSummary(input: {
   // Write HTML first so JSON+markdown only promise a path that actually
   // exists on disk. Failure here degrades to a markdown-only summary; it
   // must not abort the run or break the JSON/MD siblings.
-  const projector = HTML_PROJECTORS[flowId];
+  const projector = getHtmlProjector(flowId);
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath: string | undefined;
   let htmlEmitWarning: OperatorSummaryWarning | undefined;

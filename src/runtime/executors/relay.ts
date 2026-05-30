@@ -5,10 +5,10 @@ import { relayCustom } from '../../connectors/custom.js';
 import { runCrossReportValidator } from '../../flows/registries/cross-report-validators.js';
 import { findReportZodSchema, parseReport } from '../../flows/registries/report-schemas.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
-import type { ResolvedConnector } from '../../schemas/connector.js';
+import type { EnabledConnector, ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
-import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
+import { canonicalJson, sha256OfString } from '../../schemas/hashing.js';
 import {
   ProofAssessment,
   type Evidence as ProofEvidence,
@@ -16,11 +16,11 @@ import {
   type ProofRecovery,
   type ProofStatus,
 } from '../../schemas/proof-assessment.js';
-import type { Ref } from '../../schemas/ref.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
 import { CheckEvaluatedTraceEntry } from '../../schemas/trace-entry.js';
-import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
+import type { ConnectorRelayInput } from '../../shared/connector-relay.js';
+import type { RelayResult } from '../../shared/connector-relay.js';
 import { evidenceFromAcceptanceCriteriaTrace } from '../../shared/proof-assessment.js';
 import {
   type CheckEvaluation,
@@ -47,6 +47,13 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
+import {
+  proofAssessmentReportRef,
+  proofIdPart,
+  readRouteFromReport,
+  stepCanCloseRun,
+  uniqueValues,
+} from './shared.js';
 
 export interface RelayRequest {
   readonly runId: string;
@@ -89,33 +96,26 @@ export async function relayWithResolvedConnector(
       : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) }),
     ...(input.responseSchema === undefined ? {} : { responseSchema: input.responseSchema }),
   };
-  if (connector.kind === 'builtin' && connector.name === 'claude-code') {
-    return relayClaudeCode(relayInput);
-  }
-  if (connector.kind === 'builtin' && connector.name === 'codex') {
-    return relayCodex(relayInput);
-  }
-  if (connector.kind === 'builtin' && connector.name === 'cursor-agent') {
-    return relayCursorAgent(relayInput);
-  }
   if (connector.kind === 'custom') {
     return relayCustom({ ...relayInput, descriptor: connector });
   }
-  throw new Error(`unsupported relay connector '${connector.name}'`);
+  return BUILTIN_CONNECTOR_RELAYERS[connector.name](relayInput);
 }
+
+// Built-in connector dispatch table. Keyed by `EnabledConnector` and pinned
+// with `satisfies Record<EnabledConnector, ...>`: adding a built-in connector
+// to the enum without wiring its relayer here — or wiring one whose key is not
+// in the enum — is a `tsc` error, so dispatch can never silently fall through
+// to the old `unsupported relay connector` throw.
+const BUILTIN_CONNECTOR_RELAYERS = {
+  'claude-code': relayClaudeCode,
+  codex: relayCodex,
+  'cursor-agent': relayCursorAgent,
+} as const satisfies Record<EnabledConnector, (input: ConnectorRelayInput) => Promise<RelayResult>>;
 
 function timeoutMs(step: RelayStep): number | undefined {
-  const wallClock = (step.budgets as { readonly wall_clock_ms?: unknown } | undefined)
-    ?.wall_clock_ms;
+  const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === 'number' ? wallClock : undefined;
-}
-
-function proofIdPart(value: string): string {
-  return value.replace(/[^a-z0-9._-]/g, '-').toLowerCase();
-}
-
-function uniqueValues(values: readonly string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 
 function acceptanceProofStatus(evidence: readonly ProofEvidence[]): ProofStatus {
@@ -170,30 +170,6 @@ function declaredRecoveryForAcceptanceProof(input: {
     route_id: binding.route_id,
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status),
-  };
-}
-
-function stepCanCloseRun(step: RelayStep): boolean {
-  return Object.values(step.routes).some(
-    (target) => target.kind === 'terminal' && target.target === '@complete',
-  );
-}
-
-function proofAssessmentReportRef(input: {
-  readonly context: RunContext;
-  readonly stepId: string;
-  readonly attempt: number;
-  readonly path: string;
-  readonly body: unknown;
-}): Ref {
-  return {
-    kind: 'report',
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}\n`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt,
   };
 }
 
@@ -295,35 +271,8 @@ async function writeAcceptanceProofAssessment(input: {
   });
 }
 
-function readRouteFromReportBody(body: unknown, path: readonly string[]): string {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) {
-      throw new Error(
-        `route_from_report path '${path.join('.')}' descended into a non-object at '${segment}'`,
-      );
-    }
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-  if (typeof cursor !== 'string' || cursor.length === 0) {
-    throw new Error(
-      `route_from_report path '${path.join('.')}' must resolve to a non-empty string`,
-    );
-  }
-  return cursor;
-}
-
-function stableJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(
-      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  });
-}
-
 function sameJson(left: unknown, right: unknown): boolean {
-  return stableJson(left) === stableJson(right);
+  return canonicalJson(left) === canonicalJson(right);
 }
 
 function relaySkillIdentities(
@@ -531,7 +480,7 @@ export async function executeProductionRelayAttempt(input: {
     );
   }
   await context.files.writeText(request, prompt);
-  const requestPayloadHash = sha256Hex(prompt);
+  const requestPayloadHash = sha256OfString(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
   const relayGuidance = await appendRelayExecutionGuidance(context, {
@@ -650,7 +599,7 @@ export async function executeProductionRelayAttempt(input: {
     kind: 'relay.result',
     step_id: step.id,
     attempt,
-    result_report_hash: sha256Hex(relayResult.result_body),
+    result_report_hash: sha256OfString(relayResult.result_body),
   });
 
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
@@ -861,7 +810,7 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   const { evaluation } = relayAttempt;
   if (evaluation.kind === 'pass') {
     if (step.routeFromReport !== undefined) {
-      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      const route = readRouteFromReport(relayAttempt.parsed_body, step.routeFromReport.path);
       if (!Object.hasOwn(step.routes, route)) {
         throw new Error(
           `relay step '${step.id}' route_from_report selected undeclared route '${route}'`,

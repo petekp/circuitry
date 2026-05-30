@@ -10767,8 +10767,8 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync22, mkdirSync as mkdirSync8, readFileSync as readFileSync38, writeFileSync as writeFileSync9 } from "node:fs";
-import { dirname as dirname12, join as join23, resolve as resolve15 } from "node:path";
+import { existsSync as existsSync23, mkdirSync as mkdirSync8, readFileSync as readFileSync36, writeFileSync as writeFileSync9 } from "node:fs";
+import { dirname as dirname12, join as join23, resolve as resolve16 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/commander/esm.mjs
@@ -10789,7 +10789,7 @@ var {
 } = import_index.default;
 
 // dist/runtime/run/checkpoint-resume.js
-import { readFileSync as readFileSync23 } from "node:fs";
+import { readFileSync as readFileSync24 } from "node:fs";
 
 // dist/flows/catalog-derivations.js
 function collectBuilderRegistry(packages, slot, pluck) {
@@ -10905,6 +10905,15 @@ function findDefaultRoutablePackage(routables) {
     throw new Error(`more than one default flow package: ${defaults.map((entry) => entry.pkg.id).join(", ")}`);
   }
   return first;
+}
+
+// dist/shared/html/index.js
+var HTML_PROJECTORS = /* @__PURE__ */ new Map();
+function registerHtmlProjector(flowId, projector) {
+  HTML_PROJECTORS.set(flowId, projector);
+}
+function getHtmlProjector(flowId) {
+  return HTML_PROJECTORS.get(flowId);
 }
 
 // node_modules/zod/v4/classic/external.js
@@ -25442,26 +25451,26 @@ function commandBinaryName(argv0) {
 var ProjectRelativeCwd = external_exports.string().min(1).superRefine((cwd, ctx) => {
   if (cwd.startsWith("/") || cwd.startsWith("~") || /^[A-Za-z]:[\\/]/.test(cwd)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must be project-relative and cannot use absolute or home paths"
     });
   }
   if (cwd.startsWith("\\\\") || cwd.startsWith("//")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must not use UNC or network absolute paths"
     });
   }
   const parts = cwd.split("/");
   if (parts.some((part) => part === "..")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must not escape the project root"
     });
   }
   if (cwd !== "." && parts.some((part) => part.length === 0 || part === ".")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: 'cwd must be "." or a normalized project-relative path'
     });
   }
@@ -25480,7 +25489,7 @@ var VerificationCommand = external_exports.object({
   const binary = commandBinaryName(firstArg);
   if (SHELL_BINARIES.has(binary)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["argv"],
       message: "verification commands must use direct argv execution, not a shell executable"
     });
@@ -25499,7 +25508,7 @@ var VerificationCommandResult = external_exports.object({
   const expected = result.exit_code === 0 ? "passed" : "failed";
   if (result.status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status must be '${expected}' when exit_code is ${result.exit_code}`
     });
@@ -25512,7 +25521,7 @@ var VerificationResult = external_exports.object({
   const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
   if (verification.overall_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expected}' for command results`
     });
@@ -25581,7 +25590,7 @@ var FlowAxes = external_exports.object({
   for (const [index, rigor] of axes.allowed_rigors.entries()) {
     if (seenRigors.has(rigor)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["allowed_rigors", index],
         message: `duplicate allowed rigor: ${rigor}`
       });
@@ -25590,35 +25599,35 @@ var FlowAxes = external_exports.object({
   }
   if (!seenRigors.has(axes.default.rigor)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "rigor"],
       message: `default rigor '${axes.default.rigor}' is not in allowed_rigors`
     });
   }
   if (axes.default.tournament && !axes.supports_tournament) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "tournament"],
       message: "default tournament cannot be true when supports_tournament is false"
     });
   }
   if (axes.default.autonomous && !axes.supports_autonomous) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "autonomous"],
       message: "default autonomous cannot be true when supports_autonomous is false"
     });
   }
   if (axes.supports_tournament && axes.tournament_fan_out_stage === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["tournament_fan_out_stage"],
       message: "tournament_fan_out_stage is required when supports_tournament is true"
     });
   }
   if (!axes.supports_tournament && axes.tournament_fan_out_stage !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["tournament_fan_out_stage"],
       message: "tournament_fan_out_stage is only allowed when supports_tournament is true"
     });
@@ -25821,7 +25830,7 @@ var FlowInputContractSet = external_exports.array(FlowContractRef).min(1).superR
   for (const [index, contract] of contracts.entries()) {
     if (seen.has(contract)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate input contract: ${contract}`
       });
@@ -25834,7 +25843,7 @@ var nonEmptyUniqueStrings = external_exports.array(external_exports.string().min
   for (const [index, value] of values.entries()) {
     if (seen.has(value)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate value: ${value}`
       });
@@ -25869,7 +25878,7 @@ var FlowBlock = external_exports.object({
   for (const [index, route] of block.allowed_routes.entries()) {
     if (routeSet.has(route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["allowed_routes", index],
         message: `duplicate route: ${route}`
       });
@@ -25879,28 +25888,28 @@ var FlowBlock = external_exports.object({
   if (block.id === "human-decision") {
     if (block.human_interaction !== "mode-dependent") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["human_interaction"],
         message: "human-decision must be mode-dependent"
       });
     }
     if (block.host_capabilities.claude.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "claude"],
         message: "human-decision must name a Claude host strategy"
       });
     }
     if (block.host_capabilities.codex.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "codex"],
         message: "human-decision must name a Codex host strategy"
       });
     }
     if (block.host_capabilities.non_interactive.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "non_interactive"],
         message: "human-decision must name a non-interactive host strategy"
       });
@@ -25908,7 +25917,7 @@ var FlowBlock = external_exports.object({
   }
   if (block.id === "close-with-evidence" && !routeSet.has("complete")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["allowed_routes"],
       message: "close-with-evidence must allow complete"
     });
@@ -25923,7 +25932,7 @@ var FlowBlockCatalog = external_exports.object({
     const prior = seen.get(block.id);
     if (prior !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocks", index, "id"],
         message: `duplicate block id: ${block.id} also appears at index ${prior}`
       });
@@ -25933,7 +25942,7 @@ var FlowBlockCatalog = external_exports.object({
   for (const requiredId of FLOW_BLOCK_IDS) {
     if (!seen.has(requiredId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocks"],
         message: `missing block id: ${requiredId}`
       });
@@ -25964,7 +25973,7 @@ var UniqueSkillArray = external_exports.array(SkillId).superRefine((arr, ctx) =>
   if (duplicates.length === 0)
     return;
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     message: `skills array contains duplicates: ${duplicates.join(", ")}`
   });
 });
@@ -26038,7 +26047,7 @@ var SelectionResolutionBody = external_exports.object({
   applied: external_exports.array(AppliedEntry)
 }).strict();
 var issueAt = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 function identityKey(entry) {
   switch (entry.source) {
@@ -26697,6 +26706,94 @@ var RunRelativePath = external_exports.string().min(1, { message: "run-relative 
   message: "run-relative path must not contain empty, current-directory, or parent-directory segments"
 }).brand();
 
+// dist/schemas/ref.js
+var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RefKind = external_exports.enum([
+  "work_contract",
+  "policy",
+  "trace",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory",
+  "operator_input"
+]);
+var ContentRefKinds = /* @__PURE__ */ new Set([
+  "work_contract",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory"
+]);
+var Ref = external_exports.object({
+  kind: RefKind,
+  ref: external_exports.string().min(1),
+  sha256: Sha256.optional(),
+  run_id: RunId.optional(),
+  flow_id: CompiledFlowId.optional(),
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional()
+}).strict().superRefine((ref, ctx) => {
+  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["sha256"],
+      message: `${ref.kind} refs require sha256`
+    });
+  }
+  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["flow_id"],
+      message: "work_contract refs require flow_id"
+    });
+  }
+  if (ref.kind !== "trace")
+    return;
+  if (ref.run_id === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["run_id"],
+      message: "trace refs require run_id"
+    });
+  }
+  if (ref.sequence === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["sequence"],
+      message: "trace refs require sequence"
+    });
+    return;
+  }
+  const expected = `trace.ndjson#sequence=${ref.sequence}`;
+  if (ref.ref !== expected) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["ref"],
+      message: `trace refs must use ${expected}`
+    });
+  }
+});
+
 // dist/schemas/skill.js
 var SkillDomain = external_exports.enum(["coding", "design", "research", "ops", "domain-general"]);
 var descriptorOwnPropertyGuard = external_exports.custom((raw) => {
@@ -26723,7 +26820,6 @@ var SkillDescriptorBody = external_exports.object({
   domain: SkillDomain.default("domain-general")
 }).strict();
 var SkillDescriptor = descriptorOwnPropertyGuard.pipe(SkillDescriptorBody);
-var HEX64 = /^[0-9a-f]{64}$/;
 var UserSkillEntry = external_exports.object({
   id: SkillId,
   name: external_exports.string().min(1).optional(),
@@ -26731,7 +26827,7 @@ var UserSkillEntry = external_exports.object({
   trigger: external_exports.string().min(1).optional(),
   root: external_exports.string().min(1),
   path: external_exports.string().min(1),
-  sha256: external_exports.string().regex(HEX64),
+  sha256: Sha256,
   bytes: external_exports.number().int().nonnegative()
 }).strict();
 var SkillSlot = external_exports.object({
@@ -26744,7 +26840,7 @@ var SkillSlotArray = external_exports.array(SkillSlot).superRefine((slots, ctx) 
     const key = slot.id;
     if (seen.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index, "id"],
         message: `duplicate skill slot '${key}'`
       });
@@ -26757,14 +26853,17 @@ var SkillSlotArray = external_exports.array(SkillSlot).superRefine((slots, ctx) 
 var RubricRuntimeSignal = external_exports.enum(["met", "missing", "n/a"]);
 var RubricJudgment = external_exports.enum(["pass", "concern", "fail"]);
 var RubricDimScore = external_exports.union([external_exports.literal(1), external_exports.literal(0.5), external_exports.literal(0)]);
-var DIM_SCORE_BY_JUDGMENT = {
+var RUBRIC_DIM_SCORE_BY_JUDGMENT = {
   pass: 1,
   concern: 0.5,
   fail: 0
 };
-function roundedAggregateScore(scores) {
+function roundRubricScore(value) {
+  return Number(value.toFixed(3));
+}
+function aggregateRubricScore(scores) {
   const total = scores.reduce((sum, score) => sum + score, 0);
-  return Number((total / scores.length).toFixed(3));
+  return roundRubricScore(total / scores.length);
 }
 var RubricDimResult = external_exports.object({
   runtime_signal: RubricRuntimeSignal,
@@ -26774,25 +26873,25 @@ var RubricDimResult = external_exports.object({
   runtime_vetoed: external_exports.boolean()
 }).strict().superRefine((dim, ctx) => {
   const expectedFinalScore = dim.runtime_signal === "missing" ? "fail" : dim.model_judgment;
-  const expectedDimScore = DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
+  const expectedDimScore = RUBRIC_DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
   const expectedRuntimeVetoed = dim.runtime_signal === "missing";
   if (dim.final_score !== expectedFinalScore) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["final_score"],
       message: dim.runtime_signal === "missing" ? "missing runtime evidence must force final_score to fail" : "final_score must match model_judgment when runtime_signal is met or n/a"
     });
   }
   if (dim.dim_score !== expectedDimScore) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["dim_score"],
       message: `dim_score must be ${expectedDimScore} for final_score '${expectedFinalScore}'`
     });
   }
   if (dim.runtime_vetoed !== expectedRuntimeVetoed) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["runtime_vetoed"],
       message: `runtime_vetoed must be ${String(expectedRuntimeVetoed)} when runtime_signal is '${dim.runtime_signal}'`
     });
@@ -26806,7 +26905,7 @@ var RubricTieBreak = external_exports.object({
   for (const [index, dimId] of tieBreak.ordered_dims.entries()) {
     if (seen.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `duplicate tie-break dim '${dimId}'`
       });
@@ -26823,16 +26922,16 @@ var RubricResult = external_exports.object({
   const dims = Object.entries(result.dims);
   if (dims.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["dims"],
       message: "rubric result must include at least one dim"
     });
     return;
   }
-  const expectedAggregate = roundedAggregateScore(dims.map(([, dim]) => dim.dim_score));
+  const expectedAggregate = aggregateRubricScore(dims.map(([, dim]) => dim.dim_score));
   if (result.aggregate_score !== expectedAggregate) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["aggregate_score"],
       message: `aggregate_score must be the equal-weight rounded mean (${expectedAggregate})`
     });
@@ -26840,7 +26939,7 @@ var RubricResult = external_exports.object({
   const expectedRuntimeVetoCount = dims.filter(([, dim]) => dim.runtime_vetoed).length;
   if (result.runtime_veto_count !== expectedRuntimeVetoCount) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["runtime_veto_count"],
       message: `runtime_veto_count must be ${expectedRuntimeVetoCount}`
     });
@@ -26848,7 +26947,7 @@ var RubricResult = external_exports.object({
   for (const [index, dimId] of result.tie_break.ordered_dims.entries()) {
     if (result.dims[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["tie_break", "ordered_dims", index],
         message: `tie-break dim '${dimId}' must exist in dims`
       });
@@ -26988,21 +27087,21 @@ var SkillMomentName = external_exports.string().superRefine((value, ctx) => {
     return;
   if (SHIPPED_SHAPE_RE.test(value)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: `unknown shipped Skill Moment '${value}'`
     });
     return;
   }
   if (!CUSTOM_MOMENT_RE.test(value)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "custom Skill Moments must be namespaced as <namespace>/<before|after>:<name>"
     });
     return;
   }
   if (SHIPPED_MOMENTS.has(momentBody(value))) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "custom Skill Moments must not reuse shipped moment names"
     });
   }
@@ -27012,7 +27111,7 @@ var SkillMomentNameArray = external_exports.array(SkillMomentName).superRefine((
   for (const [index, moment] of moments.entries()) {
     if (seen.has(moment)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate Skill Moment '${moment}'`
       });
@@ -27028,7 +27127,7 @@ var SkillMomentPolicyRule = external_exports.object({
   if (rule.mode === "mute") {
     if (rule.skills !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["skills"],
         message: "mute Skill Moment policy must not declare skills"
       });
@@ -27037,7 +27136,7 @@ var SkillMomentPolicyRule = external_exports.object({
   }
   if (rule.skills === void 0 || rule.skills.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["skills"],
       message: `${rule.mode} Skill Moment policy requires at least one skill`
     });
@@ -27048,7 +27147,7 @@ var SkillMomentPolicyRule = external_exports.object({
     const key = skill;
     if (seen.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["skills", index],
         message: `duplicate Skill Moment skill '${key}'`
       });
@@ -27095,7 +27194,7 @@ var SkillMomentSkillRef = external_exports.object({
 }).strict().superRefine((skill, ctx) => {
   if (["observed", "unplanned"].includes(skill.state) && skill.source !== "host-observed") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source"],
       message: `${skill.state} Skill Moment activity requires host-observed source`
     });
@@ -27118,7 +27217,7 @@ var RunSkillMomentEvent = external_exports.object({
 }).strict().superRefine((event, ctx) => {
   if ((event.policy.mode === "none" || event.policy.mode === "mute") && event.triggered_skills.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["triggered_skills"],
       message: `${event.policy.mode} Skill Moment policy must not trigger skills`
     });
@@ -27126,7 +27225,7 @@ var RunSkillMomentEvent = external_exports.object({
   for (const [index, skill] of event.unavailable_skills?.entries() ?? []) {
     if (skill.state !== "unavailable") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["unavailable_skills", index, "state"],
         message: "unavailable_skills entries must use unavailable state"
       });
@@ -27135,7 +27234,7 @@ var RunSkillMomentEvent = external_exports.object({
   for (const [index, skill] of event.triggered_skills.entries()) {
     if (skill.state === "unavailable") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["triggered_skills", index, "state"],
         message: "unavailable skills belong in unavailable_skills, not triggered_skills"
       });
@@ -27213,7 +27312,7 @@ var CheckpointPolicy = external_exports.object({
   const hasDynamicChoices = policy2.choices_from !== void 0;
   if (hasStaticChoices === hasDynamicChoices) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["choices"],
       message: "checkpoint policy must declare exactly one of choices or choices_from"
     });
@@ -27223,7 +27322,7 @@ var CheckpointPolicy = external_exports.object({
     for (const [index, choice] of policy2.choices.entries()) {
       if (choiceIds.has(choice.id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["choices", index, "id"],
           message: `duplicate checkpoint choice '${choice.id}'`
         });
@@ -27234,7 +27333,7 @@ var CheckpointPolicy = external_exports.object({
   for (const [field, value] of [["safe_default_choice", policy2.safe_default_choice]]) {
     if (value !== void 0 && policy2.choices !== void 0 && !choiceIds.has(value)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [field],
         message: `${field} must reference a declared checkpoint choice`
       });
@@ -27401,7 +27500,7 @@ var FanoutRubric = external_exports.object({
   for (const [index, dimId] of rubric.ordered_dims.entries()) {
     if (orderedDims.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `duplicate rubric dim '${dimId}'`
       });
@@ -27411,7 +27510,7 @@ var FanoutRubric = external_exports.object({
   for (const [dimId] of Object.entries(rubric.runtime_signals)) {
     if (!orderedDims.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["runtime_signals", dimId],
         message: `runtime signal dim '${dimId}' must appear in ordered_dims`
       });
@@ -27420,7 +27519,7 @@ var FanoutRubric = external_exports.object({
   for (const [index, dimId] of rubric.ordered_dims.entries()) {
     if (rubric.runtime_signals[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `ordered dim '${dimId}' must declare a runtime signal source`
       });
@@ -27460,7 +27559,7 @@ var Step = external_exports.discriminatedUnion("kind", [
   const writes = step.writes;
   if (!Object.hasOwn(writes, slot) || writes[slot] === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["check", "source", "ref"],
       message: `check.source.ref "${slot}" does not resolve to a usable slot in step.writes (available: ${Object.keys(writes).join(", ")})`
     });
@@ -27470,21 +27569,21 @@ var Step = external_exports.discriminatedUnion("kind", [
     const hasDynamicAllow = step.check.allow_from !== void 0;
     if (hasStaticAllow === hasDynamicAllow) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow"],
         message: "checkpoint check must declare exactly one of allow or allow_from"
       });
     }
     if (hasStaticAllow && step.policy.choices === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow"],
         message: "checkpoint check.allow requires static policy.choices"
       });
     }
     if (hasDynamicAllow && step.check.allow_from?.kind !== "policy_choices") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow_from"],
         message: "checkpoint check.allow_from must reference policy_choices"
       });
@@ -27494,7 +27593,7 @@ var Step = external_exports.discriminatedUnion("kind", [
       const checkChoiceIds = [...step.check.allow].sort();
       if (policyChoiceIds.join("\0") !== checkChoiceIds.join("\0")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", "allow"],
           message: "checkpoint check.allow must exactly match policy.choices ids"
         });
@@ -27502,7 +27601,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     }
     if (hasDynamicAllow && step.policy.choices === void 0 && step.policy.choices_from === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["policy", "choices_from"],
         message: "checkpoint check.allow_from requires policy.choices or policy.choices_from"
       });
@@ -27510,7 +27609,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     if (step.writes.report !== void 0) {
       if (step.policy.report_template === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["policy", "report_template"],
           message: "checkpoint report writing requires policy.report_template"
         });
@@ -27526,7 +27625,7 @@ var Step = external_exports.discriminatedUnion("kind", [
           continue;
         if (seen.has(branch.branch_id)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["branches", "branches", i, "branch_id"],
             message: `duplicate branch_id '${branch.branch_id}'`
           });
@@ -27538,7 +27637,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     if (step.branches.kind === "dynamic") {
       if (!step.branches.template.branch_id.includes("$item")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["branches", "template", "branch_id"],
           message: "dynamic fanout template.branch_id must contain `$item` placeholder so per-item expansion produces unique branch ids"
         });
@@ -27565,7 +27664,7 @@ var SchematicEvidenceRequirements = external_exports.array(SchematicEvidenceRequ
   for (const [index, requirement] of requirements.entries()) {
     if (seen.has(requirement)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate evidence requirement: ${requirement}`
       });
@@ -27656,14 +27755,14 @@ var SchematicStep = external_exports.object({
   for (const route of Object.keys(item.routes)) {
     if (!FlowRoute.safeParse(route).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["routes", route],
         message: `unknown schematic route outcome: ${route}`
       });
     }
     if (seenRoutes.has(route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["routes", route],
         message: `duplicate route outcome: ${route}`
       });
@@ -27673,14 +27772,14 @@ var SchematicStep = external_exports.object({
   for (const route of Object.keys(item.route_overrides)) {
     if (!FlowRoute.safeParse(route).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_overrides", route],
         message: `unknown schematic route outcome: ${route}`
       });
     }
     if (!Object.hasOwn(item.routes, route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_overrides", route],
         message: `route override must target a declared route outcome: ${route}`
       });
@@ -27696,7 +27795,7 @@ function validateExecutionShape(item, ctx) {
     const expectReport = () => {
       if (!has("report_path")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", "report_path"],
           message: `${kind} execution requires writes.report_path`
         });
@@ -27706,7 +27805,7 @@ function validateExecutionShape(item, ctx) {
       for (const key of ["request_path", "receipt_path", "result_path"]) {
         if (!has(key)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", key],
             message: `relay execution requires writes.${key}`
           });
@@ -27717,7 +27816,7 @@ function validateExecutionShape(item, ctx) {
       for (const key of ["checkpoint_request_path", "checkpoint_response_path"]) {
         if (!has(key)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", key],
             message: `checkpoint execution requires writes.${key}`
           });
@@ -27727,7 +27826,7 @@ function validateExecutionShape(item, ctx) {
     const expectSubRunSlots = () => {
       if (!has("result_path")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", "result_path"],
           message: "sub-run execution requires writes.result_path"
         });
@@ -27736,7 +27835,7 @@ function validateExecutionShape(item, ctx) {
     const forbid = (key, allowedKinds) => {
       if (has(key)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", key],
           message: `writes.${key} is only allowed for ${allowedKinds} execution`
         });
@@ -27779,7 +27878,7 @@ function validateExecutionShape(item, ctx) {
         expectReport();
         if (!has("branches_dir_path")) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", "branches_dir_path"],
             message: "fanout execution requires writes.branches_dir_path"
           });
@@ -27797,7 +27896,7 @@ function validateExecutionShape(item, ctx) {
     const expectField = (field, forKinds) => {
       if (g[field] === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", field],
           message: `${forKinds} execution requires check.${field}`
         });
@@ -27806,7 +27905,7 @@ function validateExecutionShape(item, ctx) {
     const forbidField = (field, allowedKinds) => {
       if (g[field] !== void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", field],
           message: `check.${field} is only allowed for ${allowedKinds} execution`
         });
@@ -27823,14 +27922,14 @@ function validateExecutionShape(item, ctx) {
       case "checkpoint":
         if (g.allow === void 0 && g.allow_from === void 0) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["check", "allow"],
             message: "checkpoint execution requires check.allow or check.allow_from"
           });
         }
         if (g.allow !== void 0 && g.allow_from !== void 0) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["check", "allow"],
             message: "checkpoint execution cannot declare both check.allow and check.allow_from"
           });
@@ -27855,35 +27954,35 @@ function validateExecutionShape(item, ctx) {
   }
   if (item.checkpoint_policy !== void 0 && kind !== "checkpoint") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["checkpoint_policy"],
       message: "checkpoint_policy is only allowed for checkpoint execution"
     });
   }
   if (item.acceptance_criteria !== void 0 && kind !== "relay") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["acceptance_criteria"],
       message: "acceptance_criteria is only allowed for relay execution"
     });
   }
   if (item.route_from_report !== void 0 && kind !== "compose" && kind !== "relay") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["route_from_report"],
       message: "route_from_report is only allowed for compose or relay execution"
     });
   }
   if (kind === "fanout" && item.fanout === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["fanout"],
       message: "fanout execution requires fanout metadata"
     });
   }
   if (item.fanout !== void 0 && kind !== "fanout") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["fanout"],
       message: "fanout metadata is only allowed for fanout execution"
     });
@@ -27932,7 +28031,7 @@ var FlowSchematic = external_exports.object({
     const prior = itemIds.get(item.id);
     if (prior !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "id"],
         message: `duplicate schematic item id: ${item.id} also appears at index ${prior}`
       });
@@ -27941,7 +28040,7 @@ var FlowSchematic = external_exports.object({
   }
   if (!itemIds.has(schematic.starts_at)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["starts_at"],
       message: `starts_at references unknown item id: ${schematic.starts_at}`
     });
@@ -27952,7 +28051,7 @@ var FlowSchematic = external_exports.object({
         continue;
       if (!itemIds.has(target)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["items", index, "routes", route],
           message: `route target references unknown schematic item id: ${target}`
         });
@@ -27964,7 +28063,7 @@ var FlowSchematic = external_exports.object({
           continue;
         if (!itemIds.has(target)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["items", index, "route_overrides", route, depth],
             message: `route override target references unknown schematic item id: ${target}`
           });
@@ -27977,7 +28076,7 @@ var FlowSchematic = external_exports.object({
     const key = `${alias.generic}\0${alias.actual}`;
     if (aliases.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["contract_aliases", index],
         message: `duplicate contract alias: ${alias.generic} -> ${alias.actual}`
       });
@@ -27990,7 +28089,7 @@ var FlowSchematic = external_exports.object({
     for (const [index, stage] of schematic.stages.entries()) {
       if (seenCanonicals.has(stage.canonical)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages", index, "canonical"],
           message: `duplicate canonical stage mapping: ${stage.canonical}`
         });
@@ -27998,7 +28097,7 @@ var FlowSchematic = external_exports.object({
       seenCanonicals.add(stage.canonical);
       if (seenIds.has(stage.id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages", index, "id"],
           message: `duplicate stage id: ${stage.id}`
         });
@@ -28009,7 +28108,7 @@ var FlowSchematic = external_exports.object({
     for (const canonical of itemCanonicals) {
       if (!seenCanonicals.has(canonical)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages"],
           message: `stages is missing an entry for canonical stage '${canonical}' which is used by at least one item`
         });
@@ -28022,7 +28121,7 @@ var FlowSchematic = external_exports.object({
     const stage = stageById.get(fanOutStage);
     if (stage === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["axes", "tournament_fan_out_stage"],
         message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`
       });
@@ -28032,7 +28131,7 @@ var FlowSchematic = external_exports.object({
           continue;
         if (item.fanout?.on_child_failure !== "continue-others" || item.fanout.join.policy !== "aggregate-survivors") {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["items", index, "fanout"],
             message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE
           });
@@ -28045,7 +28144,7 @@ var FlowSchematic = external_exports.object({
     for (const [index, omitted] of schematic.stage_path_policy.omits.entries()) {
       if (seenOmits.has(omitted)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stage_path_policy", "omits", index],
           message: `duplicate omitted stage: ${omitted}`
         });
@@ -28057,7 +28156,7 @@ var FlowSchematic = external_exports.object({
       for (const omitted of seenOmits) {
         if (declared.has(omitted)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["stage_path_policy", "omits"],
             message: `canonical stage '${omitted}' is both declared in stages and listed in stage_path_policy.omits`
           });
@@ -28068,7 +28167,7 @@ var FlowSchematic = external_exports.object({
     for (const omitted of seenOmits) {
       if (itemCanonicals.has(omitted)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stage_path_policy", "omits"],
           message: `canonical stage '${omitted}' is omitted but used by at least one item`
         });
@@ -28084,7 +28183,7 @@ function validateActiveSchematicCompleteness(schematic, ctx) {
     if (schematic[field] !== void 0)
       return;
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [field],
       message: `active schematic requires ${field}`
     });
@@ -28097,28 +28196,28 @@ function validateActiveSchematicCompleteness(schematic, ctx) {
   for (const [index, item] of schematic.items.entries()) {
     if (item.protocol === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "protocol"],
         message: "active schematic item requires protocol"
       });
     }
     if (item.writes === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "writes"],
         message: "active schematic item requires writes"
       });
     }
     if (item.check === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "check"],
         message: "active schematic item requires check"
       });
     }
     if (item.execution.kind === "checkpoint" && item.checkpoint_policy === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "checkpoint_policy"],
         message: "active checkpoint schematic item requires checkpoint_policy"
       });
@@ -28352,8 +28451,7 @@ function validatePackageSet(packages) {
     }
   }
 }
-function compileFlowDefinitions(definitions) {
-  const packages = definitions.map(compileFlowDefinition);
+function assertCatalogInvariants(packages) {
   validatePackageSet(packages);
   buildComposeRegistry(packages);
   buildCloseRegistry(packages);
@@ -28364,6 +28462,10 @@ function compileFlowDefinitions(definitions) {
   buildStructuralHintList(packages);
   buildCrossReportValidatorRegistry(packages);
   buildRuntimeSurfaceRegistry(packages);
+}
+function compileFlowDefinitions(definitions) {
+  const packages = definitions.map(compileFlowDefinition);
+  assertCatalogInvariants(packages);
   return packages;
 }
 
@@ -28593,6 +28695,35 @@ var buildReviewShapeHint = {
   ].join(" ")
 };
 
+// dist/flows/report-schema-kit.js
+function resultReportPointer(reportId, schemaByReportId, pathByReportId) {
+  return external_exports.object({
+    report_id: reportId,
+    path: external_exports.string().min(1),
+    schema: external_exports.string().min(1)
+  }).strict().superRefine((pointer, ctx) => {
+    const id = pointer.report_id;
+    const expectedSchema = schemaByReportId[id];
+    if (pointer.schema !== expectedSchema) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["schema"],
+        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
+      });
+    }
+    if (pathByReportId !== void 0) {
+      const expectedPath = pathByReportId[id];
+      if (pointer.path !== expectedPath) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["path"],
+          message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
+        });
+      }
+    }
+  });
+}
+
 // dist/flows/build/reports.js
 var BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   "build.brief": "build.brief@v1",
@@ -28654,7 +28785,7 @@ var BuildCheckpointPacket = external_exports.object({
   const choiceIds = new Set(packet.choices.map((choice) => choice.id));
   if (!choiceIds.has(packet.recommendation.choice_id)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recommendation", "choice_id"],
       message: "recommendation.choice_id must reference a declared checkpoint choice"
     });
@@ -28701,7 +28832,7 @@ var BuildReview = external_exports.object({
 }).strict().superRefine((review, ctx) => {
   if (review.verdict !== "accept" && review.findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: `findings must be non-empty when verdict is '${review.verdict}'`
     });
@@ -28714,20 +28845,7 @@ var BuildResultReportId = external_exports.enum([
   "build.verification",
   "build.review"
 ]);
-var BuildResultReportPointer = external_exports.object({
-  report_id: BuildResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var BuildResultReportPointer = resultReportPointer(BuildResultReportId, BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID);
 var BuildResult = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["complete", "needs_attention", "failed"]),
@@ -28739,7 +28857,7 @@ var BuildResult = external_exports.object({
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -28749,7 +28867,7 @@ var BuildResult = external_exports.object({
   for (const reportId of BuildResultReportId.options) {
     if (!seen.has(reportId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: `missing report_id '${reportId}'`
       });
@@ -28758,14 +28876,14 @@ var BuildResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'complete'"
       });
     }
     if (result.review_verdict !== "accept") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'accept' when outcome is 'complete'"
       });
@@ -28774,14 +28892,14 @@ var BuildResult = external_exports.object({
   if (result.outcome === "needs_attention") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'needs_attention'"
       });
     }
     if (result.review_verdict !== "accept-with-fixes") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'accept-with-fixes' when outcome is 'needs_attention'"
       });
@@ -28790,12 +28908,26 @@ var BuildResult = external_exports.object({
 });
 
 // dist/flows/build/writers/checkpoint-brief.js
-import { readFileSync as readFileSync3 } from "node:fs";
+import { readFileSync as readFileSync4 } from "node:fs";
 
-// dist/shared/connector-relay.js
+// dist/schemas/hashing.js
 import { createHash } from "node:crypto";
-function sha256Hex(payload) {
+import { readFileSync } from "node:fs";
+function canonicalJson(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256OfString(payload) {
   return createHash("sha256").update(payload, "utf8").digest("hex");
+}
+function sha256OfJson(value) {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
+}
+function sha256OfFile(path) {
+  return Sha256.parse(createHash("sha256").update(readFileSync(path)).digest("hex"));
 }
 
 // dist/shared/run-relative-path.js
@@ -28837,12 +28969,12 @@ function resolveRunRelative(runFolder, relPath) {
 }
 
 // dist/shared/verification-resolver.js
-import { existsSync as existsSync3, readFileSync as readFileSync2 } from "node:fs";
+import { existsSync as existsSync3, readFileSync as readFileSync3 } from "node:fs";
 import { join as join2 } from "node:path";
 
 // dist/shared/proof-plan.js
 import { spawnSync } from "node:child_process";
-import { existsSync as existsSync2, lstatSync as lstatSync2, readFileSync, realpathSync as realpathSync2 } from "node:fs";
+import { existsSync as existsSync2, lstatSync as lstatSync2, readFileSync as readFileSync2, realpathSync as realpathSync2 } from "node:fs";
 import { isAbsolute as isAbsolute2, join, relative as relative2, resolve as resolve2 } from "node:path";
 var PROOF_PLAN_ENV_INHERIT_ALLOWLIST = [
   "PATH",
@@ -28942,7 +29074,7 @@ function preflightProofPlanCommand(command, cwdAbs) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    parsed = JSON.parse(readFileSync2(packageJsonPath, "utf8"));
   } catch (error51) {
     const message = error51 instanceof Error ? error51.message : String(error51);
     throw new ProofPlanBlockedError(`Proof plan blocked: verification command '${command.id}' could not parse package.json at cwd ${JSON.stringify(command.cwd)}: ${message}.`);
@@ -28998,7 +29130,7 @@ function readPackageInfo(projectRoot) {
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync2(packageJsonPath, "utf8"));
+    parsed = JSON.parse(readFileSync3(packageJsonPath, "utf8"));
   } catch (error51) {
     const message = error51 instanceof Error ? error51.message : String(error51);
     return `Cannot choose verification commands because package.json could not be parsed: ${message}.`;
@@ -29296,11 +29428,11 @@ var buildBriefCheckpointBuilder = {
   },
   validateResumeContext(context) {
     const reportAbs = resolveRunRelative(context.runFolder, context.reportPath);
-    const raw = readFileSync3(reportAbs, "utf8");
+    const raw = readFileSync4(reportAbs, "utf8");
     if (context.reportSha256 === void 0) {
       throw new Error("checkpoint resume rejected: checkpoint request is missing checkpoint_report_sha256");
     }
-    const observedHash = sha256Hex(raw);
+    const observedHash = sha256OfString(raw);
     if (observedHash !== context.reportSha256) {
       throw new Error("checkpoint resume rejected: waiting Build brief hash differs from request");
     }
@@ -29401,7 +29533,7 @@ var buildPlanComposeBuilder = {
 };
 
 // dist/flows/build/writers/verification.js
-import { readFileSync as readFileSync4 } from "node:fs";
+import { readFileSync as readFileSync5 } from "node:fs";
 
 // dist/flows/build/writers/verification-projection.js
 function projectBuildVerification(observations) {
@@ -29429,7 +29561,7 @@ var buildVerificationWriter = {
     if (!context.step.reads.includes(planPath)) {
       throw new Error(`build.verification@v1 requires step '${context.step.id}' to read ${planPath}`);
     }
-    const plan = BuildPlan.parse(JSON.parse(readFileSync4(resolveRunRelative(context.runFolder, planPath), "utf8")));
+    const plan = BuildPlan.parse(JSON.parse(readFileSync5(resolveRunRelative(context.runFolder, planPath), "utf8")));
     return plan.verification.commands;
   },
   buildResult(observations) {
@@ -29470,6 +29602,15 @@ var buildFlowData = {
     skipOnPlanningReport: true,
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to implementation Build flow`;
+    },
+    inferEntryMode(taskText) {
+      if (/^\s*develop\s*:/i.test(taskText)) {
+        return {
+          name: "default",
+          reason: "matched develop intent; selected default Build thoroughness"
+        };
+      }
+      return void 0;
     }
   },
   schematic: {
@@ -29850,12 +29991,319 @@ var buildFlowData = {
 // dist/flows/build/flow.js
 var buildFlowDefinition = defineFlowData(buildFlowData);
 
-// dist/shared/rubric.js
-var RUBRIC_DIM_SCORE_BY_JUDGMENT = {
-  pass: 1,
-  concern: 0.5,
-  fail: 0
+// dist/shared/html/page.js
+var ESCAPE_MAP = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
 };
+function buildSanitizePattern() {
+  const ranges = [
+    [0, 8],
+    [11, 12],
+    [14, 31],
+    [8234, 8238],
+    [8294, 8297]
+  ];
+  const klass = ranges.map(([lo, hi]) => {
+    const loEsc = `\\u${lo.toString(16).padStart(4, "0")}`;
+    const hiEsc = `\\u${hi.toString(16).padStart(4, "0")}`;
+    return `${loEsc}-${hiEsc}`;
+  }).join("");
+  return new RegExp(`[${klass}]`, "g");
+}
+var SANITIZE_PATTERN = buildSanitizePattern();
+var MAX_BULLET_LEN = 4096;
+var MAX_PROMPT_LEN = 32768;
+function sanitizeForRender(value) {
+  return value.replace(SANITIZE_PATTERN, "");
+}
+function escapeHtmlChars(value) {
+  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+}
+function escapeHtml(value) {
+  return escapeHtmlChars(sanitizeForRender(value));
+}
+function truncate(value, max) {
+  return value.length > max ? `${value.slice(0, max - 1)}\u2026` : value;
+}
+function styles() {
+  return `:root{--bg:#fafaf9;--surface:#fff;--surface-2:#f5f5f4;--border:#e7e5e4;--border-strong:#d6d3d1;--text:#1c1917;--text-2:#57534e;--text-3:#a8a29e;--accent:#0f172a;--intent-positive:#166534;--intent-positive-soft:#f0fdf4;--intent-info:#1e40af;--intent-info-soft:#eff6ff;--intent-attention:#9a3412;--intent-attention-soft:#fff7ed;--intent-negative:#991b1b;--intent-negative-soft:#fef2f2}@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--surface:#1c1917;--surface-2:#292524;--border:#292524;--border-strong:#44403c;--text:#fafaf9;--text-2:#a8a29e;--text-3:#78716c;--accent:#fafaf9;--intent-positive:#4ade80;--intent-positive-soft:#052e16;--intent-info:#93c5fd;--intent-info-soft:#172554;--intent-attention:#fb923c;--intent-attention-soft:#431407;--intent-negative:#f87171;--intent-negative-soft:#450a0a}}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}.wrap{max-width:1200px;margin:0 auto;padding:48px 32px 96px}header.top{margin-bottom:24px}.meta{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}h1{font:600 28px/1.25 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;margin:0 0 8px;letter-spacing:-.01em}.subtitle{color:var(--text-2);font-size:16px;margin:0}.verdict{margin:24px 0 32px;padding:16px 20px;background:var(--intent-info-soft);border:1px solid var(--intent-info);border-radius:8px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.verdict.intent-positive{background:var(--intent-positive-soft);border-color:var(--intent-positive)}.verdict.intent-attention{background:var(--intent-attention-soft);border-color:var(--intent-attention)}.verdict.intent-negative{background:var(--intent-negative-soft);border-color:var(--intent-negative)}.verdict .badge{font:600 11px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--intent-info);padding:4px 8px;border:1px solid var(--intent-info);border-radius:4px}.verdict.intent-positive .badge{color:var(--intent-positive);border-color:var(--intent-positive)}.verdict.intent-attention .badge{color:var(--intent-attention);border-color:var(--intent-attention)}.verdict.intent-negative .badge{color:var(--intent-negative);border-color:var(--intent-negative)}.verdict .text{color:var(--text);font-size:14px;flex:1;min-width:200px}.verdict .text strong{font-weight:600}.verdict .confidence{font-size:12px;color:var(--text-2);text-transform:lowercase}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative}.card.intent-info{border-color:var(--intent-info);box-shadow:0 0 0 3px var(--intent-info-soft)}.card.intent-positive{border-color:var(--intent-positive);box-shadow:0 0 0 3px var(--intent-positive-soft)}.card.intent-attention{border-color:var(--intent-attention);box-shadow:0 0 0 3px var(--intent-attention-soft)}.card.intent-negative{border-color:var(--intent-negative);box-shadow:0 0 0 3px var(--intent-negative-soft)}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.card-id{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);letter-spacing:.05em}.card h2{font:600 17px/1.3 -apple-system,system-ui,sans-serif;margin:4px 0 0;letter-spacing:-.005em}.intent-badge{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:4px;white-space:nowrap;color:var(--intent-info);background:var(--intent-info-soft)}.intent-badge.intent-positive{color:var(--intent-positive);background:var(--intent-positive-soft)}.intent-badge.intent-attention{color:var(--intent-attention);background:var(--intent-attention-soft)}.intent-badge.intent-negative{color:var(--intent-negative);background:var(--intent-negative-soft)}.summary{color:var(--text-2);font-size:14px;margin:0}.section-label{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:0 0 8px}ul.tradeoffs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}ul.tradeoffs li{font-size:13px;color:var(--text);padding-left:18px;position:relative;line-height:1.5}ul.tradeoffs li::before{content:"\\2022";position:absolute;left:6px;color:var(--text-3);font-weight:700}.evidence{display:flex;flex-wrap:wrap;gap:6px}.chip{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:4px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text-2)}.actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}button.copy{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}button.copy:hover{background:var(--surface-2)}button.copy.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}button.copy.primary:hover{opacity:.9}details{margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px}details summary{cursor:pointer;font:500 13px/1.4 -apple-system,system-ui,sans-serif;color:var(--text-2);user-select:none}details[open] summary{margin-bottom:12px}details .body{font-size:13px;color:var(--text-2)}details ul{margin:6px 0;padding-left:20px}details li{margin-bottom:4px}footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}footer code{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace}`;
+}
+function clipboardScript() {
+  return `document.querySelectorAll('button.copy').forEach(btn=>{btn.addEventListener('click',async()=>{const p=btn.dataset.prompt;if(!p)return;try{await navigator.clipboard.writeText(p);const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.textContent=o;},1200);}catch(e){btn.textContent='Copy failed';}});});`;
+}
+function renderPage(input) {
+  const footerLeft = input.footerLeft === void 0 ? "" : `<span>${escapeHtml(input.footerLeft)}</span>`;
+  const footerRight = input.footerRight === void 0 ? "" : `<span><code>${escapeHtml(input.footerRight)}</code></span>`;
+  const wrapClassName = input.wrapClassName ?? "wrap";
+  const extraStyles = input.extraStyles === void 0 ? "" : input.extraStyles;
+  const extraScript = input.extraScript === void 0 ? "" : input.extraScript;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(input.title)}</title>
+<style>${styles()}${extraStyles}</style>
+</head>
+<body>
+<div class="${escapeHtml(wrapClassName)}">
+  <header class="top">
+    <div class="meta">${escapeHtml(input.metaLine)}</div>
+    <h1>${escapeHtml(input.headline)}</h1>
+    <p class="subtitle">${escapeHtml(input.subtitle)}</p>
+  </header>
+${input.bodyHtml}
+  <footer>
+    ${footerLeft}
+    ${footerRight}
+  </footer>
+</div>
+<script>${clipboardScript()}${extraScript}</script>
+</body>
+</html>
+`;
+}
+
+// dist/shared/html/components.js
+function intentClass(intent) {
+  return intent === "neutral" || intent === "info" ? "" : `intent-${intent}`;
+}
+function intentBadge(input) {
+  const classes = ["intent-badge"];
+  const className = intentClass(input.intent);
+  if (className.length > 0)
+    classes.push(className);
+  return `<span class="${classes.join(" ")}">${escapeHtml(input.text)}</span>`;
+}
+function chip(text) {
+  return `<span class="chip">${escapeHtml(truncate(text, MAX_BULLET_LEN))}</span>`;
+}
+function card(input) {
+  const intent = input.intent ?? "neutral";
+  const classes = ["card"];
+  const intentClassName = intentClass(intent);
+  if (intentClassName.length > 0)
+    classes.push(intentClassName);
+  const eyebrowMarkup = input.eyebrow === void 0 ? "" : `<div class="card-id">${escapeHtml(input.eyebrow)}</div>`;
+  const badgeMarkup = input.badge === void 0 ? "" : intentBadge(input.badge);
+  return `    <article class="${classes.join(" ")}">
+      <div class="card-head">
+        <div>
+          ${eyebrowMarkup}
+          <h2>${escapeHtml(input.title)}</h2>
+        </div>
+        ${badgeMarkup}
+      </div>
+${input.bodyHtml}
+    </article>`;
+}
+function verdictBanner(input) {
+  const classes = ["verdict"];
+  const intentClassName = intentClass(input.intent);
+  if (intentClassName.length > 0)
+    classes.push(intentClassName);
+  const aside = input.aside === void 0 ? "" : `<span class="confidence">${escapeHtml(input.aside)}</span>`;
+  return `  <div class="${classes.join(" ")}">
+    <span class="badge">${escapeHtml(input.badgeText)}</span>
+    <span class="text">${input.mainHtml}</span>
+    ${aside}
+  </div>`;
+}
+
+// dist/flows/build/writers/checkpoint-html.js
+var BUILD_BRIEF_PATH = "reports/build/brief.json";
+function bulletList(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function renderCommandChips(commands) {
+  return `<div class="evidence">
+          ${commands.map((command) => chip(commandText(command))).join("\n          ")}
+        </div>`;
+}
+function choiceIntent(choiceId, recommendedId) {
+  return choiceId === recommendedId ? "positive" : "neutral";
+}
+function shellSingleQuote(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice(runFolder, choiceId) {
+  return `circuit resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
+}
+function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
+  const isRecommended = choice.id === recommendedChoiceId2;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div>
+        <p class="section-label">Executable route</p>
+        <div class="evidence">
+          ${chip(`${choice.route.key} -> ${choice.route.target}`)}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: choiceIntent(choice.id, recommendedChoiceId2),
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function renderArtifactCard(brief, packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.artifact.preview)}</p>
+      <div>
+        <p class="section-label">Scope</p>
+        <p class="summary">${escapeHtml(packet.artifact.scope)}</p>
+      </div>
+      <div>
+        <p class="section-label">Success bar</p>
+        ${bulletList(packet.artifact.success_criteria)}
+      </div>`;
+  return card({
+    intent: "info",
+    eyebrow: packet.artifact.title,
+    title: brief.objective,
+    bodyHtml
+  });
+}
+function renderProofCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.proof.summary)}</p>
+      <div>
+        <p class="section-label">Planned checks</p>
+        ${renderCommandChips(packet.proof.commands)}
+      </div>
+      <div>
+        <p class="section-label">Proof state</p>
+        ${bulletList(packet.proof.evidence)}
+      </div>`;
+  return card({
+    intent: packet.proof.status === "missing" ? "attention" : "neutral",
+    eyebrow: packet.proof.status,
+    title: "Proof",
+    bodyHtml
+  });
+}
+function renderRiskCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.risk.summary)}</p>
+      <div>
+        <p class="section-label">Tradeoffs</p>
+        ${bulletList(packet.risk.tradeoffs)}
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "manager judgment",
+    title: "Risk",
+    bodyHtml
+  });
+}
+function renderSalienceCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.salience.summary)}</p>
+      <div>
+        <p class="section-label">Why now</p>
+        ${bulletList(packet.salience.why_now)}
+      </div>
+      <div>
+        <p class="section-label">Stays internal</p>
+        ${bulletList(packet.salience.hidden_routine_work)}
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "salience",
+    title: "Why this needs you",
+    bodyHtml
+  });
+}
+function filteredChoices(packetChoices, allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return packetChoices.filter((choice) => allowed.has(choice.id));
+}
+function loadBrief(readJsonRunRelative) {
+  const raw = readJsonRunRelative(BUILD_BRIEF_PATH);
+  const parsed = BuildBrief.safeParse(raw);
+  return parsed.success ? parsed.data : void 0;
+}
+var buildCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "build" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint === void 0)
+    return void 0;
+  const brief = loadBrief(ctx.readJsonRunRelative);
+  if (brief === void 0)
+    return void 0;
+  const packet = brief.checkpoint_packet;
+  if (packet === void 0)
+    return void 0;
+  const choices = filteredChoices(packet.choices, ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Recommended",
+    mainHtml: `<strong>${escapeHtml(packet.recommendation.label)}</strong> &mdash; ${escapeHtml(packet.recommendation.rationale)}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoiceCard(choice, recommendedChoice.id, ctx.runFolder)).join("\n\n");
+  const rawEvidence = [
+    BUILD_BRIEF_PATH,
+    packet.internal.request_path,
+    packet.internal.response_path,
+    ...packet.internal.raw_evidence,
+    ctx.checkpoint.request_path
+  ];
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard(brief, packet)}
+
+${renderSalienceCard(packet)}
+
+${renderRiskCard(packet)}
+
+${renderProofCard(packet)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Decision.</strong> ${escapeHtml(packet.decision.question)}</p>
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${rawEvidence.map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} \xB7 Circuit Build checkpoint`,
+    metaLine: `Build checkpoint \xB7 ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle,
+    bodyHtml,
+    footerLeft: `circuit \xB7 build \xB7 ${ctx.runId}`,
+    footerRight: BUILD_BRIEF_PATH
+  });
+};
+
+// dist/policy/rubric.js
 var THREE_AXIS_RUBRIC_TIE_BREAK_ORDER = [
   "evidence_rigor",
   "actionability",
@@ -29885,7 +30333,7 @@ function combineRubricResult(input) {
   if (dimIds.length === 0) {
     throw new Error("combineRubricResult requires at least one dim");
   }
-  const aggregateScore = roundedRubricScore(Object.values(dims).reduce((sum, dim) => sum + dim.dim_score, 0) / dimIds.length);
+  const aggregateScore = aggregateRubricScore(Object.values(dims).map((dim) => dim.dim_score));
   const runtimeVetoCount = Object.values(dims).filter((dim) => dim.runtime_vetoed).length;
   return RubricResult.parse({
     dims,
@@ -29942,7 +30390,7 @@ function rankRubricCandidates(candidates, orderedDims = THREE_AXIS_RUBRIC_TIE_BR
     winner,
     ...runnerUp === void 0 ? {} : { runner_up: runnerUp },
     ranked,
-    margin: runnerUp === void 0 ? null : roundedRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
+    margin: runnerUp === void 0 ? null : roundRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
     tie_break: RubricTieBreak.parse({
       ordered_dims: [...orderedDims],
       final_reason: finalReason
@@ -29986,9 +30434,6 @@ function tieBreakReason(winner, runnerUp, orderedDims) {
     }
   }
   return "original_ordinal";
-}
-function roundedRubricScore(value) {
-  return Number(value.toFixed(3));
 }
 
 // dist/flows/explore/relay-hints.js
@@ -30110,7 +30555,7 @@ function refineExactExploreRubricDims(value, ctx) {
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `missing rubric dim '${dimId}'`
       });
@@ -30119,7 +30564,7 @@ function refineExactExploreRubricDims(value, ctx) {
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`
       });
@@ -30144,7 +30589,7 @@ var ExploreDecisionOptions = external_exports.object({
   for (const [index, option] of report.options.entries()) {
     if (seen.has(option.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["options", index, "id"],
         message: `duplicate option id '${option.id}'`
       });
@@ -30182,7 +30627,7 @@ var ExploreTournamentAggregate = external_exports.object({
 }).strict().superRefine((aggregate2, ctx) => {
   if (aggregate2.branch_count !== aggregate2.branches.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["branch_count"],
       message: "branch_count must match branches.length"
     });
@@ -30190,21 +30635,21 @@ var ExploreTournamentAggregate = external_exports.object({
   for (const [index, branch] of aggregate2.branches.entries()) {
     if (branch.child_outcome === "complete" && branch.result_body === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "result_body"],
         message: "complete tournament branches must include result_body provenance"
       });
     }
     if (branch.child_outcome === "complete" && branch.rubric_result === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "rubric_result"],
         message: "complete tournament branches must include rubric_result provenance"
       });
     }
     if (branch.child_outcome === "complete" && branch.result_body !== void 0 && branch.result_body.option_id !== branch.branch_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "result_body", "option_id"],
         message: `branch_id '${branch.branch_id}' must match result_body.option_id '${branch.result_body.option_id}'`
       });
@@ -30253,20 +30698,7 @@ var ExploreResultReportId = external_exports.enum([
   "explore.tournament-review",
   "explore.decision"
 ]);
-var ExploreResultReportPointer = external_exports.object({
-  report_id: ExploreResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var ExploreResultReportPointer = resultReportPointer(ExploreResultReportId, EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID);
 var ExploreDefaultResultVerdictSnapshot = external_exports.object({
   compose_verdict: external_exports.string().min(1),
   review_verdict: ExploreReviewVerdictValue,
@@ -30289,7 +30721,7 @@ function refineExploreEvidenceLinks(result, ctx, expectedReportIds) {
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -30299,7 +30731,7 @@ function refineExploreEvidenceLinks(result, ctx, expectedReportIds) {
   const matchesSet = result.evidence_links.length === expectedReportIds.length && expectedReportIds.every((reportId) => seen.has(reportId));
   if (!matchesSet) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["evidence_links"],
       message: `evidence_links must contain exactly: ${expectedReportIds.join(", ")}`
     });
@@ -30316,7 +30748,7 @@ var ExploreDefaultResult = external_exports.object({
   const requiresFoldIns = snapshot.review_verdict === "accept-with-fold-ins" || snapshot.objection_count > 0 || snapshot.missed_angle_count > 0;
   if (requiresFoldIns && result.review_fold_ins === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins"],
       message: "review_fold_ins is required when the default Explore review verdict or counts report fold-ins"
     });
@@ -30326,14 +30758,14 @@ var ExploreDefaultResult = external_exports.object({
     return;
   if (foldIns.objections.length !== snapshot.objection_count) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins", "objections"],
       message: "review_fold_ins.objections length must match verdict_snapshot.objection_count"
     });
   }
   if (foldIns.missed_angles.length !== snapshot.missed_angle_count) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins", "missed_angles"],
       message: "review_fold_ins.missed_angles length must match verdict_snapshot.missed_angle_count"
     });
@@ -30415,7 +30847,7 @@ var exploreBriefComposeBuilder = {
 };
 
 // dist/flows/explore/writers/close.js
-import { readFileSync as readFileSync5 } from "node:fs";
+import { readFileSync as readFileSync6 } from "node:fs";
 
 // dist/flows/explore/writers/result-projection.js
 function reviewHasFoldIns(review) {
@@ -30500,7 +30932,7 @@ var exploreCloseBuilder = {
       const review2 = ExploreTournamentReview.parse(context.inputs.tournamentReview);
       const decision2 = ExploreDecision.parse(context.inputs.decision);
       const aggregatePath = requiredTournamentAggregatePath(context);
-      ExploreTournamentAggregate.parse(JSON.parse(readFileSync5(resolveRunRelative(context.runFolder, aggregatePath), "utf8")));
+      ExploreTournamentAggregate.parse(JSON.parse(readFileSync6(resolveRunRelative(context.runFolder, aggregatePath), "utf8")));
       return projectExploreResult({
         kind: "tournament",
         brief,
@@ -30647,10 +31079,10 @@ var exploreDecisionOptionsComposeBuilder = {
 };
 
 // dist/flows/explore/writers/decision.js
-import { readFileSync as readFileSync6 } from "node:fs";
+import { readFileSync as readFileSync7 } from "node:fs";
 var CHECKPOINT_RESPONSE_STEP_ID = "tradeoff-checkpoint-step";
 function readJson(runFolder, path) {
-  return JSON.parse(readFileSync6(resolveRunRelative(runFolder, path), "utf8"));
+  return JSON.parse(readFileSync7(resolveRunRelative(runFolder, path), "utf8"));
 }
 function requiredRead(stepReads, suffix) {
   const path = stepReads.find((entry) => entry.endsWith(suffix));
@@ -30731,7 +31163,16 @@ var exploreFlowData = {
       throw new Error("explore is the default flow; reasonForMatch should not be called");
     },
     isDefault: true,
-    defaultReason: "no routed flow signal matched; routed to explore as the conservative default"
+    defaultReason: "no routed flow signal matched; routed to explore as the conservative default",
+    inferEntryMode(taskText) {
+      if (/^\s*decide\s*:/i.test(taskText)) {
+        return {
+          name: "tournament",
+          reason: "matched decide intent; selected Explore tournament mode"
+        };
+      }
+      return void 0;
+    }
   },
   schematic: {
     schema_version: "1",
@@ -31354,6 +31795,179 @@ var exploreFlowData = {
 // dist/flows/explore/flow.js
 var exploreFlowDefinition = defineFlowData(exploreFlowData);
 
+// dist/flows/explore/writers/tournament-html.js
+function stringField(report, key) {
+  const value = report?.[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function isObject2(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function verdictBadgeText(verdict) {
+  if (verdict === "recommend")
+    return "Recommended";
+  if (verdict === "no-clear-winner")
+    return "No clear winner";
+  return "Operator decision";
+}
+function verdictIntent(verdict) {
+  if (verdict === "recommend")
+    return "info";
+  if (verdict === "no-clear-winner")
+    return "attention";
+  return "attention";
+}
+function confidenceText(confidence) {
+  return `${confidence} confidence`;
+}
+function renderOptionCard(option, isRecommended, isSelected) {
+  const intent = isSelected ? "positive" : isRecommended ? "info" : "neutral";
+  const badge = isSelected ? { text: "Selected", intent: "positive" } : isRecommended ? { text: "Recommended", intent: "info" } : void 0;
+  const tradeoffsMarkup = option.tradeoffs.map((tradeoff) => `<li>${escapeHtml(truncate(tradeoff, MAX_BULLET_LEN))}</li>`).join("\n          ");
+  const evidenceMarkup = option.evidence_refs.map((ref) => chip(ref)).join("\n          ");
+  const bodyHtml = `      <p class="summary">${escapeHtml(option.summary)}</p>
+      <div>
+        <p class="section-label">Tradeoffs</p>
+        <ul class="tradeoffs">
+          ${tradeoffsMarkup}
+        </ul>
+      </div>
+      <div>
+        <p class="section-label">Evidence</p>
+        <div class="evidence">
+          ${evidenceMarkup}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(option.best_case_prompt, MAX_PROMPT_LEN))}">Copy as prompt</button>
+      </div>`;
+  return card({
+    intent,
+    eyebrow: option.id,
+    title: option.label,
+    ...badge === void 0 ? {} : { badge },
+    bodyHtml
+  });
+}
+function renderTournamentVerdictBanner(review, decisionOptions, decision2) {
+  const recommendedOption = decisionOptions.options.find((option) => option.id === review.recommended_option_id);
+  const recommendedLabel = recommendedOption?.label ?? review.recommended_option_id;
+  const decisionText = decision2.decision;
+  return verdictBanner({
+    intent: verdictIntent(review.verdict),
+    badgeText: verdictBadgeText(review.verdict),
+    mainHtml: `<strong>${escapeHtml(recommendedLabel)}</strong> &mdash; ${escapeHtml(decisionText)}`,
+    aside: confidenceText(review.confidence)
+  });
+}
+function renderTournamentDetails(review, decision2) {
+  const sections = [];
+  sections.push(`<p><strong>Comparison.</strong> ${escapeHtml(review.comparison)}</p>`);
+  if (review.objections.length > 0) {
+    const items = review.objections.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Objections.</strong></p><ul>${items}</ul>`);
+  }
+  if (review.missing_evidence.length > 0) {
+    const items = review.missing_evidence.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Missing evidence.</strong></p><ul>${items}</ul>`);
+  }
+  if (review.tradeoff_question.length > 0) {
+    sections.push(`<p><strong>Tradeoff question.</strong> ${escapeHtml(review.tradeoff_question)}</p>`);
+  }
+  sections.push(`<p><strong>Rationale.</strong> ${escapeHtml(decision2.rationale)}</p>`);
+  if (decision2.residual_risks.length > 0) {
+    const items = decision2.residual_risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Residual risks.</strong></p><ul>${items}</ul>`);
+  }
+  sections.push(`<p><strong>Next action.</strong> ${escapeHtml(decision2.next_action)}</p>`);
+  return sections.join("\n      ");
+}
+function formatScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  return value.toFixed(3).replace(/\.?0+$/, "");
+}
+function formatSignedScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${formatScore(value)}`;
+}
+function autoResolutionLine(record2) {
+  const label = record2.checkpoint_label ?? record2.checkpoint_id;
+  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
+  return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
+}
+function renderAutoResolutions(records) {
+  if (records === void 0 || records.length === 0)
+    return "";
+  const items = records.map((record2) => `<li>${escapeHtml(autoResolutionLine(record2))}</li>`).join("");
+  return `
+  <section>
+    <h2>Auto-resolutions</h2>
+    <ul>${items}</ul>
+  </section>
+`;
+}
+function loadHtmlPayload(flowReport, readEvidenceReportById) {
+  const snapshot = isObject2(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  if (stringField(snapshot, "decision_verdict") !== "decided")
+    return void 0;
+  const optionsRaw = readEvidenceReportById("explore.decision-options");
+  const reviewRaw = readEvidenceReportById("explore.tournament-review");
+  const decisionRaw = readEvidenceReportById("explore.decision");
+  if (optionsRaw === void 0 || reviewRaw === void 0 || decisionRaw === void 0) {
+    return void 0;
+  }
+  const optionsParsed = ExploreDecisionOptions.safeParse(optionsRaw);
+  const reviewParsed = ExploreTournamentReview.safeParse(reviewRaw);
+  const decisionParsed = ExploreDecision.safeParse(decisionRaw);
+  if (!optionsParsed.success || !reviewParsed.success || !decisionParsed.success)
+    return void 0;
+  return {
+    decisionOptions: optionsParsed.data,
+    tournamentReview: reviewParsed.data,
+    decision: decisionParsed.data
+  };
+}
+var exploreTournamentProjector = (ctx) => {
+  const payload = loadHtmlPayload(ctx.flowReport, ctx.readEvidenceReportById);
+  if (payload === void 0)
+    return void 0;
+  const { decisionOptions, tournamentReview, decision: decision2 } = payload;
+  const recommendedId = tournamentReview.recommended_option_id;
+  const selectedId = decision2.selected_option_id;
+  const subtitle = `${decisionOptions.options.length} options surfaced. Tournament review: ${tournamentReview.verdict.replace(/-/g, " ")} (${tournamentReview.confidence} confidence).`;
+  const cards = decisionOptions.options.map((option) => renderOptionCard(option, option.id === recommendedId, option.id === selectedId)).join("\n\n");
+  const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision2);
+  const detailsBody = renderTournamentDetails(tournamentReview, decision2);
+  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${cards}
+  </div>
+
+${autoResolutions}
+
+  <details>
+    <summary>Tournament reasoning &middot; why this recommendation?</summary>
+    <div class="body">
+      ${detailsBody}
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${decisionOptions.decision_question} \xB7 Circuit Explore`,
+    metaLine: `Explore \xB7 ${ctx.flowId} \xB7 ${ctx.runId}`,
+    headline: decisionOptions.decision_question,
+    subtitle,
+    bodyHtml,
+    footerLeft: `circuit \xB7 explore \xB7 ${ctx.runId}`,
+    footerRight: decisionOptions.recommendation_basis
+  });
+};
+
 // dist/flows/registries/shape-hints/from-zod.js
 function defOf(node) {
   return node._zod.def;
@@ -31617,7 +32231,7 @@ var FixRegressionContract = external_exports.object({
 }).strict().superRefine((contract, ctx) => {
   if (contract.repro.kind !== "not-reproducible" && contract.regression_test.status !== "failing-before-fix") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_test", "status"],
       message: "regression_test.status must be 'failing-before-fix' when repro evidence exists"
     });
@@ -31691,7 +32305,7 @@ var FixNoReproDecision = external_exports.object({
   const expected = NO_REPRO_DECISION_ROUTE[decision2.decision];
   if (decision2.selected_route !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected_route"],
       message: `selected_route must be '${expected}' for decision '${decision2.decision}'`
     });
@@ -31727,7 +32341,7 @@ var FixVerificationCommandResult = external_exports.object({
   });
   if (!commandParse.success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["argv"],
       message: `verification command result must include a safe command spec: ${commandParse.error.issues.map((issue2) => issue2.message).join("; ")}`
     });
@@ -31735,7 +32349,7 @@ var FixVerificationCommandResult = external_exports.object({
   const expected = result.exit_code === 0 ? "passed" : "failed";
   if (result.status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status must be '${expected}' when exit_code is ${result.exit_code}`
     });
@@ -31748,7 +32362,7 @@ var FixVerification = external_exports.object({
   const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
   if (verification.overall_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expected}' for command results`
     });
@@ -31770,7 +32384,7 @@ var FixRegressionProofObservation = external_exports.object({
   const expected = observation.exit_code === 0 ? "passed" : "failed";
   if (observation.command_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["command_status"],
       message: `command_status must be '${expected}' when exit_code is ${observation.exit_code}`
     });
@@ -31786,7 +32400,7 @@ var FixRegressionProof = external_exports.object({
   const expectedOverall = proof.status === "not-proved" ? "failed" : "passed";
   if (proof.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`
     });
@@ -31794,14 +32408,14 @@ var FixRegressionProof = external_exports.object({
   if (proof.status === "deferred") {
     if (proof.baseline !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline"],
         message: "baseline must be omitted when status is 'deferred'"
       });
     }
     if (proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'deferred'"
       });
@@ -31809,21 +32423,21 @@ var FixRegressionProof = external_exports.object({
   } else {
     if (proof.baseline === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline"],
         message: `baseline is required when status is '${proof.status}'`
       });
     }
     if (proof.status === "proved" && proof.baseline?.command_status !== "failed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'proved' requires baseline command_status 'failed'"
       });
     }
     if (proof.status === "not-proved" && proof.baseline?.command_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'not-proved' requires baseline command_status 'passed'"
       });
@@ -31882,7 +32496,7 @@ var FixChangeSet = external_exports.object({
   const expectedOverall = changeSet.status === "pass" ? "passed" : "failed";
   if (changeSet.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${changeSet.status}'`
     });
@@ -31892,7 +32506,7 @@ var FixChangeSet = external_exports.object({
   const expectedExtras = changeSet.observed.filter((path) => !declaredSet.has(path));
   if (expectedExtras.length !== changeSet.undeclared_extras.length || expectedExtras.some((p, i) => p !== changeSet.undeclared_extras[i])) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["undeclared_extras"],
       message: "undeclared_extras must equal observed minus declared (in observed order)"
     });
@@ -31900,7 +32514,7 @@ var FixChangeSet = external_exports.object({
   const expectedMissing = changeSet.declared.filter((path) => !observedSet.has(path));
   if (expectedMissing.length !== changeSet.missing_declared.length || expectedMissing.some((p, i) => p !== changeSet.missing_declared[i])) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_declared"],
       message: "missing_declared must equal declared minus observed (in declared order)"
     });
@@ -31908,7 +32522,7 @@ var FixChangeSet = external_exports.object({
   for (const [index, path] of changeSet.baseline_dirty_mutated.entries()) {
     if (!observedSet.has(path)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline_dirty_mutated", index],
         message: `baseline_dirty_mutated path '${path}' must also appear in observed`
       });
@@ -31927,21 +32541,21 @@ var FixChangeSet = external_exports.object({
     if (hiddenFlagged)
       violations.push("non-empty hidden_index_flags");
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status 'pass' requires no failure conditions, but: ${violations.join("; ")}`
     });
   }
   if (changeSet.status === "fail" && isClean) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: "status 'fail' requires at least one of: undeclared_extras, missing_declared, HEAD divergence, or hidden_index_flags"
     });
   }
   if (changeSet.status === "fail" && changeSet.reason === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason"],
       message: "reason is required when status is 'fail'"
     });
@@ -31957,7 +32571,7 @@ var FixRegressionRerun = external_exports.object({
   const expectedOverall = proof.status === "still-failing" ? "failed" : "passed";
   if (proof.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`
     });
@@ -31965,14 +32579,14 @@ var FixRegressionRerun = external_exports.object({
   if (proof.status === "deferred") {
     if (proof.rerun !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rerun"],
         message: "rerun must be omitted when status is 'deferred'"
       });
     }
     if (proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'deferred'"
       });
@@ -31980,28 +32594,28 @@ var FixRegressionRerun = external_exports.object({
   } else {
     if (proof.rerun === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rerun"],
         message: `rerun is required when status is '${proof.status}'`
       });
     }
     if (proof.status === "cleared" && proof.rerun?.command_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'cleared' requires rerun command_status 'passed'"
       });
     }
     if (proof.status === "still-failing" && proof.rerun?.command_status !== "failed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'still-failing' requires rerun command_status 'failed'"
       });
     }
     if (proof.status === "still-failing" && proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'still-failing'"
       });
@@ -32052,28 +32666,7 @@ var FixResultReportId = external_exports.enum([
   "fix.change-set",
   "fix.review"
 ]);
-var FixResultReportPointer = external_exports.object({
-  report_id: FixResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = FIX_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-  const expectedPath = FIX_RESULT_PATH_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.path !== expectedPath) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["path"],
-      message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var FixResultReportPointer = resultReportPointer(FixResultReportId, FIX_RESULT_SCHEMA_BY_ARTIFACT_ID, FIX_RESULT_PATH_BY_ARTIFACT_ID);
 var FixReviewStatus = external_exports.enum(["completed", "skipped"]);
 var FixResult = external_exports.object({
   summary: external_exports.string().min(1),
@@ -32092,7 +32685,7 @@ var FixResult = external_exports.object({
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -32102,7 +32695,7 @@ var FixResult = external_exports.object({
   for (const reportId of REQUIRED_FIX_RESULT_ARTIFACT_IDS) {
     if (!seen.has(reportId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: `missing report_id '${reportId}'`
       });
@@ -32110,56 +32703,56 @@ var FixResult = external_exports.object({
   }
   if (result.outcome === "fixed" && result.verification_status !== "passed") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verification_status"],
       message: "verification_status must be 'passed' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.regression_status !== "proved") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_status"],
       message: "regression_status must be 'proved' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.regression_rerun_status !== "cleared") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status must be 'cleared' when outcome is 'fixed'"
     });
   }
   if (result.regression_status === "deferred" && result.regression_rerun_status !== "deferred") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status must be 'deferred' when regression_status is 'deferred'"
     });
   }
   if (result.regression_status === "proved" && result.regression_rerun_status === "deferred") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status cannot be 'deferred' when regression_status is 'proved'"
     });
   }
   if (result.outcome === "fixed" && result.change_set_status !== "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["change_set_status"],
       message: "change_set_status must be 'pass' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.review_verdict === "reject") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_verdict"],
       message: "review_verdict cannot be 'reject' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.review_status === "completed" && result.review_verdict !== "accept") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_verdict"],
       message: "review_verdict must be 'accept' when outcome is 'fixed' and review completed"
     });
@@ -32167,14 +32760,14 @@ var FixResult = external_exports.object({
   if (result.review_status === "completed") {
     if (result.review_verdict === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict is required when review_status is 'completed'"
       });
     }
     if (!seen.has("fix.review")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: "review_status 'completed' must include the fix.review evidence link"
       });
@@ -32183,14 +32776,14 @@ var FixResult = external_exports.object({
   if (result.review_status === "skipped") {
     if (result.review_skip_reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_skip_reason"],
         message: "review_skip_reason is required when review_status is 'skipped'"
       });
     }
     if (result.review_verdict !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be omitted when review_status is 'skipped'"
       });
@@ -32198,7 +32791,7 @@ var FixResult = external_exports.object({
   }
   if (result.outcome === "not-reproduced" && !seen.has("fix.no-repro-decision")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["evidence_links"],
       message: "outcome 'not-reproduced' must include the fix.no-repro-decision evidence link"
     });
@@ -32483,7 +33076,7 @@ var fixBriefComposeBuilder = {
 };
 
 // dist/flows/fix/writers/change-set.js
-import { readFileSync as readFileSync7 } from "node:fs";
+import { readFileSync as readFileSync8 } from "node:fs";
 import { isAbsolute as isAbsolute3, relative as relative3 } from "node:path";
 
 // dist/flows/fix/writers/change-set-projection.js
@@ -32628,8 +33221,8 @@ var fixChangeSetWriter = {
     const post = parseGitStateObservation(observation, "fix.change-set@v1");
     const baselinePath = reportPathForSchemaInRuntimeFlow(context.flow, "fix.baseline-snapshot@v1");
     const changePath = reportPathForSchemaInRuntimeFlow(context.flow, "fix.change@v1");
-    const baseline = FixBaselineSnapshot.parse(JSON.parse(readFileSync7(resolveRunRelative(context.runFolder, baselinePath), "utf8")));
-    const change = FixChange.parse(JSON.parse(readFileSync7(resolveRunRelative(context.runFolder, changePath), "utf8")));
+    const baseline = FixBaselineSnapshot.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, baselinePath), "utf8")));
+    const change = FixChange.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, changePath), "utf8")));
     const ignoredRunFolderPrefix = runFolderPrefix({
       runFolder: context.runFolder,
       ...context.projectRoot === void 0 ? {} : { projectRoot: context.projectRoot }
@@ -32744,7 +33337,7 @@ var fixCloseBuilder = {
 };
 
 // dist/flows/fix/writers/regression-baseline.js
-import { readFileSync as readFileSync8 } from "node:fs";
+import { readFileSync as readFileSync9 } from "node:fs";
 
 // dist/flows/fix/writers/regression-projection.js
 function regressionObservationPayload(observation) {
@@ -32825,7 +33418,7 @@ var fixRegressionBaselineWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`fix.regression-proof@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = FixBrief.parse(JSON.parse(readFileSync8(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = FixBrief.parse(JSON.parse(readFileSync9(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     if (brief.regression_contract.regression_test.status !== "failing-before-fix") {
       return [];
     }
@@ -32837,7 +33430,7 @@ var fixRegressionBaselineWriter = {
 };
 
 // dist/flows/fix/writers/regression-rerun.js
-import { readFileSync as readFileSync9 } from "node:fs";
+import { readFileSync as readFileSync10 } from "node:fs";
 var fixRegressionRerunWriter = {
   resultSchemaName: "fix.regression-rerun@v1",
   loadCommands(context) {
@@ -32845,7 +33438,7 @@ var fixRegressionRerunWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`fix.regression-rerun@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = FixBrief.parse(JSON.parse(readFileSync9(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = FixBrief.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     if (brief.regression_contract.regression_test.status !== "failing-before-fix") {
       return [];
     }
@@ -32857,7 +33450,7 @@ var fixRegressionRerunWriter = {
 };
 
 // dist/flows/fix/writers/verification.js
-import { readFileSync as readFileSync10 } from "node:fs";
+import { readFileSync as readFileSync11 } from "node:fs";
 
 // dist/flows/fix/writers/verification-projection.js
 function projectFixVerification(observations) {
@@ -32888,7 +33481,7 @@ var fixVerificationWriter = {
     if (!context.step.reads.includes(briefPath)) {
       throw new Error(`fix.verification@v1 requires step '${context.step.id}' to read ${briefPath}`);
     }
-    const brief = FixBrief.parse(JSON.parse(readFileSync10(resolveRunRelative(context.runFolder, briefPath), "utf8")));
+    const brief = FixBrief.parse(JSON.parse(readFileSync11(resolveRunRelative(context.runFolder, briefPath), "utf8")));
     return brief.verification_command_candidates;
   },
   buildResult(observations) {
@@ -32909,6 +33502,8 @@ var FIX_SIGNALS = [
     pattern: /\b(?:bug|buggy|broken|failing|fails|failed|wrong|incorrect|instead\s+of|regression|crash|crashes|throw|throws)\b[\s\S]{0,200}\bfix\s+(?:it|this|that|please)\b/i
   }
 ];
+var FIX_DEEP_SIGNAL = /\b(?:regression|flaky|intermittent|incident|outage|crash|failure|failing\s+(?:test|build)|debug|diagnose|reproduce|root\s+cause)\b/i;
+var FIX_QUICK_SIGNAL = /^\s*(?:(?:quick|small|tiny|simple)\s+fix\s*:|fix\s*:\s*(?:quick|small|tiny|simple)\b)/i;
 var fixFlowData = {
   id: "fix",
   visibility: "public",
@@ -32922,6 +33517,28 @@ var fixFlowData = {
     skipOnPlanningReport: true,
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to Fix flow`;
+    },
+    inferEntryMode(taskText) {
+      if (/\bflaky\b/i.test(taskText)) {
+        return {
+          name: "deep",
+          reason: "matched flaky signal; selected deep thoroughness"
+        };
+      }
+      const deepMatch = taskText.match(FIX_DEEP_SIGNAL);
+      if (deepMatch?.[0] !== void 0) {
+        return {
+          name: "deep",
+          reason: `matched ${deepMatch[0]} signal; selected deep thoroughness`
+        };
+      }
+      if (FIX_QUICK_SIGNAL.test(taskText)) {
+        return {
+          name: "lite",
+          reason: "matched quick Fix intent; selected lite thoroughness"
+        };
+      }
+      return void 0;
     }
   },
   schematic: {
@@ -33669,11 +34286,27 @@ var PromptTransport = external_exports.enum(["prompt-file"]);
 var ConnectorOutputExtraction = external_exports.object({
   kind: external_exports.literal("output-file")
 }).strict();
-var BUILTIN_CONNECTOR_CAPABILITIES = {
-  "claude-code": { filesystem: "trusted-write", structured_output: "json" },
-  codex: { filesystem: "trusted-write", structured_output: "json" },
-  "cursor-agent": { filesystem: "trusted-write", structured_output: "json" }
+var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
+var CURSOR_AGENT_SUPPORTED_EFFORTS = ["none"];
+var BUILTIN_CONNECTOR_SPECS = {
+  "claude-code": {
+    provider: "anthropic",
+    supportedEfforts: CLAUDE_CODE_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  },
+  codex: {
+    provider: "openai",
+    supportedEfforts: CODEX_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  },
+  "cursor-agent": {
+    provider: "gemini",
+    supportedEfforts: CURSOR_AGENT_SUPPORTED_EFFORTS,
+    capabilities: { filesystem: "trusted-write", structured_output: "json" }
+  }
 };
+var BUILTIN_CONNECTOR_CAPABILITIES = Object.fromEntries(EnabledConnector.options.map((name) => [name, BUILTIN_CONNECTOR_SPECS[name].capabilities]));
 var RESERVED_CONNECTOR_NAMES = [
   ...EnabledConnector.options,
   "auto"
@@ -33689,7 +34322,7 @@ var CustomConnectorDescriptor = external_exports.object({
 }).strict().superRefine((descriptor, ctx) => {
   if (descriptor.capabilities.filesystem !== "read-only") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["capabilities", "filesystem"],
       message: "custom connectors are read-only in V1; writable custom workers require a later isolated mode"
     });
@@ -33721,94 +34354,6 @@ var RelayResolutionSource = external_exports.discriminatedUnion("source", [
   DefaultResolutionSource,
   AutoResolutionSource
 ]);
-
-// dist/schemas/ref.js
-var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
-var RefKind = external_exports.enum([
-  "work_contract",
-  "policy",
-  "trace",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory",
-  "operator_input"
-]);
-var ContentRefKinds = /* @__PURE__ */ new Set([
-  "work_contract",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory"
-]);
-var Ref = external_exports.object({
-  kind: RefKind,
-  ref: external_exports.string().min(1),
-  sha256: Sha256.optional(),
-  run_id: RunId.optional(),
-  flow_id: CompiledFlowId.optional(),
-  step_id: StepId.optional(),
-  attempt: external_exports.number().int().positive().optional(),
-  sequence: external_exports.number().int().nonnegative().optional()
-}).strict().superRefine((ref, ctx) => {
-  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sha256"],
-      message: `${ref.kind} refs require sha256`
-    });
-  }
-  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["flow_id"],
-      message: "work_contract refs require flow_id"
-    });
-  }
-  if (ref.kind !== "trace")
-    return;
-  if (ref.run_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["run_id"],
-      message: "trace refs require run_id"
-    });
-  }
-  if (ref.sequence === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sequence"],
-      message: "trace refs require sequence"
-    });
-    return;
-  }
-  const expected = `trace.ndjson#sequence=${ref.sequence}`;
-  if (ref.ref !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["ref"],
-      message: `trace refs must use ${expected}`
-    });
-  }
-});
 
 // dist/schemas/recovery-route-kind.js
 var RecoveryRouteKind = external_exports.enum([
@@ -33885,35 +34430,35 @@ var RecoveryRouteBindingV0 = external_exports.object({
   if (binding.kind === "retry_same_step_with_feedback") {
     if (binding.route_target !== binding.step_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_target"],
         message: "retry_same_step_with_feedback must target the same step"
       });
     }
     if (!requiredRefs.has("acceptance_feedback")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["required_refs"],
         message: "retry_same_step_with_feedback requires acceptance_feedback refs"
       });
     }
     if (!binding.attempt_budget.consumes_step_attempt) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "consumes_step_attempt"],
         message: "retry_same_step_with_feedback consumes the step attempt budget"
       });
     }
     if (!binding.attempt_budget.must_respect_max_attempts) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "must_respect_max_attempts"],
         message: "retry_same_step_with_feedback must respect max_attempts"
       });
     }
     if (binding.attempt_budget.retry_target !== "same_step") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "retry_target"],
         message: "retry_same_step_with_feedback requires retry_target same_step"
       });
@@ -33921,35 +34466,35 @@ var RecoveryRouteBindingV0 = external_exports.object({
   }
   if (causes.has("unknown_failure") && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(binding.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["allowed_failure_causes"],
       message: "unknown_failure cannot route to retry, verification, or independent review"
     });
   }
   if (binding.kind === "safe_apply_reject" && !requiredRefs.has("safe_apply_result") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "safe_apply_reject requires safe_apply_result, runtime_diff, or change_packet refs"
     });
   }
   if (causes.has("generated_surface_drift") && !requiredRefs.has("generated_surface_evidence")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "generated_surface_drift requires generated_surface_evidence refs"
     });
   }
   if (causes.has("protected_file_touched") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "protected_file_touched requires runtime_diff or change_packet refs"
     });
   }
   if (binding.source_ref.kind !== "work_contract") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source_ref", "kind"],
       message: "recovery route bindings must point back to WorkContract refs"
     });
@@ -34029,7 +34574,7 @@ var SafeApplySelected = external_exports.object({
 }).strict().superRefine((selected, ctx) => {
   if (selected.action === "apply" && selected.final_verification_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["final_verification_ref"],
       message: "safe_apply apply decisions require final verification refs"
     });
@@ -34044,14 +34589,14 @@ var RecoveryRouteSelected = external_exports.object({
 }).strict().superRefine((selected, ctx) => {
   if (["work_contract", "policy", "memory"].includes(selected.failure_ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["failure_ref", "kind"],
       message: "recovery failure refs must point at failure evidence, not authority or memory refs"
     });
   }
   if (selected.failure_cause === "unknown_failure" && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(selected.recovery_kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery_kind"],
       message: "unknown_failure cannot route to retry, verification, or independent review"
     });
@@ -34072,28 +34617,28 @@ function isMemoryReasonCode(reasonCode) {
 function addScopedRefIssues(ctx, path, label, ref, entry) {
   if (ref.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "run_id"],
       message: `${label} run_id must match guidance run_id`
     });
   }
   if (ref.flow_id !== entry.scope.flow_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "flow_id"],
       message: `${label} flow_id must match guidance scope.flow_id`
     });
   }
   if (ref.step_id !== entry.scope.step_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "step_id"],
       message: `${label} step_id must match guidance scope.step_id`
     });
   }
   if (ref.attempt !== entry.scope.attempt) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "attempt"],
       message: `${label} attempt must match guidance scope.attempt`
     });
@@ -34122,7 +34667,7 @@ var GuidanceDecisionTraceEntryBody = external_exports.object({
 function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.scope.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["scope", "run_id"],
       message: "scope.run_id must match run_id"
     });
@@ -34130,7 +34675,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.constraint_refs.entries()) {
     if (ref.kind !== "work_contract" && ref.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["constraint_refs", index, "kind"],
         message: "constraint_refs must use work_contract or policy refs in V0"
       });
@@ -34139,7 +34684,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.contract_refs.entries()) {
     if (ref.kind !== "work_contract") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["contract_refs", index, "kind"],
         message: "contract_refs must use work_contract refs"
       });
@@ -34148,7 +34693,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.policy_refs.entries()) {
     if (ref.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["policy_refs", index, "kind"],
         message: "policy_refs must use policy refs"
       });
@@ -34157,7 +34702,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.memory_refs?.entries() ?? []) {
     if (ref.kind !== "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["memory_refs", index, "kind"],
         message: "memory_refs must use memory refs"
       });
@@ -34166,7 +34711,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.evidence_refs?.entries() ?? []) {
     if (ref.kind === "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "kind"],
         message: "memory refs cannot be evidence refs"
       });
@@ -34177,14 +34722,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   const hasMemoryRefs = (entry.memory_refs?.length ?? 0) > 0;
   if (hasMemoryReasonCode && !hasMemoryRefs) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_refs"],
       message: "memory reason codes require memory_refs"
     });
   }
   if (hasMemoryRefs && !hasMemoryReasonCode) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "memory_refs require a memory reason code"
     });
@@ -34192,21 +34737,21 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, option] of entry.rejected_options?.entries() ?? []) {
     if (option.blocked_by?.kind === "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory refs cannot block guidance options"
       });
     }
     if (option.reason_code === "memory_conflicts_with_policy" && option.blocked_by?.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory policy conflicts must be blocked by policy refs"
       });
     }
     if (option.reason_code === "memory_conflicts_with_contract" && option.blocked_by?.kind !== "work_contract") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory contract conflicts must be blocked by work_contract refs"
       });
@@ -34215,7 +34760,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.subject === "flow_selection") {
     if (!FlowSelectionSelected.safeParse(entry.selected).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["selected"],
         message: "flow_selection selected payload must name flow_id and work_contract_ref"
       });
@@ -34224,7 +34769,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.scope.flow_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["scope", "flow_id"],
       message: `${entry.subject} decisions require scope.flow_id`
     });
@@ -34232,7 +34777,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.subject === "proof_policy") {
     if (entry.scope.step_id === void 0 !== (entry.scope.attempt === void 0)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "attempt"],
         message: "proof_policy decisions must include step_id and attempt together"
       });
@@ -34240,14 +34785,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   } else {
     if (entry.scope.step_id === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "step_id"],
         message: `${entry.subject} decisions require scope.step_id`
       });
     }
     if (entry.scope.attempt === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "attempt"],
         message: `${entry.subject} decisions require scope.attempt`
       });
@@ -34255,21 +34800,21 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.subject === "relay_execution" && !RelayExecutionSelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "relay_execution selected payload must name role, connector, skills, context ref, and request hash"
     });
   }
   if (entry.subject === "proof_policy" && !ProofPolicySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "proof_policy selected payload must name proof_profile, required claim kinds, required evidence kinds, and whether close requires proven claims"
     });
   }
   if (entry.subject === "safe_apply" && !SafeApplySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "safe_apply selected payload must name action, change_packet_ref, base_ref, and final verification refs when applying"
     });
@@ -34282,14 +34827,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       addScopedRefIssues(ctx, ["selected", "base_ref"], "safe_apply base_ref", base_ref, entry);
       if (!entry.input_refs.some((ref) => sameRef(ref, change_packet_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "safe_apply input_refs must include selected.change_packet_ref"
         });
       }
       if (!entry.input_refs.some((ref) => sameRef(ref, base_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "safe_apply input_refs must include selected.base_ref"
         });
@@ -34298,7 +34843,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
         addScopedRefIssues(ctx, ["selected", "final_verification_ref"], "safe_apply final_verification_ref", final_verification_ref, entry);
         if (!entry.evidence_refs?.some((ref) => sameRef(ref, final_verification_ref))) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["evidence_refs"],
             message: "safe_apply evidence_refs must include selected.final_verification_ref"
           });
@@ -34308,7 +34853,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.subject === "recovery_route" && !RecoveryRouteSelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "recovery_route selected payload must name route_id, recovery_kind, failure_cause, failure_ref, and binding_ref"
     });
@@ -34319,63 +34864,63 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       const { binding_ref, failure_ref } = recoverySelected.data;
       if (!entry.input_refs.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "recovery_route input_refs must include selected.failure_ref"
         });
       }
       if (!entry.evidence_refs?.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence_refs"],
           message: "recovery_route evidence_refs must include selected.failure_ref"
         });
       }
       if (failure_ref.kind === "trace" && failure_ref.sequence !== void 0 && failure_ref.sequence >= entry.sequence) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "sequence"],
           message: "recovery trace failure_ref must point to an earlier trace entry"
         });
       }
       if (binding_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "binding_ref", "flow_id"],
           message: "recovery binding_ref flow_id must match guidance scope.flow_id"
         });
       }
       if (failure_ref.run_id !== void 0 && failure_ref.run_id !== entry.run_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "run_id"],
           message: "recovery failure_ref run_id must match guidance run_id"
         });
       }
       if (failure_ref.flow_id !== void 0 && failure_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "flow_id"],
           message: "recovery failure_ref flow_id must match guidance scope.flow_id"
         });
       }
       if (failure_ref.step_id === void 0 !== (failure_ref.attempt === void 0)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "attempt"],
           message: "recovery failure_ref must include step_id and attempt together"
         });
       }
       if (failure_ref.step_id !== void 0 && failure_ref.step_id !== entry.scope.step_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "step_id"],
           message: "recovery failure_ref step_id must match guidance scope.step_id"
         });
       }
       if (failure_ref.attempt !== void 0 && failure_ref.attempt !== entry.scope.attempt) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "attempt"],
           message: "recovery failure_ref attempt must match guidance scope.attempt"
         });
@@ -34462,35 +35007,35 @@ var Evidence = external_exports.object({
 }).strict().superRefine((evidence2, ctx) => {
   if (!EvidenceRefKinds[evidence2.kind].includes(evidence2.ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["ref", "kind"],
       message: `${evidence2.kind} evidence cannot use ${evidence2.ref.kind} refs`
     });
   }
   if (RuntimeOwnedEvidenceKinds.has(evidence2.kind) && evidence2.producer !== "runtime") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["producer"],
       message: `${evidence2.kind} evidence must be produced by the runtime`
     });
   }
   if (evidence2.producer === "worker" && evidence2.result === "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result"],
       message: "worker-produced evidence cannot be marked pass by itself"
     });
   }
   if (evidence2.independence === "self" && evidence2.result === "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["independence"],
       message: "self evidence cannot prove a claim"
     });
   }
   if (evidence2.kind === "review" && evidence2.independence === "self") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["independence"],
       message: "review evidence must be independent or runtime-owned"
     });
@@ -34526,14 +35071,14 @@ var ProofAssessmentResult = external_exports.object({
 }).strict().superRefine((result, ctx) => {
   if (result.status === "proven" && result.recovery !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery"],
       message: "proven claims must not declare a recovery route"
     });
   }
   if (result.status !== "proven" && result.recovery === void 0 && result.missing.length === 0 && result.contradictions.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery"],
       message: "non-proven claims without recovery must explain the missing or contradicted proof"
     });
@@ -34573,7 +35118,7 @@ var ProofAssessment = external_exports.object({
   for (const [index, claim] of assessment.claims.entries()) {
     if (claimIds.has(claim.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claims", index, "id"],
         message: `duplicate claim '${claim.id}'`
       });
@@ -34586,7 +35131,7 @@ var ProofAssessment = external_exports.object({
   for (const [index, evidence2] of assessment.evidence.entries()) {
     if (evidenceById.has(evidence2.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence", index, "id"],
         message: `duplicate evidence '${evidence2.id}'`
       });
@@ -34595,7 +35140,7 @@ var ProofAssessment = external_exports.object({
     for (const [claimIndex, claimId] of evidence2.covers_claims.entries()) {
       if (!claimIds.has(claimId)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence", index, "covers_claims", claimIndex],
           message: `evidence covers undeclared claim '${claimId}'`
         });
@@ -34606,14 +35151,14 @@ var ProofAssessment = external_exports.object({
   for (const [index, result] of assessment.results.entries()) {
     if (!claimIds.has(result.claim_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results", index, "claim_id"],
         message: `result references undeclared claim '${result.claim_id}'`
       });
     }
     if (resultsByClaim.has(result.claim_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results", index, "claim_id"],
         message: `duplicate proof result for claim '${result.claim_id}'`
       });
@@ -34623,7 +35168,7 @@ var ProofAssessment = external_exports.object({
       const evidence2 = evidenceById.get(id);
       if (evidence2 === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "evidence_refs", evidenceIndex],
           message: `result references undeclared evidence '${id}'`
         });
@@ -34633,14 +35178,14 @@ var ProofAssessment = external_exports.object({
     if (result.status === "proven") {
       if (result.missing.length > 0 || result.contradictions.length > 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "status"],
           message: "proven claims cannot list missing evidence or contradictions"
         });
       }
       if (!referencedEvidence.some((evidence2) => evidence2 !== void 0 && canProveClaim(evidence2, result.claim_id))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "evidence_refs"],
           message: "proven claims require passing runtime or independent evidence beyond report shape"
         });
@@ -34650,7 +35195,7 @@ var ProofAssessment = external_exports.object({
   for (const requiredClaimId of requiredClaimIds) {
     if (!resultsByClaim.has(requiredClaimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results"],
         message: `missing proof result for required claim '${requiredClaimId}'`
       });
@@ -34664,14 +35209,14 @@ var ProofAssessment = external_exports.object({
   const expectedOverall = worstStatus(relevantResults.map((result) => result.status));
   if (assessment.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' for the required claim results`
     });
   }
   if (assessment.close_allowed && relevantResults.some((result) => result.status !== "proven")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["close_allowed"],
       message: "close_allowed requires every required claim to be proven"
     });
@@ -34685,10 +35230,7 @@ var TraceEntryBase = external_exports.object({
   recorded_at: external_exports.string().datetime(),
   run_id: RunId
 });
-var HEX642 = /^[0-9a-f]{64}$/;
-var ContentHash = external_exports.string().regex(HEX642, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
+var ContentHash = Sha256;
 var RunBootstrappedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("run.bootstrapped"),
   flow_id: CompiledFlowId,
@@ -34770,7 +35312,7 @@ var ProofScope2 = external_exports.object({
 }).strict().superRefine((scope, ctx) => {
   if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["attempt"],
       message: "proof assessment scope must include step_id and attempt together"
     });
@@ -34793,7 +35335,7 @@ var SafeApplyScope = external_exports.object({
 }).strict().superRefine((scope, ctx) => {
   if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["attempt"],
       message: "safe apply scope must include step_id and attempt together"
     });
@@ -34825,20 +35367,20 @@ var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
 }).strict().superRefine((entry, ctx) => {
   if (entry.boundary_ref.sha256 !== entry.boundary_hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_hash"],
       message: "checkpoint boundary_hash must match boundary_ref.sha256"
     });
   }
   if (entry.boundary_ref.step_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary_ref.step_id is required"
     });
   } else if (entry.boundary_ref.step_id !== entry.step_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary_ref.step_id must match step_id"
     });
@@ -34962,7 +35504,7 @@ var FanoutExecutionPolicy = external_exports.object({
 }).strict().superRefine((policy2, ctx) => {
   if (policy2.writable_relay_branches_serialized && policy2.reason === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason"],
       message: "serialized writable relay fanouts require a reason"
     });
@@ -35062,7 +35604,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     const expected = ev.exit_code === 0 ? "passed" : "failed";
     if (ev.status !== expected) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: `status must be '${expected}' when exit_code is ${ev.exit_code}`
       });
@@ -35072,14 +35614,14 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   if (ev.kind === "proof.assessed") {
     if (ev.scope.run_id !== ev.run_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "run_id"],
         message: "proof assessment scope.run_id must match run_id"
       });
     }
     if (ev.close_allowed && ev.overall_status !== "proven") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["close_allowed"],
         message: "proof assessment close_allowed requires overall_status proven"
       });
@@ -35089,7 +35631,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   if (ev.kind === "safe_apply.result") {
     if (ev.scope.run_id !== ev.run_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "run_id"],
         message: "safe apply scope.run_id must match run_id"
       });
@@ -35112,28 +35654,28 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     ]) {
       if (ref.run_id !== ev.run_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "run_id"],
           message: `${label} run_id must match run_id`
         });
       }
       if (ref.flow_id !== ev.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "flow_id"],
           message: `${label} flow_id must match scope.flow_id`
         });
       }
       if (ref.step_id !== ev.scope.step_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "step_id"],
           message: `${label} step_id must match scope.step_id`
         });
       }
       if (ref.attempt !== ev.scope.attempt) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "attempt"],
           message: `${label} attempt must match scope.attempt`
         });
@@ -35141,7 +35683,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     }
     if (ev.action === "rejected" && ev.outcome !== "fail") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "rejected safe apply trace results require fail outcome"
       });
@@ -35149,14 +35691,14 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     if (ev.action === "applied") {
       if (ev.outcome !== "pass") {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["outcome"],
           message: "applied safe apply trace results require pass outcome"
         });
       }
       if (ev.final_verification_ref === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["final_verification_ref"],
           message: "applied safe apply trace results require final verification refs"
         });
@@ -35168,7 +35710,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     return;
   if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["resolved_from", "role"],
       message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
     });
@@ -35308,21 +35850,21 @@ var GoalClarifiedTask = external_exports.object({
 }).strict().superRefine((task, ctx) => {
   if (!task.proof_needed.some((proof) => proof.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["proof_needed"],
       message: "Goal Clarify requires at least one required proof entry"
     });
   }
   if (task.verdict === "ask" && task.missing_information.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_information"],
       message: "Goal Clarify ask verdict requires missing information"
     });
   }
   if (task.verdict === "stop" && task.stop_conditions.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["stop_conditions"],
       message: "Goal Clarify stop verdict requires a stop condition"
     });
@@ -35352,7 +35894,7 @@ var GoalClarifiedTask = external_exports.object({
   const forbiddenReviewText = /before completion[\s\S]{0,120}adversarially review|two consecutive(?:\s+\w+){0,3}\s+(?:reviews?|passes?)|two[-\s]+clean[-\s]+reviews?|medium-or-above\s+(?:gate|completion|finding ceremony|gate finding)/i;
   if (clarifyAuthoredText.some((text) => forbiddenReviewText.test(text))) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clarified_prompt"],
       message: "Goal Clarify must not include the adversarial review loop"
     });
@@ -35370,7 +35912,7 @@ var GoalDoneClaim = external_exports.object({
 }).strict().superRefine((claim, ctx) => {
   if (!claim.required_evidence.some((entry) => entry.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_evidence"],
       message: "each done_when item must include at least one required evidence entry"
     });
@@ -35403,7 +35945,7 @@ var GoalContract = external_exports.object({
 }).strict().superRefine((contract, ctx) => {
   if (!contract.allowed_flow_targets.includes(contract.selected_flow_target)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected_flow_target"],
       message: "selected_flow_target must be present in allowed_flow_targets"
     });
@@ -35433,21 +35975,21 @@ var GoalEvidenceEvaluation = external_exports.object({
   const allProved = evaluation.claim_results.every((claim) => claim.status === "proved");
   if (evaluation.verdict === "satisfied" && !allProved) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["claim_results"],
       message: "verdict 'satisfied' requires every claim result to be proved"
     });
   }
   if (evaluation.next_route === "completion-gate" && evaluation.verdict !== "satisfied") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "next_route 'completion-gate' is allowed only when verdict is satisfied"
     });
   }
   if (evaluation.verdict === "satisfied" && evaluation.next_route !== "completion-gate") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "verdict 'satisfied' must route to completion-gate"
     });
@@ -35456,7 +35998,7 @@ var GoalEvidenceEvaluation = external_exports.object({
     const hasGap = evaluation.claim_results.some((claim) => claim.status === "missing" && claim.gap !== null);
     if (!hasGap) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claim_results"],
         message: "missing-evidence must name at least one missing claim gap"
       });
@@ -35464,7 +36006,7 @@ var GoalEvidenceEvaluation = external_exports.object({
   }
   if ((evaluation.verdict === "contradicted" || evaluation.verdict === "blocked") && evaluation.next_route === "completion-gate") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: `${evaluation.verdict} must not route directly to completion-gate`
     });
@@ -35520,7 +36062,7 @@ var GoalGate = external_exports.object({
   for (const [index, pass] of gate.passes.entries()) {
     if (attackLenses.has(pass.attack_lens)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["passes", index, "attack_lens"],
         message: "gate passes in the same report must use distinct attack lenses"
       });
@@ -35529,77 +36071,77 @@ var GoalGate = external_exports.object({
   }
   if (gate.clean_streak > cleanPassCount) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "clean_streak must not exceed the number of recorded gate-pass passes"
     });
   }
   if (gate.blocking_findings.length > 0 && gate.clean_streak !== 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "any blocking finding resets clean_streak to 0"
     });
   }
   if (gate.verdict === "gate-pass" && gate.blocking_findings.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocking_findings"],
       message: "gate-pass requires no blocking findings"
     });
   }
   if (gate.verdict === "blocked" && gate.blocking_findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocking_findings"],
       message: "blocked requires at least one blocking finding"
     });
   }
   if (gate.verdict === "blocked" && gate.next_route !== "recover") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "blocked gate verdict must route to 'recover'"
     });
   }
   if (gate.verdict === "gate-pass" && gate.next_route === "recover") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "gate-pass must not route to recover"
     });
   }
   if (gate.next_route === "close" && gate.clean_streak < gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "close requires clean_streak >= required_passes"
     });
   }
   if (gate.next_route === "close" && cleanPassCount < gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["passes"],
       message: "close requires recorded gate-pass passes to meet required_passes"
     });
   }
   if (gate.next_route === "close" && gate.verdict !== "gate-pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "close requires final gate verdict 'gate-pass'"
     });
   }
   if (gate.next_route === "run-next-gate-pass" && gate.verdict !== "gate-pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "run-next-gate-pass requires a gate-pass verdict"
     });
   }
   if (gate.next_route === "run-next-gate-pass" && gate.clean_streak >= gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "run-next-gate-pass is allowed only before the required pass streak is met"
     });
@@ -35627,7 +36169,7 @@ var GoalResultEvidenceLink = external_exports.object({
   const expected = GOAL_RESULT_SCHEMA_BY_REPORT_ID[link.report_id];
   if (link.schema !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expected}' for report_id '${link.report_id}'`
     });
@@ -35652,21 +36194,21 @@ var GoalResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.missing_or_weak_claims.length > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["missing_or_weak_claims"],
         message: "complete requires no missing or weak claims"
       });
     }
     if (result.gate.clean_streak < result.gate.required_passes) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate", "clean_streak"],
         message: "complete requires gate.clean_streak >= 2"
       });
     }
     if (result.gate.final_verdict !== "gate-pass") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate", "final_verdict"],
         message: "complete requires final gate verdict 'gate-pass'"
       });
@@ -35676,7 +36218,7 @@ var GoalResult = external_exports.object({
     const hasUsefulAction = result.summary.toLowerCase().includes(result.outcome) || result.rerun_commands.length > 0;
     if (!hasUsefulAction) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["summary"],
         message: `${result.outcome} must include a reason or next useful operator action`
       });
@@ -35685,7 +36227,7 @@ var GoalResult = external_exports.object({
 });
 
 // dist/flows/goal/writers/attempt.js
-import { existsSync as existsSync4, readFileSync as readFileSync11 } from "node:fs";
+import { existsSync as existsSync4, readFileSync as readFileSync12 } from "node:fs";
 var CHILD_RESULT_PATHS = {
   fix: "reports/goal/child-results/fix-result.json",
   build: "reports/goal/child-results/build-result.json",
@@ -35698,7 +36240,7 @@ function readChildResult(runFolder, target) {
   const absPath = resolveRunRelative(runFolder, relPath);
   if (!existsSync4(absPath))
     return void 0;
-  return JSON.parse(readFileSync11(absPath, "utf8"));
+  return JSON.parse(readFileSync12(absPath, "utf8"));
 }
 function mapChildOutcome(outcome) {
   if (outcome === "complete")
@@ -35931,7 +36473,7 @@ var goalContractBuilder = {
 };
 
 // dist/flows/goal/writers/evidence-evaluation.js
-import { existsSync as existsSync5, readFileSync as readFileSync12 } from "node:fs";
+import { existsSync as existsSync5, readFileSync as readFileSync13 } from "node:fs";
 var PROOF_ELIGIBLE_VERDICTS = {
   fix: ["accept"],
   build: ["accept"],
@@ -35943,7 +36485,7 @@ function readChildRunResult(runFolder, path) {
   const absPath = resolveRunRelative(runFolder, path);
   if (!existsSync5(absPath))
     return void 0;
-  return RunResult.parse(JSON.parse(readFileSync12(absPath, "utf8")));
+  return RunResult.parse(JSON.parse(readFileSync13(absPath, "utf8")));
 }
 function childResultIsProofEligible(input) {
   const allowedVerdicts = PROOF_ELIGIBLE_VERDICTS[input.target];
@@ -36016,7 +36558,7 @@ var goalEvidenceEvaluationBuilder = {
 };
 
 // dist/flows/goal/writers/recovery.js
-import { existsSync as existsSync6, readFileSync as readFileSync13 } from "node:fs";
+import { existsSync as existsSync6, readFileSync as readFileSync14 } from "node:fs";
 function routeFromEvaluation(evaluation) {
   if (evaluation.verdict === "missing-evidence") {
     return {
@@ -36053,7 +36595,7 @@ function readLatestGate(runFolder) {
     const absolutePath = resolveRunRelative(runFolder, path);
     if (!existsSync6(absolutePath))
       continue;
-    return GoalGate.parse(JSON.parse(readFileSync13(absolutePath, "utf8")));
+    return GoalGate.parse(JSON.parse(readFileSync14(absolutePath, "utf8")));
   }
   return void 0;
 }
@@ -36756,7 +37298,7 @@ var RelayConfigBody = external_exports.object({
   connectors: external_exports.record(ConnectorName, CustomConnectorDescriptor).default({})
 }).strict();
 var issueAt2 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 var RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
   const ownConnectorKeys = Object.keys(cfg.connectors);
@@ -36877,7 +37419,7 @@ var PrototypeCheckpointSelectionOrMissing = external_exports.union([
 ]);
 function addPathIssue(ctx, path, message) {
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     path: [...path],
     message
   });
@@ -37019,7 +37561,7 @@ function refineExactPrototypeRubricDims(value, ctx) {
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `missing rubric dim '${dimId}'`
       });
@@ -37028,7 +37570,7 @@ function refineExactPrototypeRubricDims(value, ctx) {
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`
       });
@@ -37335,20 +37877,7 @@ var PrototypeResultReportId = external_exports.enum([
   "prototype.checkpoint.request",
   "prototype.checkpoint.response"
 ]);
-var PrototypeResultReportPointer = external_exports.object({
-  report_id: PrototypeResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var PrototypeResultReportPointer = resultReportPointer(PrototypeResultReportId, PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID);
 var PrototypeResultBase = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["kept", "build_input_saved", "discarded", "needs_attention", "failed"]),
@@ -37531,7 +38060,7 @@ var prototypeBriefComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/close.js
-import { existsSync as existsSync7, readFileSync as readFileSync14 } from "node:fs";
+import { existsSync as existsSync7, readFileSync as readFileSync15 } from "node:fs";
 var CheckpointResponse = external_exports.object({
   schema_version: external_exports.literal(1),
   step_id: external_exports.literal("prototype-checkpoint-step"),
@@ -37574,7 +38103,7 @@ function readCheckpointResponse(context) {
   const abs = resolveRunRelative(context.runFolder, responsePath);
   if (!existsSync7(abs))
     return void 0;
-  const raw = JSON.parse(readFileSync14(abs, "utf8"));
+  const raw = JSON.parse(readFileSync15(abs, "utf8"));
   return { path: responsePath, response: CheckpointResponse.parse(raw) };
 }
 function readVariantCheckpointResponse(context) {
@@ -37585,7 +38114,7 @@ function readVariantCheckpointResponse(context) {
   const abs = resolveRunRelative(context.runFolder, responsePath);
   if (!existsSync7(abs))
     return void 0;
-  const raw = JSON.parse(readFileSync14(abs, "utf8"));
+  const raw = JSON.parse(readFileSync15(abs, "utf8"));
   return { path: responsePath, response: VariantCheckpointResponse.parse(raw) };
 }
 function existingCheckpointRequestPath(context) {
@@ -37640,7 +38169,7 @@ function readOptionalReport(context, schemaName, parse3) {
   const abs = resolveRunRelative(context.runFolder, path);
   if (!existsSync7(abs))
     return void 0;
-  return parse3(JSON.parse(readFileSync14(abs, "utf8")));
+  return parse3(JSON.parse(readFileSync15(abs, "utf8")));
 }
 function variantEvidenceLinks(context, checkpointResponse) {
   const links = BASE_VARIANT_POINTERS.map((pointer) => ({
@@ -37922,868 +38451,7 @@ var prototypeVariantChoiceOptionsComposeBuilder = {
   }
 };
 
-// dist/shared/json-extraction.js
-function extractJsonObject(text) {
-  let cursor = 0;
-  while (cursor < text.length) {
-    const start = text.indexOf("{", cursor);
-    if (start === -1)
-      break;
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    let end = -1;
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i];
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (inString) {
-        if (ch === "\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === '"')
-          inString = false;
-        continue;
-      }
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-      if (ch === "{")
-        depth++;
-      else if (ch === "}") {
-        depth--;
-        if (depth === 0) {
-          end = i + 1;
-          break;
-        }
-      }
-    }
-    if (end === -1)
-      break;
-    const candidate = text.slice(start, end);
-    try {
-      JSON.parse(candidate);
-      return candidate;
-    } catch {
-      cursor = start + 1;
-    }
-  }
-  return text;
-}
-
-// dist/connectors/subprocess.js
-import { spawn } from "node:child_process";
-import { performance } from "node:perf_hooks";
-var ConnectorSubprocessSpawnError = class extends Error {
-  phase;
-  constructor(phase, message) {
-    super(message);
-    this.phase = phase;
-    this.name = "ConnectorSubprocessSpawnError";
-  }
-};
-function isConnectorSubprocessSpawnError(error51) {
-  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
-}
-function appendCapped(current, currentBytes, chunk, maxBytes) {
-  const chunkBytes = Buffer.byteLength(chunk, "utf8");
-  if (currentBytes + chunkBytes <= maxBytes) {
-    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
-  }
-  const remaining = maxBytes - currentBytes;
-  if (remaining <= 0) {
-    return { text: current, bytes: currentBytes, capped: true };
-  }
-  return {
-    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
-    bytes: maxBytes,
-    capped: true
-  };
-}
-async function runConnectorSubprocess(input) {
-  const start = performance.now();
-  return await new Promise((resolve16, reject) => {
-    let child;
-    try {
-      child = spawn(input.executable, [...input.args], {
-        stdio: ["ignore", "pipe", "pipe"],
-        env: input.env ?? process.env,
-        detached: true,
-        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-      });
-    } catch (error51) {
-      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
-      return;
-    }
-    let stdout = "";
-    let stdoutBytes = 0;
-    let stderr = "";
-    let stderrBytes = 0;
-    let stdoutCapped = false;
-    let stderrCapped = false;
-    let timedOut = false;
-    let killGroupSucceeded = false;
-    const killProcessGroup = (signal) => {
-      const pid = child.pid;
-      if (typeof pid !== "number")
-        return false;
-      try {
-        process.kill(-pid, signal);
-        return true;
-      } catch {
-        try {
-          child.kill(signal);
-          return true;
-        } catch {
-          return false;
-        }
-      }
-    };
-    let killGraceTimer;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroupSucceeded = killProcessGroup("SIGTERM");
-      killGraceTimer = setTimeout(() => {
-        killProcessGroup("SIGKILL");
-        killGraceTimer = void 0;
-      }, input.sigtermToSigkillGraceMs);
-    }, input.timeoutMs);
-    const clearAllTimers = () => {
-      clearTimeout(timer);
-      if (killGraceTimer !== void 0) {
-        clearTimeout(killGraceTimer);
-        killGraceTimer = void 0;
-      }
-    };
-    child.stdout?.setEncoding("utf8");
-    child.stderr?.setEncoding("utf8");
-    child.stdout?.on("data", (chunk) => {
-      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
-      stdout = next.text;
-      stdoutBytes = next.bytes;
-      stdoutCapped = stdoutCapped || next.capped;
-    });
-    child.stderr?.on("data", (chunk) => {
-      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
-      stderr = next.text;
-      stderrBytes = next.bytes;
-      stderrCapped = stderrCapped || next.capped;
-    });
-    child.on("error", (error51) => {
-      clearAllTimers();
-      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
-    });
-    child.on("close", (code, signal) => {
-      clearAllTimers();
-      resolve16({
-        stdout,
-        stderr,
-        stdoutCapped,
-        stderrCapped,
-        timedOut,
-        killGroupSucceeded,
-        code,
-        signal,
-        durationMs: performance.now() - start
-      });
-    });
-  });
-}
-
-// dist/connectors/claude-code.js
-var CLAUDE_CODE_DISPATCH_FLAGS = [
-  "-p",
-  "--permission-mode",
-  "bypassPermissions",
-  "--strict-mcp-config",
-  "--disable-slash-commands",
-  "--setting-sources",
-  "",
-  "--settings",
-  "{}",
-  "--output-format",
-  "stream-json",
-  "--verbose",
-  "--no-session-persistence"
-];
-var CLAUDE_CODE_EXECUTABLE = "claude";
-var CLAUDE_CODE_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
-var DEFAULT_TIMEOUT_MS = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
-var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES = 1024 * 1024;
-function selectedAnthropicModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "anthropic") {
-    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
-  }
-  return model.model;
-}
-function assertClaudeCodeEffort(effort) {
-  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function buildClaudeCodeArgs(input) {
-  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
-  const model = selectedAnthropicModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("--model", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertClaudeCodeEffort(effort);
-    args.push("--effort", effort);
-  }
-  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
-    args.push("--json-schema", JSON.stringify(input.responseSchema));
-  }
-  args.push(input.prompt);
-  return args;
-}
-function claudeCodeStdoutDiagnostic(stdout) {
-  try {
-    parseClaudeCodeStdout(stdout, "", 0);
-    return void 0;
-  } catch (error51) {
-    return error51 instanceof Error ? error51.message : String(error51);
-  }
-}
-function isClaudeCodeStructuredOutputCompatible(schema) {
-  return schema.type === "object";
-}
-async function relayClaudeCode(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const args = buildClaudeCodeArgs(input);
-  let result;
-  try {
-    result = await runConnectorSubprocess({
-      executable: CLAUDE_CODE_EXECUTABLE,
-      args,
-      timeoutMs: timeoutMs2,
-      stdoutMaxBytes: STDOUT_MAX_BYTES,
-      stderrMaxBytes: STDERR_MAX_BYTES,
-      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
-      env: process.env
-    });
-  } catch (error51) {
-    if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
-    }
-    throw error51;
-  }
-  if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
-    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
-    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.stdoutCapped) {
-    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-  }
-  try {
-    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
-  } catch (error51) {
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-  }
-}
-function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("stream-json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
-  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
-  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
-  if (initTraceEntry === void 0) {
-    throw new Error("system/init trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry === void 0) {
-    throw new Error("result trace_entry missing from subprocess stdout");
-  }
-  if (resultTraceEntry.is_error === true) {
-    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
-    throw new Error(`subprocess reported is_error: ${message}`);
-  }
-  const mcpServers = initTraceEntry.mcp_servers;
-  const slashCommands = initTraceEntry.slash_commands;
-  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
-    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
-  }
-  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
-    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
-  }
-  const receipt_id = initTraceEntry.session_id;
-  const cli_version = initTraceEntry.claude_code_version;
-  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
-    throw new Error("init.session_id missing or empty");
-  }
-  if (typeof cli_version !== "string" || cli_version.length === 0) {
-    throw new Error("init.claude_code_version missing or empty");
-  }
-  const structuredOutput = resultTraceEntry.structured_output;
-  let result_body;
-  if (structuredOutput !== void 0 && structuredOutput !== null) {
-    if (typeof structuredOutput !== "object") {
-      throw new Error("result.structured_output present but not an object");
-    }
-    result_body = JSON.stringify(structuredOutput);
-  } else {
-    const result_body_raw = resultTraceEntry.result;
-    if (typeof result_body_raw !== "string") {
-      throw new Error("result.result missing or not a string");
-    }
-    result_body = extractJsonObject(result_body_raw);
-  }
-  return {
-    request_payload: prompt,
-    receipt_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
-// dist/connectors/codex.js
-import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join as joinPath } from "node:path";
-var CODEX_WRITE_FLAGS = Object.freeze([
-  "exec",
-  "--json",
-  "-s",
-  "workspace-write",
-  "--ephemeral",
-  "--skip-git-repo-check",
-  "--ignore-user-config",
-  "--ignore-rules"
-]);
-var CODEX_EXECUTABLE = "codex";
-var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
-  "--dangerously-bypass-approvals-and-sandbox",
-  "--full-auto",
-  "--add-dir",
-  "-o",
-  "--output-last-message",
-  "-c",
-  "--config",
-  "-p",
-  "--profile",
-  "--sandbox"
-]);
-var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
-var CODEX_SUPPORTED_EFFORTS = ["low", "medium", "high", "xhigh"];
-if (!CODEX_WRITE_FLAGS.includes("-s") || !CODEX_WRITE_FLAGS.includes("workspace-write") || !CODEX_WRITE_FLAGS.includes("--ignore-user-config") || !CODEX_WRITE_FLAGS.includes("--ignore-rules")) {
-  throw new Error('CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"');
-}
-var flagsAsStringArray = CODEX_WRITE_FLAGS;
-for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
-  if (flagsAsStringArray.includes(forbidden)) {
-    throw new Error(`CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
-  }
-}
-var DEFAULT_TIMEOUT_MS2 = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
-var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES2 = 1024 * 1024;
-var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
-var cachedCodexVersion;
-function captureCodexVersion() {
-  if (cachedCodexVersion !== void 0)
-    return cachedCodexVersion;
-  let stdout;
-  try {
-    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
-      encoding: "utf8",
-      timeout: VERSION_CAPTURE_TIMEOUT_MS,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (err) {
-    throw new Error(`codex --version failed: ${err.message}`);
-  }
-  const version2 = stdout.trim();
-  if (version2.length === 0) {
-    throw new Error("codex --version produced empty output");
-  }
-  cachedCodexVersion = version2;
-  return version2;
-}
-function assertCodexEffort(effort) {
-  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function selectedOpenAIModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "openai") {
-    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
-  }
-  return model.model;
-}
-function codexReasoningEffortConfigValue(effort) {
-  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
-}
-function isForbiddenCodexArg(arg) {
-  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
-    if (token === "-c")
-      return false;
-    if (arg === token)
-      return true;
-    return token.startsWith("--") && arg.startsWith(`${token}=`);
-  });
-}
-function isAllowedCodexConfigOverride(value) {
-  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
-}
-function assertCodexSpawnArgvBoundary(args) {
-  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
-  const sandboxFlagIndex = sandboxFlagIndexes[0];
-  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "workspace-write") {
-    throw new Error('codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required');
-  }
-  let configOverrideCount = 0;
-  for (let idx = 0; idx < args.length; idx += 1) {
-    const arg = args[idx];
-    if (arg === void 0)
-      continue;
-    if (arg === "-c") {
-      configOverrideCount += 1;
-      if (configOverrideCount > 1) {
-        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
-      }
-      const value = args[idx + 1];
-      if (!isAllowedCodexConfigOverride(value)) {
-        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
-      }
-      idx += 1;
-      continue;
-    }
-    if (isForbiddenCodexArg(arg)) {
-      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
-    }
-  }
-}
-function buildCodexArgs(input, schemaPath) {
-  const args = [...CODEX_WRITE_FLAGS];
-  if (input.cwd !== void 0) {
-    args.push("--cd", input.cwd);
-  }
-  const model = selectedOpenAIModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("-m", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertCodexEffort(effort);
-    args.push("-c", codexReasoningEffortConfigValue(effort));
-  }
-  if (schemaPath !== void 0) {
-    args.push("--output-schema", schemaPath);
-  }
-  args.push(input.prompt);
-  assertCodexSpawnArgvBoundary(args);
-  return args;
-}
-var CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
-  "$id",
-  "$ref",
-  "$schema",
-  "$defs",
-  "allOf",
-  "anyOf",
-  "const",
-  "contains",
-  "definitions",
-  "dependentRequired",
-  "dependentSchemas",
-  "exclusiveMaximum",
-  "exclusiveMinimum",
-  "format",
-  "if",
-  "maxContains",
-  "maxItems",
-  "maxLength",
-  "maxProperties",
-  "maximum",
-  "minContains",
-  "minItems",
-  "minLength",
-  "minProperties",
-  "minimum",
-  "multipleOf",
-  "not",
-  "oneOf",
-  "pattern",
-  "patternProperties",
-  "propertyNames",
-  "then",
-  "uniqueItems"
-]);
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function everyObjectPropertyIsRequired(schema) {
-  if (!isRecord(schema.properties))
-    return true;
-  if (!Array.isArray(schema.required))
-    return false;
-  const required2 = new Set(schema.required.filter((value) => typeof value === "string"));
-  const propertyNames = Object.keys(schema.properties);
-  return propertyNames.length === required2.size && propertyNames.every((property) => required2.has(property));
-}
-function isCodexOutputSchemaNodeCompatible(node) {
-  if (Array.isArray(node))
-    return node.every(isCodexOutputSchemaNodeCompatible);
-  if (!isRecord(node))
-    return true;
-  for (const key of Object.keys(node)) {
-    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key))
-      return false;
-  }
-  if (Array.isArray(node.type))
-    return false;
-  if (node.type === "object") {
-    if (node.additionalProperties !== void 0 && node.additionalProperties !== false) {
-      return false;
-    }
-    if (!everyObjectPropertyIsRequired(node))
-      return false;
-  }
-  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
-}
-function isCodexOutputSchemaCompatible(schema) {
-  return schema.type === "object" && isCodexOutputSchemaNodeCompatible(schema);
-}
-async function writeSchemaTempFile(schema) {
-  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
-  try {
-    const path = joinPath(dir, "schema.json");
-    await writeFile(path, JSON.stringify(schema), "utf8");
-    return { dir, path };
-  } catch (err) {
-    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
-    throw err;
-  }
-}
-async function cleanupSchemaTempDir(dir) {
-  if (dir === void 0)
-    return;
-  try {
-    await rm(dir, { recursive: true, force: true });
-  } catch {
-  }
-}
-async function relayCodex(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
-  const cli_version = captureCodexVersion();
-  let tempDir;
-  let schemaPath;
-  try {
-    if (input.responseSchema !== void 0 && isCodexOutputSchemaCompatible(input.responseSchema)) {
-      const allocated = await writeSchemaTempFile(input.responseSchema);
-      tempDir = allocated.dir;
-      schemaPath = allocated.path;
-    }
-    const args = buildCodexArgs(input, schemaPath);
-    let result;
-    try {
-      result = await runConnectorSubprocess({
-        executable: CODEX_EXECUTABLE,
-        args,
-        timeoutMs: timeoutMs2,
-        stdoutMaxBytes: STDOUT_MAX_BYTES2,
-        stderrMaxBytes: STDERR_MAX_BYTES2,
-        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
-        env: process.env,
-        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-      });
-    } catch (error51) {
-      if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
-      }
-      throw error51;
-    }
-    if (result.timedOut) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
-    }
-    if (result.code !== 0) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
-    }
-    if (result.stdoutCapped) {
-      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
-    }
-    try {
-      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
-    } catch (error51) {
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
-    }
-  } finally {
-    await cleanupSchemaTempDir(tempDir);
-  }
-}
-var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set([
-  "agent_message",
-  "command_execution",
-  "reasoning",
-  "file_change",
-  "todo_list"
-]);
-var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
-  "thread.started",
-  "turn.started",
-  "item.started",
-  "item.updated",
-  "item.completed",
-  "turn.completed"
-]);
-var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
-function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("codex --json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
-  }
-  for (const [idx, trace_entry] of trace_entries.entries()) {
-    const type = trace_entry.type;
-    if (typeof type !== "string") {
-      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
-    }
-    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
-      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
-      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
-    }
-    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
-      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
-    }
-  }
-  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
-  if (threadStarted === void 0) {
-    throw new Error("thread.started trace_entry missing from codex --json stdout");
-  }
-  const thread_id = threadStarted.thread_id;
-  if (typeof thread_id !== "string" || thread_id.length === 0) {
-    throw new Error("thread.started.thread_id missing or empty");
-  }
-  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
-  if (turnCompleted === void 0) {
-    throw new Error("turn.completed trace_entry missing from codex --json stdout");
-  }
-  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
-  for (const [idx, e] of itemCompleted.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.completed[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.completed[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
-  for (const [idx, e] of itemUpdated.entries()) {
-    const item2 = e.item;
-    if (typeof item2 !== "object" || item2 === null) {
-      throw new Error(`item.updated[${idx}].item is not an object`);
-    }
-    const itemType = item2.type;
-    if (typeof itemType !== "string") {
-      throw new Error(`item.updated[${idx}].item.type is not a string`);
-    }
-    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
-      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
-    }
-  }
-  const agentMessages = itemCompleted.filter((e) => {
-    const item2 = e.item;
-    return item2.type === "agent_message";
-  });
-  const terminalMessage = agentMessages[agentMessages.length - 1];
-  if (terminalMessage === void 0) {
-    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
-  }
-  const item = terminalMessage.item;
-  const result_body_raw = item.text;
-  if (typeof result_body_raw !== "string") {
-    throw new Error("terminal agent_message item.text missing or not a string");
-  }
-  const result_body = extractJsonObject(result_body_raw);
-  return {
-    request_payload: prompt,
-    receipt_id: thread_id,
-    result_body,
-    duration_ms,
-    cli_version
-  };
-}
-
-// dist/connectors/cursor-agent.js
-import { execFileSync as execFileSync2 } from "node:child_process";
-var CURSOR_AGENT_EXECUTABLE = "cursor-agent";
-var CURSOR_AGENT_SUPPORTED_EFFORTS = ["none"];
-var CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
-  "--print",
-  "--output-format",
-  "text",
-  "--trust",
-  "--force"
-]);
-var DEFAULT_TIMEOUT_MS3 = 6e5;
-var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
-var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
-var STDERR_MAX_BYTES3 = 1024 * 1024;
-var VERSION_CAPTURE_TIMEOUT_MS2 = 5e3;
-var cachedCursorAgentVersion;
-function captureCursorAgentVersion() {
-  if (cachedCursorAgentVersion !== void 0)
-    return cachedCursorAgentVersion;
-  let stdout;
-  try {
-    stdout = execFileSync2(CURSOR_AGENT_EXECUTABLE, ["--version"], {
-      encoding: "utf8",
-      timeout: VERSION_CAPTURE_TIMEOUT_MS2,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (err) {
-    throw new Error(`cursor-agent --version failed: ${err.message}`);
-  }
-  const version2 = stdout.trim();
-  if (version2.length === 0) {
-    throw new Error("cursor-agent --version produced empty output");
-  }
-  cachedCursorAgentVersion = version2;
-  return version2;
-}
-function selectedGeminiModel(selection) {
-  const model = selection?.model;
-  if (model === void 0)
-    return void 0;
-  if (model.provider !== "gemini") {
-    throw new Error(`cursor-agent connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'gemini'`);
-  }
-  return model.model;
-}
-function assertCursorAgentEffort(effort) {
-  if (!CURSOR_AGENT_SUPPORTED_EFFORTS.includes(effort)) {
-    throw new Error(`cursor-agent connector cannot honor effort '${effort}'; supported efforts: ${CURSOR_AGENT_SUPPORTED_EFFORTS.join(", ")}`);
-  }
-}
-function buildCursorAgentArgs(input) {
-  const args = [...CURSOR_AGENT_DISPATCH_FLAGS];
-  const model = selectedGeminiModel(input.resolvedSelection);
-  if (model !== void 0) {
-    args.push("--model", model);
-  }
-  const effort = input.resolvedSelection?.effort;
-  if (effort !== void 0) {
-    assertCursorAgentEffort(effort);
-  }
-  if (input.cwd !== void 0) {
-    args.push("--workspace", input.cwd);
-  }
-  args.push(input.prompt);
-  return args;
-}
-async function relayCursorAgent(input) {
-  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
-  const cliVersion = captureCursorAgentVersion();
-  const args = buildCursorAgentArgs(input);
-  let result;
-  try {
-    result = await runConnectorSubprocess({
-      executable: CURSOR_AGENT_EXECUTABLE,
-      args,
-      timeoutMs: timeoutMs2,
-      stdoutMaxBytes: STDOUT_MAX_BYTES3,
-      stderrMaxBytes: STDERR_MAX_BYTES3,
-      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
-      env: process.env,
-      ...input.cwd === void 0 ? {} : { cwd: input.cwd }
-    });
-  } catch (error51) {
-    if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`cursor-agent subprocess ${verb}: ${error51.message}`);
-    }
-    throw error51;
-  }
-  if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
-    throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
-  }
-  if (result.stdoutCapped) {
-    throw new Error(`cursor-agent subprocess stdout exceeded ${STDOUT_MAX_BYTES3} bytes; connector output cannot be evaluated on truncated stream`);
-  }
-  const resultBodyRaw = result.stdout.trim();
-  if (resultBodyRaw.length === 0) {
-    throw new Error("cursor-agent stdout is empty");
-  }
-  return {
-    request_payload: input.prompt,
-    receipt_id: sha256Hex(resultBodyRaw),
-    result_body: extractJsonObject(resultBodyRaw),
-    duration_ms: result.durationMs,
-    cli_version: cliVersion
-  };
-}
-
-// dist/runtime/connectors/resolver.js
+// dist/connectors/resolver.js
 function mergedRelayConfig(layers) {
   const merged = {
     default: "auto",
@@ -38871,22 +38539,14 @@ function resolveConnectorForGuidanceInput(input) {
   return decision({ kind: "builtin", name: "claude-code" }, { source: "auto" }, input.role);
 }
 function expectedProvider(connectorName) {
-  if (connectorName === "claude-code")
-    return "anthropic";
-  if (connectorName === "codex")
-    return "openai";
-  if (connectorName === "cursor-agent")
-    return "gemini";
-  return void 0;
+  if (!isEnabledConnector(connectorName))
+    return void 0;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].provider;
 }
 function supportedEfforts(connectorName) {
-  if (connectorName === "claude-code")
-    return CLAUDE_CODE_SUPPORTED_EFFORTS;
-  if (connectorName === "codex")
-    return CODEX_SUPPORTED_EFFORTS;
-  if (connectorName === "cursor-agent")
-    return CURSOR_AGENT_SUPPORTED_EFFORTS;
-  return void 0;
+  if (!isEnabledConnector(connectorName))
+    return void 0;
+  return BUILTIN_CONNECTOR_SPECS[connectorName].supportedEfforts;
 }
 function assertConnectorSelectionCompatible(connectorName, selection) {
   const expected = expectedProvider(connectorName);
@@ -39013,13 +38673,13 @@ var prototypeVariantOptionsComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/variant-provider-evidence.js
-import { existsSync as existsSync8, readFileSync as readFileSync15 } from "node:fs";
+import { existsSync as existsSync8, readFileSync as readFileSync16 } from "node:fs";
 import { join as join3 } from "node:path";
 function readTraceEntries(runFolder) {
   const tracePath = join3(runFolder, "trace.ndjson");
   if (!existsSync8(tracePath))
     return [];
-  return readFileSync15(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
+  return readFileSync16(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line));
 }
 function isRelayStarted(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) && value.kind === "relay.started";
@@ -39084,7 +38744,7 @@ var prototypeVariantProviderEvidenceComposeBuilder = {
 };
 
 // dist/flows/prototype/writers/variant-verification.js
-import { readFileSync as readFileSync16 } from "node:fs";
+import { readFileSync as readFileSync17 } from "node:fs";
 var VARIANT_INTEGRITY_SCRIPT = [
   "const fs = require('node:fs')",
   "const path = require('node:path')",
@@ -39125,7 +38785,7 @@ function readReport(context, schemaName, parse3) {
   if (!context.step.reads.includes(reportPath)) {
     throw new Error(`prototype.variant-verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
   }
-  return parse3(JSON.parse(readFileSync16(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+  return parse3(JSON.parse(readFileSync17(resolveRunRelative(context.runFolder, reportPath), "utf8")));
 }
 function aggregate(context) {
   return readReport(context, "prototype.variant-aggregate@v1", (raw) => PrototypeVariantAggregate.parse(raw));
@@ -39208,7 +38868,7 @@ var prototypeVariantVerificationWriter = {
 };
 
 // dist/flows/prototype/writers/verification.js
-import { readFileSync as readFileSync17 } from "node:fs";
+import { readFileSync as readFileSync18 } from "node:fs";
 var ARTIFACT_INTEGRITY_SCRIPT = [
   "const fs = require('node:fs')",
   "const path = require('node:path')",
@@ -39246,7 +38906,7 @@ function readReport2(context, schemaName, parse3) {
   if (!context.step.reads.includes(reportPath)) {
     throw new Error(`prototype.verification@v1 requires step '${context.step.id}' to read ${reportPath}`);
   }
-  return parse3(JSON.parse(readFileSync17(resolveRunRelative(context.runFolder, reportPath), "utf8")));
+  return parse3(JSON.parse(readFileSync18(resolveRunRelative(context.runFolder, reportPath), "utf8")));
 }
 function artifactIntegrityCommand(input) {
   const payload = {
@@ -40019,6 +39679,551 @@ var prototypeFlowData = {
 // dist/flows/prototype/flow.js
 var prototypeFlowDefinition = defineFlowData(prototypeFlowData);
 
+// dist/shared/html/multi-variant.js
+import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve3 } from "node:path";
+import { pathToFileURL } from "node:url";
+var PREVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".gif",
+  ".htm",
+  ".html",
+  ".jpeg",
+  ".jpg",
+  ".pdf",
+  ".png",
+  ".svg",
+  ".webp"
+]);
+function withoutQueryOrHash(value) {
+  const queryIndex = value.search(/[?#]/);
+  return queryIndex === -1 ? value : value.slice(0, queryIndex);
+}
+function extensionForPath(value) {
+  const cleaned = withoutQueryOrHash(value).toLowerCase();
+  const dotIndex = cleaned.lastIndexOf(".");
+  if (dotIndex === -1)
+    return "";
+  const slashIndex = cleaned.lastIndexOf("/");
+  return dotIndex > slashIndex ? cleaned.slice(dotIndex) : "";
+}
+function isPreviewableArtifactPath(value) {
+  return PREVIEWABLE_EXTENSIONS.has(extensionForPath(value));
+}
+function toBrowserPath(value) {
+  return value.replace(/\\/g, "/");
+}
+function encodeUrlPath(value) {
+  return value.split("/").map((part) => part === ".." || part === "." ? part : encodeURIComponent(part)).join("/");
+}
+function isInside2(root, target) {
+  const fromRoot = relative5(root, target);
+  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute5(fromRoot);
+}
+function runIdFromFolder(runFolder) {
+  const parts = toBrowserPath(resolve3(runFolder)).split("/").filter((part) => part.length > 0);
+  return parts.at(-1);
+}
+function runArtifactPreviewHref(input) {
+  if (!isPreviewableArtifactPath(input.entryPath))
+    return void 0;
+  const reportsDir = resolve3(input.runFolder, "reports");
+  const runRoot = resolve3(input.runFolder);
+  if (isAbsolute5(input.entryPath)) {
+    const absoluteEntry = resolve3(input.entryPath);
+    if (!isInside2(runRoot, absoluteEntry))
+      return void 0;
+    return encodeUrlPath(toBrowserPath(relative5(reportsDir, absoluteEntry)));
+  }
+  const normalized = toBrowserPath(input.entryPath).replace(/^\.\//, "");
+  if (normalized.split("/").some((part) => part === ".."))
+    return void 0;
+  if (normalized.startsWith("prototype-files/"))
+    return encodeUrlPath(`../${normalized}`);
+  const runId = runIdFromFolder(input.runFolder);
+  const currentRunPrefix = runId === void 0 ? void 0 : `.circuit/runs/${runId}/`;
+  if (currentRunPrefix !== void 0 && normalized.startsWith(currentRunPrefix)) {
+    return encodeUrlPath(`../${normalized.slice(currentRunPrefix.length)}`);
+  }
+  if (input.projectRoot !== void 0) {
+    const projectRoot = resolve3(input.projectRoot);
+    const absoluteEntry = resolve3(projectRoot, normalized);
+    if (!isInside2(projectRoot, absoluteEntry))
+      return void 0;
+    return pathToFileURL(absoluteEntry).href;
+  }
+  return void 0;
+}
+function previewForEntryPoints(input) {
+  for (const entryPoint of input.entryPoints) {
+    const href = runArtifactPreviewHref({
+      entryPath: entryPoint,
+      runFolder: input.runFolder,
+      projectRoot: input.projectRoot
+    });
+    if (href !== void 0)
+      return { href, sourcePath: entryPoint };
+  }
+  return void 0;
+}
+function multiVariantStyles() {
+  return `.mv-wrap{--mv-pad:clamp(18px,2.4vw,44px);--mv-top:clamp(30px,3vw,50px);--mv-rail-width:clamp(420px,32vw,640px);--mv-rail-gap:clamp(34px,4vw,72px);max-width:1280px}.mv-wrap.mv-visual{max-width:none;width:100%;padding:var(--mv-top) calc(var(--mv-rail-width) + var(--mv-pad) + var(--mv-rail-gap)) 96px var(--mv-pad)}.mv-decision{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin:24px 0 28px;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}.mv-decision strong{display:block;font-size:15px;line-height:1.35;margin-bottom:3px;font-weight:560}.mv-decision span{color:var(--text-2)}.mv-count{font-size:12px;color:var(--text-3);white-space:nowrap}.mv-compare{display:block}.mv-list-head,.mv-row{display:grid;grid-template-columns:minmax(150px,190px) minmax(30ch,1fr) minmax(240px,.9fr);gap:clamp(18px,2vw,34px);align-items:start}.mv-list-head{padding:0 0 10px;color:var(--text-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0}.mv-row{position:relative;width:100%;padding:18px 0;border-top:1px solid var(--border)}.mv-row:last-child{border-bottom:1px solid var(--border)}.mv-row[data-selected="true"]::before{content:"";position:absolute;left:-14px;top:18px;bottom:18px;width:2px;border-radius:999px;background:var(--intent-positive)}.mv-name{display:flex;flex-direction:column;gap:6px}.mv-name strong{font-size:15.5px;line-height:1.3;font-weight:560}.mv-tag{width:max-content;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:500}.mv-tag.good{color:var(--intent-positive);border-color:var(--intent-positive)}.mv-copy p{margin:0 0 9px;color:var(--text)}.mv-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;color:var(--text-2);font-size:13px}.mv-facts b{display:block;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0;font-weight:600;margin-bottom:2px}.mv-evidence-cell{display:flex;flex-direction:column;gap:10px;min-width:0}.mv-actions{display:flex;gap:8px;flex-wrap:wrap}.mv-preview-trigger{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}.mv-preview-trigger:hover{background:var(--surface-2)}.mv-detail{position:fixed;top:var(--mv-top);right:var(--mv-pad);bottom:28px;width:var(--mv-rail-width);border-left:1px solid var(--border);padding-left:clamp(24px,2.4vw,40px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.mv-detail h2{font-size:18px;line-height:1.3;margin:0 0 12px;letter-spacing:0;font-weight:560}.mv-frame{border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);min-height:clamp(280px,42vh,470px);box-shadow:0 16px 42px rgba(22,28,24,.07);overflow:hidden}.mv-frame iframe{display:block;width:100%;height:clamp(280px,42vh,470px);border:0;background:white}.mv-empty-preview{padding:18px;color:var(--text-2);font-size:13px}.mv-detail-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px}.mv-open-link{font-size:13px;color:var(--intent-info);text-decoration:none}.mv-open-link:hover{text-decoration:underline}.mv-detail-source{font:500 11px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);overflow-wrap:anywhere}.mv-wrap.mv-evidence .mv-row{grid-template-columns:minmax(150px,210px) minmax(32ch,1fr) minmax(260px,.8fr)}@media (max-width:1320px){.mv-wrap.mv-visual{max-width:1280px;margin:0 auto;padding:var(--mv-top) var(--mv-pad) 96px}.mv-detail{position:static;width:auto;overflow:visible;border-left:0;border-top:1px solid var(--border);padding-left:0;padding-top:22px;margin-top:24px}.mv-frame iframe{height:420px}}@media (max-width:760px){.mv-decision{grid-template-columns:1fr}.mv-count{white-space:normal}.mv-list-head{display:none}.mv-row,.mv-wrap.mv-evidence .mv-row{grid-template-columns:1fr;gap:12px}.mv-facts{grid-template-columns:1fr}.mv-frame iframe{height:340px}}`;
+}
+function multiVariantScript() {
+  return `(()=>{const frame=document.querySelector('[data-mv-frame]');const title=document.querySelector('[data-mv-title]');const source=document.querySelector('[data-mv-source]');const link=document.querySelector('[data-mv-open]');const empty=document.querySelector('[data-mv-empty]');const rows=[...document.querySelectorAll('[data-mv-row]')];const triggers=[...document.querySelectorAll('[data-mv-preview-trigger]')];if(!frame||!title||!source||!link||!empty)return;function select(trigger){const id=trigger.dataset.mvVariantId||'';const src=trigger.dataset.mvPreviewSrc||'';title.textContent=trigger.dataset.mvPreviewTitle||'';source.textContent=trigger.dataset.mvPreviewSource||'';rows.forEach(row=>{row.dataset.selected=String(row.dataset.mvVariantId===id);});if(src.length>0){frame.hidden=false;empty.hidden=true;frame.setAttribute('src',src);link.hidden=false;link.setAttribute('href',src);}else{frame.hidden=true;empty.hidden=false;link.hidden=true;link.removeAttribute('href');}}triggers.forEach(trigger=>{trigger.addEventListener('click',()=>select(trigger));});})();`;
+}
+function renderFacts(facts) {
+  if (facts.length === 0)
+    return "";
+  return `<div class="mv-facts">
+          ${facts.map((fact) => `<span><b>${escapeHtml(fact.label)}</b>${escapeHtml(truncate(fact.value, MAX_BULLET_LEN))}</span>`).join("\n          ")}
+        </div>`;
+}
+function renderRisks(risks) {
+  if (risks === void 0 || risks.length === 0)
+    return "";
+  return `<div>
+          <p class="section-label">Risks</p>
+          <ul class="tradeoffs">
+            ${risks.map((risk) => `<li>${escapeHtml(truncate(risk, MAX_BULLET_LEN))}</li>`).join("\n            ")}
+          </ul>
+        </div>`;
+}
+function renderAction(action) {
+  if (action === void 0)
+    return "";
+  const classes = action.primary === false ? "copy" : "copy primary";
+  return `<button class="${classes}" data-prompt="${escapeHtml(truncate(action.prompt, MAX_PROMPT_LEN))}">${escapeHtml(action.label)}</button>`;
+}
+function renderVariantRow(input) {
+  const { selected, variant, visual } = input;
+  const previewButton = visual && variant.preview !== void 0 ? `<button class="mv-preview-trigger" type="button" data-mv-preview-trigger data-mv-variant-id="${escapeHtml(variant.id)}" data-mv-preview-src="${escapeHtml(variant.preview.href)}" data-mv-preview-title="${escapeHtml(variant.label)}" data-mv-preview-source="${escapeHtml(variant.preview.sourcePath)}">Preview</button>` : "";
+  const evidence2 = variant.evidence.length === 0 ? "" : variant.evidence.map((item) => chip(item)).join("\n          ");
+  return `      <article class="mv-row" data-mv-row data-mv-variant-id="${escapeHtml(variant.id)}" data-selected="${selected ? "true" : "false"}">
+        <div class="mv-name">
+          <strong>${escapeHtml(variant.label)}</strong>
+          <span class="mv-tag${variant.recommended ? " good" : ""}">${escapeHtml(variant.recommended ? "Recommended" : variant.id)}</span>
+        </div>
+        <div class="mv-copy">
+          <p>${escapeHtml(truncate(variant.description, MAX_BULLET_LEN))}</p>
+          ${renderFacts(variant.facts)}
+          ${renderRisks(variant.risks)}
+        </div>
+        <div class="mv-evidence-cell">
+          <div class="evidence">
+          ${evidence2}
+          </div>
+          <div class="mv-actions">
+            ${previewButton}
+            ${renderAction(variant.action)}
+          </div>
+        </div>
+      </article>`;
+}
+function renderVisualDetail(variant) {
+  const preview = variant.preview;
+  const frameHtml = preview === void 0 ? '<iframe data-mv-frame hidden title=""></iframe><p class="mv-empty-preview" data-mv-empty>No visual preview is available for this variant.</p>' : `<iframe data-mv-frame src="${escapeHtml(preview.href)}" title="${escapeHtml(`${variant.label} preview`)}" sandbox="allow-scripts allow-forms allow-pointer-lock" loading="lazy"></iframe><p class="mv-empty-preview" data-mv-empty hidden>No visual preview is available for this variant.</p>`;
+  const source = preview?.sourcePath ?? "No visual artifact path";
+  const link = preview === void 0 ? '<a class="mv-open-link" data-mv-open hidden>Open artifact</a>' : `<a class="mv-open-link" data-mv-open href="${escapeHtml(preview.href)}" target="_blank" rel="noreferrer">Open artifact</a>`;
+  return `    <aside class="mv-detail" aria-label="Selected variant preview">
+      <h2 data-mv-title>${escapeHtml(variant.label)}</h2>
+      <div class="mv-frame">
+        ${frameHtml}
+      </div>
+      <div class="mv-detail-meta">
+        ${link}
+        <div class="mv-detail-source" data-mv-source>${escapeHtml(source)}</div>
+      </div>
+    </aside>`;
+}
+function renderMultiVariantComparisonPage(input) {
+  if (input.variants.length === 0) {
+    throw new Error("multi-variant comparison requires at least one variant");
+  }
+  const recommended = input.variants.find((variant) => variant.recommended) ?? input.variants[0];
+  if (recommended === void 0) {
+    throw new Error("multi-variant comparison could not choose a default variant");
+  }
+  const visual = input.variants.some((variant) => variant.preview !== void 0);
+  const defaultVariant = visual ? input.variants.find((variant) => variant.recommended && variant.preview !== void 0) ?? input.variants.find((variant) => variant.preview !== void 0) ?? recommended : recommended;
+  const rows = input.variants.map((variant) => renderVariantRow({ variant, visual, selected: variant.id === defaultVariant.id })).join("\n");
+  const banner = verdictBanner({
+    intent: input.recommendation.intent,
+    badgeText: input.recommendation.badgeText,
+    mainHtml: `<strong>${escapeHtml(input.recommendation.label)}</strong> &mdash; ${escapeHtml(input.recommendation.rationale)}`,
+    ...input.recommendation.aside === void 0 ? {} : { aside: input.recommendation.aside }
+  });
+  const details = input.detailsHtml === void 0 ? "" : input.detailsHtml;
+  const bodyHtml = `${banner}
+
+  <section class="mv-decision" aria-label="Checkpoint decision">
+    <div>
+      <strong>Recommended: ${escapeHtml(recommended.label)}</strong>
+      <span>${escapeHtml(input.recommendation.rationale)}</span>
+    </div>
+    <div class="mv-count">${input.variants.length} variants compared</div>
+  </section>
+
+  <div class="mv-compare">
+    <section aria-label="Variant comparison">
+      <div class="mv-list-head">
+        <div>Variant</div>
+        <div>What changes</div>
+        <div>${visual ? "Evidence and preview" : "Evidence"}</div>
+      </div>
+${rows}
+    </section>
+${visual ? renderVisualDetail(defaultVariant) : ""}
+  </div>
+
+${details}
+`;
+  return renderPage({
+    title: input.title,
+    metaLine: input.metaLine,
+    headline: input.headline,
+    subtitle: input.subtitle,
+    bodyHtml,
+    ...input.footerLeft === void 0 ? {} : { footerLeft: input.footerLeft },
+    ...input.footerRight === void 0 ? {} : { footerRight: input.footerRight },
+    wrapClassName: visual ? "wrap mv-wrap mv-visual" : "wrap mv-wrap mv-evidence",
+    extraStyles: multiVariantStyles(),
+    ...visual ? { extraScript: multiVariantScript() } : {}
+  });
+}
+
+// dist/flows/prototype/writers/checkpoint-html.js
+var PROTOTYPE_BRIEF_PATH = "reports/prototype/brief.json";
+var PROTOTYPE_PLAN_PATH = "reports/prototype/plan.json";
+var PROTOTYPE_ARTIFACT_PATH = "reports/prototype/artifact.json";
+var PROTOTYPE_VERIFICATION_PATH = "reports/prototype/verification.json";
+var PROTOTYPE_VARIANT_AGGREGATE_PATH = "reports/prototype/variant-aggregate.json";
+var PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH = "reports/prototype/variant-provider-evidence.json";
+var PROTOTYPE_VARIANT_VERIFICATION_PATH = "reports/prototype/variant-verification.json";
+var PROTOTYPE_VARIANT_REVIEW_PATH = "reports/prototype/variant-review.json";
+var PROTOTYPE_VARIANT_CHOICES_PATH = "reports/prototype/variant-choice-options.json";
+var CHOICES = [
+  {
+    id: "keep-prototype",
+    label: "Keep Prototype",
+    description: "Save the prototype as useful evidence and stop here.",
+    intent: "positive"
+  },
+  {
+    id: "save-build-input",
+    label: "Save Build Input",
+    description: "Close with a Build-ready follow-up prompt, without running Build.",
+    intent: "info"
+  },
+  {
+    id: "discard-prototype",
+    label: "Discard Prototype",
+    description: "Mark the prototype as discarded while keeping the evidence trail.",
+    intent: "attention"
+  }
+];
+function bulletList2(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText2(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function shellSingleQuote2(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice2(runFolder, choiceId) {
+  return `circuit resume --run-folder ${shellSingleQuote2(runFolder)} --checkpoint-choice ${shellSingleQuote2(choiceId)}`;
+}
+function load(readJsonRunRelative, relPath, parse3) {
+  const parsed = parse3(readJsonRunRelative(relPath));
+  return parsed.success ? parsed.data : void 0;
+}
+function renderArtifactCard2(artifact) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(artifact.summary)}</p>
+      <div>
+        <p class="section-label">Prototype root</p>
+        <div class="evidence">${chip(artifact.prototype_root)}</div>
+      </div>
+      <div>
+        <p class="section-label">Entry points</p>
+        <div class="evidence">
+          ${artifact.entry_points.map((entry) => chip(entry)).join("\n          ")}
+        </div>
+      </div>
+      <div>
+        <p class="section-label">Preview</p>
+        <p class="summary">${escapeHtml(artifact.preview_instructions)}</p>
+      </div>`;
+  return card({
+    intent: "positive",
+    eyebrow: "artifact",
+    title: "Prototype files",
+    bodyHtml
+  });
+}
+function renderVerificationCard(verification) {
+  const status = verification.overall_status;
+  const bodyHtml = `      <p class="summary">${escapeHtml(status === "passed" ? "Artifact integrity and target checks passed." : "One or more checks failed.")}</p>
+      <div>
+        <p class="section-label">Checks</p>
+        <div class="evidence">
+          ${verification.commands.map((command) => chip(commandText2(command))).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: status === "passed" ? "positive" : "negative",
+    eyebrow: status,
+    title: "Verification",
+    bodyHtml
+  });
+}
+function renderRiskCard2(artifact, brief) {
+  const limits = [...brief.claim_limits, ...artifact.claim_limits];
+  const bodyHtml = `      <p class="summary">Prototype is local evidence, not a production or deployed result.</p>
+      <div>
+        <p class="section-label">Known limitations</p>
+        ${artifact.known_limitations.length === 0 ? '<p class="summary">No limitations were reported.</p>' : bulletList2(artifact.known_limitations)}
+      </div>
+      <div>
+        <p class="section-label">Claim limits</p>
+        <div class="evidence">
+          ${Array.from(new Set(limits)).map((limit) => chip(limit)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "limits",
+    title: "Read Before Reuse",
+    bodyHtml
+  });
+}
+function renderPlanCard(plan) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(plan.preview_instructions)}</p>
+      <div>
+        <p class="section-label">Planned files</p>
+        <div class="evidence">
+          ${plan.files_to_create.map((file2) => chip(file2)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "plan",
+    title: "Artifact Plan",
+    bodyHtml
+  });
+}
+function renderChoice(choice, runFolder, recommendedId) {
+  const isRecommended = choice.id === recommendedId;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: isRecommended ? "positive" : choice.intent,
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function filteredChoices2(allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return CHOICES.filter((choice) => allowed.has(choice.id));
+}
+function relaySelectionLine(evidence2) {
+  if (evidence2?.status === "captured" && evidence2.provider !== void 0 && evidence2.model !== void 0 && evidence2.effort !== void 0) {
+    return `${evidence2.provider}/${evidence2.model} (${evidence2.effort})`;
+  }
+  return "No captured relay selection evidence";
+}
+function renderVariantDetails(input) {
+  const missingEvidenceHtml = input.providerEvidence.missing_evidence.length === 0 && input.review.missing_evidence.length === 0 ? "" : `<p><strong>Missing evidence.</strong> ${escapeHtml([
+    ...input.providerEvidence.missing_evidence.map((item) => `${item.variant_id}: ${item.reason}`),
+    ...input.review.missing_evidence
+  ].join("; "))}</p>`;
+  const strengthsHtml = input.review.strengths.length === 0 ? "" : `<p><strong>Strengths.</strong></p><ul>${input.review.strengths.map((item) => `<li>${escapeHtml(`${item.variant_id}: ${item.note}`)}</li>`).join("")}</ul>`;
+  const risksHtml = input.review.risks.length === 0 ? "" : `<p><strong>Risks.</strong></p><ul>${input.review.risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("")}</ul>`;
+  return `  <details>
+    <summary>Comparison evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Comparison.</strong> ${escapeHtml(input.review.comparison_summary)}</p>
+      ${strengthsHtml}
+      ${risksHtml}
+      <p><strong>Verification.</strong> ${escapeHtml(input.verification.overall_status)}</p>
+      ${missingEvidenceHtml}
+      <p><strong>Resume command.</strong> <code>${escapeHtml(input.resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_VARIANT_AGGREGATE_PATH,
+    PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
+    PROTOTYPE_VARIANT_VERIFICATION_PATH,
+    PROTOTYPE_VARIANT_REVIEW_PATH,
+    PROTOTYPE_VARIANT_CHOICES_PATH,
+    input.checkpointRequestPath ?? ""
+  ].filter((item) => item.length > 0).map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>`;
+}
+function variantComparisonItems(input) {
+  return input.choices.map((choice) => {
+    const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === choice.id);
+    const artifact = branch?.result_body;
+    const evidence2 = input.providerEvidence.variants.find((candidate) => candidate.variant_id === choice.id);
+    const entryPoints = artifact?.entry_points ?? choice.entry_points;
+    const createdFiles = artifact?.created_files ?? [];
+    const artifactEvidence = artifact?.evidence ?? [];
+    const risks = artifact?.known_limitations ?? [];
+    const providerLine = evidence2?.status === "captured" ? relaySelectionLine(evidence2) : "No captured relay selection evidence";
+    const preview = previewForEntryPoints({
+      entryPoints,
+      runFolder: input.runFolder,
+      projectRoot: input.projectRoot
+    });
+    return {
+      id: choice.id,
+      label: choice.label,
+      description: artifact?.summary ?? choice.description,
+      recommended: choice.id === input.recommendedChoiceId,
+      facts: [
+        { label: "Relay", value: providerLine },
+        { label: "Verification", value: choice.verification_status },
+        { label: "Verdict", value: branch?.verdict ?? "not reported" },
+        { label: "Review", value: choice.review_recommendation ? "recommended" : "compared" }
+      ],
+      evidence: [...entryPoints, ...createdFiles, ...artifactEvidence],
+      risks,
+      ...preview === void 0 ? {} : { preview },
+      action: {
+        label: "Copy resume command",
+        prompt: resumeCommandForChoice2(input.runFolder, choice.id),
+        primary: true
+      }
+    };
+  });
+}
+function renderVariantCheckpoint(ctx) {
+  const aggregate2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_AGGREGATE_PATH, (raw) => PrototypeVariantAggregate.safeParse(raw));
+  const providerEvidence2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH, (raw) => PrototypeVariantProviderEvidence.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_VERIFICATION_PATH, (raw) => PrototypeVariantVerification.safeParse(raw));
+  const review = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_REVIEW_PATH, (raw) => PrototypeVariantReview.safeParse(raw));
+  const choices = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_CHOICES_PATH, (raw) => PrototypeVariantChoiceOptions.safeParse(raw));
+  if (aggregate2 === void 0 || providerEvidence2 === void 0 || verification === void 0 || review === void 0 || choices === void 0) {
+    return void 0;
+  }
+  const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
+  const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
+  if (visibleChoices.length === 0)
+    return void 0;
+  const recommended = visibleChoices.find((choice) => choice.id === choices.recommended_variant_id) ?? visibleChoices.find((choice) => choice.recommended) ?? visibleChoices[0];
+  if (recommended === void 0)
+    return void 0;
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<variant-id>'`;
+  return renderMultiVariantComparisonPage({
+    title: "Prototype model comparison checkpoint",
+    metaLine: `Prototype model comparison - ${ctx.runId}`,
+    headline: "Choose a prototype variant",
+    subtitle: "Compare local prototype artifacts using captured relay selection evidence, then keep one variant.",
+    recommendation: {
+      label: recommended.label,
+      rationale: review.comparison_summary,
+      badgeText: review.verdict === "recommend" ? "Recommended variant" : "Operator choice",
+      intent: review.verdict === "recommend" ? "positive" : "attention",
+      aside: `${providerEvidence2.captured_count} relay selections captured`
+    },
+    variants: variantComparisonItems({
+      aggregate: aggregate2,
+      providerEvidence: providerEvidence2,
+      choices: visibleChoices,
+      recommendedChoiceId: recommended.id,
+      runFolder: ctx.runFolder,
+      projectRoot: ctx.projectRoot
+    }),
+    detailsHtml: renderVariantDetails({
+      review,
+      verification,
+      providerEvidence: providerEvidence2,
+      checkpointRequestPath: ctx.checkpoint?.request_path,
+      resumeCommand
+    }),
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH
+  });
+}
+var prototypeCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "prototype" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint?.step_id === "prototype-variant-checkpoint-step") {
+    return renderVariantCheckpoint(ctx);
+  }
+  if (ctx.checkpoint?.step_id !== "prototype-checkpoint-step")
+    return void 0;
+  const brief = load(ctx.readJsonRunRelative, PROTOTYPE_BRIEF_PATH, (raw) => PrototypeBrief.safeParse(raw));
+  const plan = load(ctx.readJsonRunRelative, PROTOTYPE_PLAN_PATH, (raw) => PrototypePlan.safeParse(raw));
+  const artifact = load(ctx.readJsonRunRelative, PROTOTYPE_ARTIFACT_PATH, (raw) => PrototypeArtifact.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VERIFICATION_PATH, (raw) => PrototypeVerification.safeParse(raw));
+  if (brief === void 0 || plan === void 0 || artifact === void 0 || verification === void 0) {
+    return void 0;
+  }
+  const choices = filteredChoices2(ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === "keep-prototype") ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Verified local artifact",
+    mainHtml: `<strong>${escapeHtml(recommendedChoice.label)}</strong> &mdash; ${escapeHtml("Safe default: keep the prototype evidence and decide on Build separately.")}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoice(choice, ctx.runFolder, recommendedChoice.id)).join("\n\n");
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard2(artifact)}
+
+${renderVerificationCard(verification)}
+
+${renderRiskCard2(artifact, brief)}
+
+${renderPlanCard(plan)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_BRIEF_PATH,
+    PROTOTYPE_PLAN_PATH,
+    PROTOTYPE_ARTIFACT_PATH,
+    PROTOTYPE_VERIFICATION_PATH,
+    ctx.checkpoint.request_path
+  ].map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} - Circuit Prototype checkpoint`,
+    metaLine: `Prototype checkpoint - ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle: "Choose whether to keep this local prototype, save it as Build input, or mark it discarded.",
+    bodyHtml,
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_ARTIFACT_PATH
+  });
+};
+
 // dist/flows/stage-policy.js
 function defineEnforcedStagePolicy(input) {
   const canonicals = [...input.canonicals];
@@ -40123,7 +40328,7 @@ var PursuitContract = external_exports.object({
   for (const [index, pursuit] of contract.pursuits.entries()) {
     if (seen.has(pursuit.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["pursuits", index, "id"],
         message: `duplicate pursuit id: ${pursuit.id}`
       });
@@ -40165,7 +40370,7 @@ var PursuitGraph = external_exports.object({
   for (const [index, node] of graph.nodes.entries()) {
     if (nodeIds.has(node.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["nodes", index, "id"],
         message: `duplicate node id: ${node.id}`
       });
@@ -40175,14 +40380,14 @@ var PursuitGraph = external_exports.object({
   for (const [index, edge] of graph.edges.entries()) {
     if (!nodeIds.has(edge.from)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["edges", index, "from"],
         message: `edge references unknown pursuit id: ${edge.from}`
       });
     }
     if (!nodeIds.has(edge.to)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["edges", index, "to"],
         message: `edge references unknown pursuit id: ${edge.to}`
       });
@@ -40195,7 +40400,7 @@ var PursuitGraph = external_exports.object({
     for (const [index, id] of group.pursuit_ids.entries()) {
       if (!nodeIds.has(id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["groups", groupIndex, "pursuit_ids", index],
           message: `group references unknown pursuit id: ${id}`
         });
@@ -40205,7 +40410,7 @@ var PursuitGraph = external_exports.object({
   for (const [index, item] of graph.blocked.entries()) {
     if (!nodeIds.has(item.pursuit_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocked", index, "pursuit_id"],
         message: `blocked item references unknown pursuit id: ${item.pursuit_id}`
       });
@@ -40228,7 +40433,7 @@ var PursuitWavePlan = external_exports.object({
   for (const [index, wave] of plan.waves.entries()) {
     if (wave.kind === "code-change" && wave.execution !== "serial") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["waves", index, "execution"],
         message: "code-change waves must execute serially in Pursuits V1"
       });
@@ -40261,7 +40466,7 @@ var PursuitBatch = external_exports.object({
     for (const [index, item] of batch[field].entries()) {
       if (item.status !== expectedStatus) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [field, index, "status"],
           message: `status must be '${expectedStatus}' for ${field} items`
         });
@@ -40270,21 +40475,21 @@ var PursuitBatch = external_exports.object({
   }
   if (batch.verdict === "accept" && (batch.blocked.length > 0 || batch.failed.length > 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must not be 'accept' when blocked or failed items exist"
     });
   }
   if (batch.verdict === "accept" && batch.skipped.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must not be 'accept' when skipped items exist"
     });
   }
   if (batch.verdict === "blocked" && batch.blocked.length === 0 && batch.failed.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must be backed by blocked or failed items when it is 'blocked'"
     });
@@ -40299,7 +40504,7 @@ var PursuitBatch = external_exports.object({
     for (const [index, item] of items.entries()) {
       if (seen.has(item.pursuit_id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [field, index, "pursuit_id"],
           message: `duplicate pursuit id in batch: ${item.pursuit_id}`
         });
@@ -40323,21 +40528,21 @@ var PursuitReview = external_exports.object({
   const mediumOrHigher = review.findings.filter((finding) => ["critical", "high", "medium"].includes(finding.severity));
   if (review.verdict === "clean" && review.findings.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: "findings must be empty when verdict is 'clean'"
     });
   }
   if (review.verdict !== "clean" && review.findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: `findings must be non-empty when verdict is '${review.verdict}'`
     });
   }
   if (review.verdict === "needs-followup" && mediumOrHigher.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must be 'blocked' when review findings include medium, high, or critical severity"
     });
@@ -40351,28 +40556,7 @@ var PursuitResultReportId = external_exports.enum([
   "pursuit.verification",
   "pursuit.review"
 ]);
-var PursuitResultReportPointer = external_exports.object({
-  report_id: PursuitResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-  const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
-  if (pointer.path !== expectedPath) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["path"],
-      message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var PursuitResultReportPointer = resultReportPointer(PursuitResultReportId, PURSUIT_RESULT_SCHEMA_BY_REPORT_ID, PURSUIT_RESULT_PATH_BY_REPORT_ID);
 var PursuitResult = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["complete", "needs_attention", "blocked", "failed"]),
@@ -40389,7 +40573,7 @@ var PursuitResult = external_exports.object({
   const accounted = result.completed_count + result.skipped_count + result.blocked_count + result.failed_count;
   if (accounted !== result.total_pursuits) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["total_pursuits"],
       message: "total_pursuits must equal completed + skipped + blocked + failed counts"
     });
@@ -40397,28 +40581,28 @@ var PursuitResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'complete'"
       });
     }
     if (result.review_verdict !== "clean") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'clean' when outcome is 'complete'"
       });
     }
     if (result.blocked_count > 0 || result.failed_count > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "outcome must not be 'complete' when pursuits are blocked or failed"
       });
     }
     if (result.skipped_count > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "outcome must not be 'complete' when pursuits are skipped"
       });
@@ -40680,7 +40864,7 @@ var pursuitGraphComposeBuilder = {
 };
 
 // dist/flows/pursue/writers/verification.js
-import { readFileSync as readFileSync18 } from "node:fs";
+import { readFileSync as readFileSync19 } from "node:fs";
 
 // dist/flows/pursue/writers/verification-projection.js
 function projectPursuitVerification(observations) {
@@ -40708,7 +40892,7 @@ var pursuitVerificationWriter = {
     if (!context.step.reads.includes(contractPath)) {
       throw new Error(`pursuit.verification@v1 requires step '${context.step.id}' to read ${contractPath}`);
     }
-    const contract = PursuitContract.parse(JSON.parse(readFileSync18(resolveRunRelative(context.runFolder, contractPath), "utf8")));
+    const contract = PursuitContract.parse(JSON.parse(readFileSync19(resolveRunRelative(context.runFolder, contractPath), "utf8")));
     return contract.verification_command_candidates;
   },
   buildResult(observations) {
@@ -41264,7 +41448,7 @@ var ReviewResult = external_exports.object({
   const expected = computeReviewVerdict(report.findings);
   if (report.verdict !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`
     });
@@ -41291,7 +41475,7 @@ var ReviewRelayResult = external_exports.object({
   const expected = report.findings.length === 0 ? "NO_ISSUES_FOUND" : "ISSUES_FOUND";
   if (report.verdict !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: `review relay verdict must be ${expected} for findings.length=${report.findings.length}`
     });
@@ -41301,7 +41485,7 @@ var ReviewRelayResult = external_exports.object({
 // dist/flows/review/writers/intake.js
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { closeSync, lstatSync as lstatSync3, openSync, readSync } from "node:fs";
-import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve3 } from "node:path";
+import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4 } from "node:path";
 
 // dist/flows/review/writers/intake-projection.js
 function gitCommandFailed(text) {
@@ -41453,11 +41637,11 @@ function runGitDiff(projectRoot, args) {
   };
 }
 function insideProject(projectRoot, path) {
-  const rel = relative5(projectRoot, path);
-  return rel === "" || !rel.startsWith("..") && !isAbsolute5(rel);
+  const rel = relative6(projectRoot, path);
+  return rel === "" || !rel.startsWith("..") && !isAbsolute6(rel);
 }
 function readUntrackedFile(projectRoot, path, contentPolicy) {
-  const abs = resolve3(projectRoot, path);
+  const abs = resolve4(projectRoot, path);
   if (!insideProject(projectRoot, abs)) {
     return { path, byte_length: 0, skipped_reason: "path resolves outside project root" };
   }
@@ -41559,7 +41743,7 @@ var reviewIntakeComposeBuilder = {
 };
 
 // dist/flows/review/writers/result.js
-import { readFileSync as readFileSync19 } from "node:fs";
+import { readFileSync as readFileSync20 } from "node:fs";
 
 // dist/flows/review/writers/result-projection.js
 function evidenceSummary(evidence2) {
@@ -41616,8 +41800,8 @@ var reviewResultComposeBuilder = {
   // its own resolution.
   build(context) {
     const path = reviewerRelayResultPath(context.flow, context.step);
-    const intake = ReviewIntake.parse(JSON.parse(readFileSync19(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
-    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync19(resolveRunRelative(context.runFolder, path), "utf8")));
+    const intake = ReviewIntake.parse(JSON.parse(readFileSync20(resolveRunRelative(context.runFolder, reviewIntakePath(context.flow, context.step)), "utf8")));
+    const relayResult = ReviewRelayResult.parse(JSON.parse(readFileSync20(resolveRunRelative(context.runFolder, path), "utf8")));
     return projectReviewResult({ intake, relayResult });
   }
 };
@@ -42003,6 +42187,7 @@ var flowDefinitions = [
   goalFlowDefinition
 ];
 var flowPackages = compileFlowDefinitions(flowDefinitions);
+var catalogFlowIds = flowPackages.map((pkg) => pkg.id);
 var PACKAGES_BY_ID = (() => {
   const map2 = /* @__PURE__ */ new Map();
   for (const pkg of flowPackages) {
@@ -42014,6 +42199,9 @@ var PACKAGES_BY_ID = (() => {
   return map2;
 })();
 var RUNTIME_SURFACES = buildRuntimeSurfaceRegistry(flowPackages);
+registerHtmlProjector("build", buildCheckpointProjector);
+registerHtmlProjector("explore", exploreTournamentProjector);
+registerHtmlProjector("prototype", prototypeCheckpointProjector);
 function findCompiledFlowPackageById(id) {
   return PACKAGES_BY_ID.get(id);
 }
@@ -42073,7 +42261,7 @@ var PolicySelectionRequest = SelectionOverride.superRefine((selection, ctx) => {
   if (forbidden === void 0)
     return;
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     path: ["invocation_options", forbidden],
     message: `invocation_options cannot carry authority key '${forbidden}'`
   });
@@ -42088,14 +42276,14 @@ var ConnectorRules = external_exports.object({
   for (const [name, descriptor] of Object.entries(rules.registry)) {
     if (reserved.has(name)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["registry", name],
         message: `connector name '${name}' is reserved and cannot be used as a custom connector key`
       });
     }
     if (descriptor.name !== name) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["registry", name, "name"],
         message: `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`
       });
@@ -42206,7 +42394,7 @@ var PolicyEnvelopeV2 = external_exports.object({
     if (builtinConnectors.has(name) || registeredConnectors.has(name))
       return;
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path,
       message: `connector '${name}' is not registered`
     });
@@ -42216,7 +42404,7 @@ var PolicyEnvelopeV2 = external_exports.object({
       return;
     if (!registeredConnectors.has(ref.name)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path,
         message: `connector '${ref.name}' is not registered`
       });
@@ -42288,338 +42476,7 @@ var ComposedPolicyHardConstraints = external_exports.object({
   limits: PolicyLimits
 }).strict();
 
-// dist/shared/checkpoint-boundary.js
-import { createHash as createHash3 } from "node:crypto";
-
-// dist/schemas/checkpoint-boundary.js
-var CheckpointReasonCode = external_exports.enum([
-  "scope_expansion",
-  "protected_files",
-  "weak_proof",
-  "unsafe_apply",
-  "budget_exceeded",
-  "ambiguous_intent"
-]);
-var CheckpointAuthorityRequired = external_exports.enum(["operator", "policy"]);
-var CheckpointRouteTarget = external_exports.union([
-  StepId,
-  external_exports.enum(["@complete", "@stop", "@handoff", "@escalate"])
-]);
-var PolicyRef = Ref.superRefine((ref, ctx) => {
-  if (ref.kind !== "policy") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["kind"],
-      message: "checkpoint declared defaults require policy refs"
-    });
-  }
-});
-var CheckpointBoundaryRoute = external_exports.object({
-  id: external_exports.string().min(1),
-  target: CheckpointRouteTarget
-}).strict();
-var CheckpointBoundaryChoice = external_exports.object({
-  id: external_exports.string().min(1),
-  label: external_exports.string().min(1).optional(),
-  description: external_exports.string().min(1).optional(),
-  route: CheckpointBoundaryRoute,
-  consequence: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
-  external_exports.object({
-    kind: external_exports.literal("static"),
-    items: external_exports.array(CheckpointBoundaryChoice).min(1)
-  }).strict().superRefine((choices, ctx) => {
-    const ids = /* @__PURE__ */ new Set();
-    for (const [index, choice] of choices.items.entries()) {
-      if (ids.has(choice.id)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["items", index, "id"],
-          message: `duplicate checkpoint choice '${choice.id}'`
-        });
-      }
-      ids.add(choice.id);
-    }
-  }),
-  external_exports.object({
-    kind: external_exports.literal("dynamic"),
-    source: CheckpointChoiceSource,
-    route_family: CheckpointBoundaryRoute,
-    consequence_template: external_exports.string().min(1)
-  }).strict()
-]);
-var DeclaredCheckpointDefault = external_exports.object({
-  choice_id: external_exports.string().min(1),
-  allowed_when: external_exports.array(PolicyRef).min(1),
-  reason_code: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryV0 = external_exports.object({
-  schema_version: external_exports.literal(0),
-  step_id: StepId,
-  reason_code: CheckpointReasonCode,
-  authority_required: CheckpointAuthorityRequired,
-  prompt: external_exports.string().min(1),
-  choices: CheckpointBoundaryChoices,
-  declared_default: DeclaredCheckpointDefault.optional(),
-  writes: external_exports.object({
-    request: RunRelativePath,
-    response: RunRelativePath,
-    report: ReportRef.optional()
-  }).strict(),
-  check: CheckpointSelectionCheck,
-  proof_refs: external_exports.array(Ref).default([])
-}).strict().superRefine((boundary, ctx) => {
-  if (boundary.declared_default === void 0)
-    return;
-  if (boundary.choices.kind === "dynamic") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["declared_default"],
-      message: "declared defaults require static checkpoint choices in V0"
-    });
-    return;
-  }
-  const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
-  if (!choiceIds.has(boundary.declared_default.choice_id)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["declared_default", "choice_id"],
-      message: "declared_default.choice_id must name a declared checkpoint choice"
-    });
-  }
-});
-var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
-  boundary_ref: Ref,
-  boundary_hash: Sha256,
-  auto_resolved: external_exports.literal(false).optional()
-}).strict().superRefine((request, ctx) => {
-  if (request.boundary_ref.kind !== "work_contract") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "kind"],
-      message: "checkpoint boundary refs must be work_contract refs"
-    });
-  }
-  if (request.boundary_ref.step_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary refs must include step_id"
-    });
-  }
-  if (request.boundary_ref.sha256 !== request.boundary_hash) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_hash"],
-      message: "checkpoint boundary_hash must match boundary_ref.sha256"
-    });
-  }
-});
-var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
-  step_id: StepId,
-  attempt: external_exports.number().int().positive(),
-  options: external_exports.array(external_exports.string().min(1)).min(1),
-  request_path: RunRelativePath,
-  request_report_hash: Sha256,
-  boundary_ref: Ref,
-  boundary_hash: Sha256,
-  auto_resolved: external_exports.literal(false).optional()
-}).strict().superRefine((request, ctx) => {
-  if (request.boundary_ref.kind !== "work_contract") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "kind"],
-      message: "checkpoint boundary refs must be work_contract refs"
-    });
-  }
-  if (request.boundary_ref.step_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary refs must include step_id"
-    });
-  } else if (request.boundary_ref.step_id !== request.step_id) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_ref", "step_id"],
-      message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
-    });
-  }
-  if (request.boundary_ref.sha256 !== request.boundary_hash) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["boundary_hash"],
-      message: "checkpoint boundary_hash must match boundary_ref.sha256"
-    });
-  }
-});
-var CheckpointBoundaryResolutionSource = external_exports.enum([
-  "operator",
-  "declared-default",
-  "policy"
-]);
-var CheckpointBoundaryResolutionV0 = external_exports.object({
-  selection: external_exports.string().min(1),
-  route_id: external_exports.string().min(1),
-  auto_resolved: external_exports.boolean(),
-  resolution_source: CheckpointBoundaryResolutionSource
-}).strict().superRefine((resolution, ctx) => {
-  if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["auto_resolved"],
-      message: "operator checkpoint resolutions cannot be auto-resolved"
-    });
-  }
-});
-var CheckpointResumeValidationV0 = external_exports.object({
-  request_path_matches_step: external_exports.literal(true),
-  request_hash_required: external_exports.literal(true),
-  choices_match_request: external_exports.literal(true),
-  selected_choice_allowed: external_exports.literal(true),
-  report_hash_matches_when_present: external_exports.literal(true),
-  boundary_hash_required: external_exports.literal(true),
-  guidance_decision_required_before_resolution: external_exports.literal(true)
-}).strict();
-var CheckpointBoundaryRejectedAuthority = external_exports.object({
-  path: external_exports.string().min(1),
-  field: external_exports.string().min(1),
-  reason: external_exports.string().min(1)
-}).strict();
-var CheckpointBoundaryProjectionV0 = external_exports.object({
-  schema_version: external_exports.literal(0),
-  boundary: CheckpointBoundaryV0,
-  request_trace: CheckpointBoundaryRequestTraceLinkV0,
-  allowed_resolution_sources: external_exports.array(CheckpointBoundaryResolutionSource).min(1),
-  resume_validation: CheckpointResumeValidationV0,
-  rejected_old_authority: external_exports.array(CheckpointBoundaryRejectedAuthority)
-}).strict();
-
-// dist/shared/checkpoint-boundary.js
-var CheckpointBoundaryProjectionError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "CheckpointBoundaryProjectionError";
-  }
-};
-function stableJson(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
-function sha256(value) {
-  return createHash3("sha256").update(stableJson(value)).digest("hex");
-}
-function rejectOldAuthority(path, field, reason) {
-  return { path, field, reason };
-}
-function routeForChoice2(step, choiceId) {
-  const directTarget = step.routes[choiceId];
-  if (directTarget !== void 0) {
-    return { id: choiceId, target: directTarget };
-  }
-  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`);
-}
-function consequenceForChoice(choice) {
-  return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
-}
-function dynamicRouteFamily(step) {
-  const selectTarget = step.routes.select;
-  if (selectTarget !== void 0) {
-    return { id: "select", target: selectTarget };
-  }
-  const passTarget = step.routes.pass;
-  if (passTarget !== void 0) {
-    return { id: "pass", target: passTarget };
-  }
-  throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
-}
-function staticChoices(step) {
-  const choices = step.policy.choices;
-  if (choices === void 0) {
-    throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
-  }
-  return choices.map((choice) => ({
-    id: choice.id,
-    ...choice.label === void 0 ? {} : { label: choice.label },
-    ...choice.description === void 0 ? {} : { description: choice.description },
-    route: routeForChoice2(step, choice.id),
-    consequence: consequenceForChoice(choice)
-  }));
-}
-function projectCheckpointBoundaryV0(input) {
-  const { step } = input;
-  const rejectedOldAuthority = [];
-  const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
-  if (step.policy.auto_resolution !== void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
-  }
-  const choices = step.policy.choices !== void 0 ? {
-    kind: "static",
-    items: staticChoices(step)
-  } : (() => {
-    const routeFamily = dynamicRouteFamily(step);
-    return {
-      kind: "dynamic",
-      source: step.policy.choices_from,
-      route_family: routeFamily,
-      consequence_template: `Select one dynamic checkpoint choice and take route '${routeFamily.id}' to '${routeFamily.target}'.`
-    };
-  })();
-  const declaredDefault = step.policy.safe_default_choice !== void 0 && choices.kind === "static" && declaredDefaultPolicyRefs.length > 0 ? {
-    choice_id: step.policy.safe_default_choice,
-    allowed_when: declaredDefaultPolicyRefs,
-    reason_code: "safe_default_choice"
-  } : void 0;
-  if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
-  }
-  const boundary = {
-    schema_version: 0,
-    step_id: step.id,
-    reason_code: input.reasonCode ?? "ambiguous_intent",
-    authority_required: declaredDefault === void 0 ? "operator" : "policy",
-    prompt: step.policy.prompt,
-    choices,
-    ...declaredDefault === void 0 ? {} : { declared_default: declaredDefault },
-    writes: step.writes,
-    check: step.check,
-    proof_refs: []
-  };
-  const boundaryHash = sha256(boundary);
-  const boundaryRef = {
-    kind: "work_contract",
-    ref: `compiled-flow/steps/${step.id}/checkpoint-boundary.v0`,
-    sha256: boundaryHash,
-    flow_id: input.flowId,
-    step_id: step.id
-  };
-  return CheckpointBoundaryProjectionV0.parse({
-    schema_version: 0,
-    boundary,
-    request_trace: {
-      boundary_ref: boundaryRef,
-      boundary_hash: boundaryHash
-    },
-    allowed_resolution_sources: ["operator", "declared-default", "policy"],
-    resume_validation: {
-      request_path_matches_step: true,
-      request_hash_required: true,
-      choices_match_request: true,
-      selected_choice_allowed: true,
-      report_hash_matches_when_present: true,
-      boundary_hash_required: true,
-      guidance_decision_required_before_resolution: true
-    },
-    rejected_old_authority: rejectedOldAuthority
-  });
-}
-
-// dist/shared/policy-envelope.js
-import { createHash as createHash4 } from "node:crypto";
+// dist/policy/policy-envelope.js
 var PolicyEnvelopeCompositionError = class extends Error {
   constructor(message) {
     super(message);
@@ -42693,18 +42550,11 @@ function connectorRefFromDefault(value) {
 function connectorRefFromConfig(ref) {
   return ref;
 }
-function rejectOldAuthority2(path, field, reason) {
+function rejectOldAuthority(path, field, reason) {
   return { path, field, reason };
 }
-function stableJson2(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha256Json(value) {
-  return createHash4("sha256").update(stableJson2(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function policyLayerSourceForConfigLayer(layer) {
   if (layer === "default")
@@ -42783,7 +42633,7 @@ function projectConfigV1ToPolicyEnvelopeV2(input) {
   const { config: config2, source } = input;
   const rejectedOldAuthority = [];
   const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
-    rejectedOldAuthority.push(rejectOldAuthority2(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
+    rejectedOldAuthority.push(rejectOldAuthority(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
     return {
       flow_id: flowId,
       prefer_connector: connectorRefFromConfig(ref)
@@ -42806,7 +42656,7 @@ function projectConfigV1ToPolicyEnvelopeV2(input) {
       });
     }
     if (override.variant_models !== void 0) {
-      rejectedOldAuthority.push(rejectOldAuthority2(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
+      rejectedOldAuthority.push(rejectOldAuthority(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
       for (const variant of override.variant_models) {
         variantModelHints.push({
           flow_id: flowId,
@@ -42898,8 +42748,391 @@ function policyRefsForRuntimeInputs(input) {
   return refs;
 }
 
-// dist/shared/work-contract-projection.js
-import { createHash as createHash5 } from "node:crypto";
+// dist/schemas/checkpoint-boundary.js
+var CheckpointReasonCode = external_exports.enum([
+  "scope_expansion",
+  "protected_files",
+  "weak_proof",
+  "unsafe_apply",
+  "budget_exceeded",
+  "ambiguous_intent"
+]);
+var CheckpointAuthorityRequired = external_exports.enum(["operator", "policy"]);
+var CheckpointRouteTarget = external_exports.union([
+  StepId,
+  external_exports.enum(["@complete", "@stop", "@handoff", "@escalate"])
+]);
+var PolicyRef = Ref.superRefine((ref, ctx) => {
+  if (ref.kind !== "policy") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["kind"],
+      message: "checkpoint declared defaults require policy refs"
+    });
+  }
+});
+var CheckpointBoundaryRoute = external_exports.object({
+  id: external_exports.string().min(1),
+  target: CheckpointRouteTarget
+}).strict();
+var CheckpointBoundaryChoice = external_exports.object({
+  id: external_exports.string().min(1),
+  label: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  route: CheckpointBoundaryRoute,
+  consequence: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
+  external_exports.object({
+    kind: external_exports.literal("static"),
+    items: external_exports.array(CheckpointBoundaryChoice).min(1)
+  }).strict().superRefine((choices, ctx) => {
+    const ids = /* @__PURE__ */ new Set();
+    for (const [index, choice] of choices.items.entries()) {
+      if (ids.has(choice.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["items", index, "id"],
+          message: `duplicate checkpoint choice '${choice.id}'`
+        });
+      }
+      ids.add(choice.id);
+    }
+  }),
+  external_exports.object({
+    kind: external_exports.literal("dynamic"),
+    source: CheckpointChoiceSource,
+    route_family: CheckpointBoundaryRoute,
+    consequence_template: external_exports.string().min(1)
+  }).strict()
+]);
+var DeclaredCheckpointDefault = external_exports.object({
+  choice_id: external_exports.string().min(1),
+  allowed_when: external_exports.array(PolicyRef).min(1),
+  reason_code: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  step_id: StepId,
+  reason_code: CheckpointReasonCode,
+  authority_required: CheckpointAuthorityRequired,
+  prompt: external_exports.string().min(1),
+  choices: CheckpointBoundaryChoices,
+  declared_default: DeclaredCheckpointDefault.optional(),
+  writes: external_exports.object({
+    request: RunRelativePath,
+    response: RunRelativePath,
+    report: ReportRef.optional()
+  }).strict(),
+  check: CheckpointSelectionCheck,
+  proof_refs: external_exports.array(Ref).default([])
+}).strict().superRefine((boundary, ctx) => {
+  if (boundary.declared_default === void 0)
+    return;
+  if (boundary.choices.kind === "dynamic") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["declared_default"],
+      message: "declared defaults require static checkpoint choices in V0"
+    });
+    return;
+  }
+  const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
+  if (!choiceIds.has(boundary.declared_default.choice_id)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["declared_default", "choice_id"],
+      message: "declared_default.choice_id must name a declared checkpoint choice"
+    });
+  }
+});
+var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
+  step_id: StepId,
+  attempt: external_exports.number().int().positive(),
+  options: external_exports.array(external_exports.string().min(1)).min(1),
+  request_path: RunRelativePath,
+  request_report_hash: Sha256,
+  boundary_ref: Ref,
+  boundary_hash: Sha256,
+  auto_resolved: external_exports.literal(false).optional()
+}).strict().superRefine((request, ctx) => {
+  if (request.boundary_ref.kind !== "work_contract") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_ref", "kind"],
+      message: "checkpoint boundary refs must be work_contract refs"
+    });
+  }
+  if (request.boundary_ref.step_id === void 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary refs must include step_id"
+    });
+  } else if (request.boundary_ref.step_id !== request.step_id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_ref", "step_id"],
+      message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
+    });
+  }
+  if (request.boundary_ref.sha256 !== request.boundary_hash) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["boundary_hash"],
+      message: "checkpoint boundary_hash must match boundary_ref.sha256"
+    });
+  }
+});
+var CheckpointBoundaryResolutionSource = external_exports.enum([
+  "operator",
+  "declared-default",
+  "policy"
+]);
+var CheckpointBoundaryResolutionV0 = external_exports.object({
+  selection: external_exports.string().min(1),
+  route_id: external_exports.string().min(1),
+  auto_resolved: external_exports.boolean(),
+  resolution_source: CheckpointBoundaryResolutionSource
+}).strict().superRefine((resolution, ctx) => {
+  if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["auto_resolved"],
+      message: "operator checkpoint resolutions cannot be auto-resolved"
+    });
+  }
+});
+var CheckpointResumeValidationV0 = external_exports.object({
+  request_path_matches_step: external_exports.literal(true),
+  request_hash_required: external_exports.literal(true),
+  choices_match_request: external_exports.literal(true),
+  selected_choice_allowed: external_exports.literal(true),
+  report_hash_matches_when_present: external_exports.literal(true),
+  boundary_hash_required: external_exports.literal(true),
+  guidance_decision_required_before_resolution: external_exports.literal(true)
+}).strict();
+var CheckpointBoundaryRejectedAuthority = external_exports.object({
+  path: external_exports.string().min(1),
+  field: external_exports.string().min(1),
+  reason: external_exports.string().min(1)
+}).strict();
+var CheckpointBoundaryProjectionV0 = external_exports.object({
+  schema_version: external_exports.literal(0),
+  boundary: CheckpointBoundaryV0,
+  request_trace: CheckpointBoundaryRequestTraceLinkV0,
+  allowed_resolution_sources: external_exports.array(CheckpointBoundaryResolutionSource).min(1),
+  resume_validation: CheckpointResumeValidationV0,
+  rejected_old_authority: external_exports.array(CheckpointBoundaryRejectedAuthority)
+}).strict();
+
+// dist/shared/checkpoint-boundary.js
+var CheckpointBoundaryProjectionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CheckpointBoundaryProjectionError";
+  }
+};
+function sha256(value) {
+  return sha256OfJson(value);
+}
+function rejectOldAuthority2(path, field, reason) {
+  return { path, field, reason };
+}
+function routeForChoice2(step, choiceId) {
+  const directTarget = step.routes[choiceId];
+  if (directTarget !== void 0) {
+    return { id: choiceId, target: directTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`checkpoint choice '${choiceId}' on step '${step.id}' has no explicit declared route`);
+}
+function consequenceForChoice(choice) {
+  return choice.description ?? choice.label ?? `Select checkpoint choice '${choice.id}' and follow its declared route.`;
+}
+function dynamicRouteFamily(step) {
+  const selectTarget = step.routes.select;
+  if (selectTarget !== void 0) {
+    return { id: "select", target: selectTarget };
+  }
+  const passTarget = step.routes.pass;
+  if (passTarget !== void 0) {
+    return { id: "pass", target: passTarget };
+  }
+  throw new CheckpointBoundaryProjectionError(`dynamic checkpoint step '${step.id}' has no route family for produced choices`);
+}
+function staticChoices(step) {
+  const choices = step.policy.choices;
+  if (choices === void 0) {
+    throw new CheckpointBoundaryProjectionError(`checkpoint step '${step.id}' has no static choices`);
+  }
+  return choices.map((choice) => ({
+    id: choice.id,
+    ...choice.label === void 0 ? {} : { label: choice.label },
+    ...choice.description === void 0 ? {} : { description: choice.description },
+    route: routeForChoice2(step, choice.id),
+    consequence: consequenceForChoice(choice)
+  }));
+}
+function projectCheckpointBoundaryV0(input) {
+  const { step } = input;
+  const rejectedOldAuthority = [];
+  const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
+  if (step.policy.auto_resolution !== void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority2(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
+  }
+  const choices = step.policy.choices !== void 0 ? {
+    kind: "static",
+    items: staticChoices(step)
+  } : (() => {
+    const routeFamily = dynamicRouteFamily(step);
+    return {
+      kind: "dynamic",
+      source: step.policy.choices_from,
+      route_family: routeFamily,
+      consequence_template: `Select one dynamic checkpoint choice and take route '${routeFamily.id}' to '${routeFamily.target}'.`
+    };
+  })();
+  const declaredDefault = step.policy.safe_default_choice !== void 0 && choices.kind === "static" && declaredDefaultPolicyRefs.length > 0 ? {
+    choice_id: step.policy.safe_default_choice,
+    allowed_when: declaredDefaultPolicyRefs,
+    reason_code: "safe_default_choice"
+  } : void 0;
+  if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
+    rejectedOldAuthority.push(rejectOldAuthority2(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
+  }
+  const boundary = {
+    schema_version: 0,
+    step_id: step.id,
+    reason_code: input.reasonCode ?? "ambiguous_intent",
+    authority_required: declaredDefault === void 0 ? "operator" : "policy",
+    prompt: step.policy.prompt,
+    choices,
+    ...declaredDefault === void 0 ? {} : { declared_default: declaredDefault },
+    writes: step.writes,
+    check: step.check,
+    proof_refs: []
+  };
+  const boundaryHash = sha256(boundary);
+  const boundaryRef = {
+    kind: "work_contract",
+    ref: `compiled-flow/steps/${step.id}/checkpoint-boundary.v0`,
+    sha256: boundaryHash,
+    flow_id: input.flowId,
+    step_id: step.id
+  };
+  return CheckpointBoundaryProjectionV0.parse({
+    schema_version: 0,
+    boundary,
+    request_trace: {
+      boundary_ref: boundaryRef,
+      boundary_hash: boundaryHash
+    },
+    allowed_resolution_sources: ["operator", "declared-default", "policy"],
+    resume_validation: {
+      request_path_matches_step: true,
+      request_hash_required: true,
+      choices_match_request: true,
+      selected_choice_allowed: true,
+      report_hash_matches_when_present: true,
+      boundary_hash_required: true,
+      guidance_decision_required_before_resolution: true
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+
+// dist/shared/run-file-paths.js
+import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
+import { isAbsolute as isAbsolute7, relative as relative7, resolve as resolve5, sep } from "node:path";
+function isInsideOrSame3(root, target) {
+  const fromRoot = relative7(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+}
+function validateRunFilePath(runRelativePath2) {
+  const issues = [];
+  if (runRelativePath2.trim().length === 0) {
+    issues.push("must be non-empty");
+  }
+  if (isAbsolute7(runRelativePath2)) {
+    issues.push("must be relative");
+  }
+  if (runRelativePath2.includes("\\")) {
+    issues.push('must use POSIX "/" separators');
+  }
+  if (runRelativePath2.includes(":")) {
+    issues.push("must not contain drive-letter or colon forms");
+  }
+  if (runRelativePath2.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
+    issues.push("must not contain empty, current-directory, or parent-directory segments");
+  }
+  return issues;
+}
+function resolveRunFilePath(runDir, runRelativePath2) {
+  if (runRelativePath2.trim().length === 0) {
+    throw new Error("run file path must be non-empty");
+  }
+  if (isAbsolute7(runRelativePath2)) {
+    throw new Error(`run file path must be relative: ${runRelativePath2}`);
+  }
+  const root = resolve5(runDir);
+  const fullPath = resolve5(root, runRelativePath2);
+  if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
+    throw new Error(`run file path escapes run directory: ${runRelativePath2}`);
+  }
+  if (fullPath === root) {
+    throw new Error(`run file path must name a file: ${runRelativePath2}`);
+  }
+  const validation = validateRunFilePath(runRelativePath2);
+  if (validation.length > 0) {
+    throw new Error(`run file path ${validation[0]}: ${runRelativePath2}`);
+  }
+  if (existsSync9(root)) {
+    if (lstatSync4(root).isSymbolicLink()) {
+      throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
+    }
+    const rootReal = realpathSync3.native(root);
+    let cursor = root;
+    for (const segment of runRelativePath2.split("/")) {
+      cursor = resolve5(cursor, segment);
+      if (!existsSync9(cursor))
+        break;
+      if (lstatSync4(cursor).isSymbolicLink()) {
+        throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
+      }
+      if (!isInsideOrSame3(rootReal, realpathSync3.native(cursor))) {
+        throw new Error(`run file path escapes run directory through symlink: ${runRelativePath2}`);
+      }
+    }
+  }
+  return fullPath;
+}
 
 // dist/schemas/work-contract-projection.js
 var ReportSlot = external_exports.object({
@@ -43042,7 +43275,7 @@ var WorkContractProjectionV0 = external_exports.object({
     const key = `${binding.step_id}:${binding.route_id}`;
     if (seenRecovery.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_id"],
         message: `duplicate recovery binding for ${key}`
       });
@@ -43051,7 +43284,7 @@ var WorkContractProjectionV0 = external_exports.object({
     const declaredTarget = routeTargets.get(key);
     if (declaredTarget === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_id"],
         message: "recovery route binding must name a declared route"
       });
@@ -43059,7 +43292,7 @@ var WorkContractProjectionV0 = external_exports.object({
     }
     if (declaredTarget !== binding.route_target) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_target"],
         message: "recovery route target must match the declared route target"
       });
@@ -43283,15 +43516,8 @@ function attemptBudgetForRecoveryKind(kind, routeTarget, stepId) {
     retry_target: "declared_step"
   };
 }
-function stableJson3(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha2562(value) {
-  return createHash5("sha256").update(stableJson3(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function asJsonObject(value) {
   return value;
@@ -43625,72 +43851,6 @@ var TERMINAL_TARGETS = [
   "@escalate"
 ];
 
-// dist/runtime/run-files/paths.js
-import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4, sep } from "node:path";
-function isInsideOrSame3(root, target) {
-  const fromRoot = relative6(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute6(fromRoot);
-}
-function validateRunFilePath(runRelativePath4) {
-  const issues = [];
-  if (runRelativePath4.trim().length === 0) {
-    issues.push("must be non-empty");
-  }
-  if (isAbsolute6(runRelativePath4)) {
-    issues.push("must be relative");
-  }
-  if (runRelativePath4.includes("\\")) {
-    issues.push('must use POSIX "/" separators');
-  }
-  if (runRelativePath4.includes(":")) {
-    issues.push("must not contain drive-letter or colon forms");
-  }
-  if (runRelativePath4.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
-    issues.push("must not contain empty, current-directory, or parent-directory segments");
-  }
-  return issues;
-}
-function resolveRunFilePath(runDir, runRelativePath4) {
-  if (runRelativePath4.trim().length === 0) {
-    throw new Error("run file path must be non-empty");
-  }
-  if (isAbsolute6(runRelativePath4)) {
-    throw new Error(`run file path must be relative: ${runRelativePath4}`);
-  }
-  const root = resolve4(runDir);
-  const fullPath = resolve4(root, runRelativePath4);
-  if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
-    throw new Error(`run file path escapes run directory: ${runRelativePath4}`);
-  }
-  if (fullPath === root) {
-    throw new Error(`run file path must name a file: ${runRelativePath4}`);
-  }
-  const validation = validateRunFilePath(runRelativePath4);
-  if (validation.length > 0) {
-    throw new Error(`run file path ${validation[0]}: ${runRelativePath4}`);
-  }
-  if (existsSync9(root)) {
-    if (lstatSync4(root).isSymbolicLink()) {
-      throw new Error(`run file path crosses symlink: ${runRelativePath4}`);
-    }
-    const rootReal = realpathSync3.native(root);
-    let cursor = root;
-    for (const segment of runRelativePath4.split("/")) {
-      cursor = resolve4(cursor, segment);
-      if (!existsSync9(cursor))
-        break;
-      if (lstatSync4(cursor).isSymbolicLink()) {
-        throw new Error(`run file path crosses symlink: ${runRelativePath4}`);
-      }
-      if (!isInsideOrSame3(rootReal, realpathSync3.native(cursor))) {
-        throw new Error(`run file path escapes run directory through symlink: ${runRelativePath4}`);
-      }
-    }
-  }
-  return fullPath;
-}
-
 // dist/runtime/manifest/validate-executable-flow.js
 function requiredRoutesForStep() {
   return ["pass"];
@@ -43786,8 +43946,8 @@ function validateExecutableFlow(flow) {
     if (step.kind === "relay" && step.report !== void 0) {
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
-    if (step.kind === "fanout" && typeof step.join === "object" && step.join !== null) {
-      const aggregate2 = step.join.aggregate;
+    if (step.kind === "fanout") {
+      const aggregate2 = step.writes?.aggregate;
       if (typeof aggregate2 === "object" && aggregate2 !== null && typeof aggregate2.path === "string") {
         addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate2);
       }
@@ -43923,10 +44083,6 @@ function convertStep(step) {
     ...base,
     kind: "fanout",
     branches: step.branches,
-    join: {
-      aggregate: toRunFileRef(step.writes.aggregate),
-      on_child_failure: step.on_child_failure
-    },
     concurrency: step.concurrency,
     onChildFailure: step.on_child_failure,
     ...step.rubric === void 0 ? {} : { rubric: step.rubric }
@@ -43959,6 +44115,74 @@ function fromCompiledFlow(flow) {
   };
   assertExecutableFlow(executable);
   return executable;
+}
+
+// dist/runtime/trace/trace-fields.js
+function fieldView(entry) {
+  return entry;
+}
+function traceString(entry, key) {
+  const value = fieldView(entry)[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function stringArrayValue(value) {
+  if (!Array.isArray(value))
+    return void 0;
+  const entries = value.filter((item) => typeof item === "string");
+  return entries.length === value.length && entries.length > 0 ? entries : void 0;
+}
+var RUN_CLOSED_OUTCOMES = RunClosedOutcome.options;
+function isRunClosedOutcome(value) {
+  return RUN_CLOSED_OUTCOMES.includes(value);
+}
+function runOutcome(entry) {
+  const outcome = fieldView(entry).outcome;
+  return isRunClosedOutcome(outcome) ? outcome : "aborted";
+}
+function runReason(entry) {
+  const reason = fieldView(entry).reason;
+  return typeof reason === "string" && reason.length > 0 ? reason : void 0;
+}
+function optionalRunClosedOutcome(value) {
+  return isRunClosedOutcome(value) ? value : void 0;
+}
+var PROGRESS_RELAY_ROLES = [
+  "researcher",
+  "reviewer",
+  "implementer"
+];
+function relayRoleFromTrace(entry) {
+  const role = fieldView(entry).role;
+  return PROGRESS_RELAY_ROLES.includes(role) ? role : void 0;
+}
+function connectorFromTrace(entry) {
+  const connector = fieldView(entry).connector;
+  if (connector === void 0 || connector === null || typeof connector !== "object") {
+    return void 0;
+  }
+  const record2 = connector;
+  if (record2.kind === "builtin" && typeof record2.name === "string" && EnabledConnector.options.includes(record2.name)) {
+    return { kind: "builtin", name: record2.name };
+  }
+  if (record2.kind === "custom" && typeof record2.name === "string" && Array.isArray(record2.command) && record2.capabilities !== void 0) {
+    return connector;
+  }
+  return void 0;
+}
+function connectorFilesystemCapability(connector) {
+  return connector.kind === "builtin" ? BUILTIN_CONNECTOR_CAPABILITIES[connector.name].filesystem : connector.capabilities.filesystem;
+}
+var FANOUT_JOIN_POLICIES = [
+  "pick-winner",
+  "disjoint-merge",
+  "aggregate-only",
+  "aggregate-survivors"
+];
+function fanoutPolicy(value) {
+  return FANOUT_JOIN_POLICIES.includes(value) ? value : void 0;
+}
+function fanoutBranchKind(value) {
+  return value === "relay" || value === "sub-run" ? value : void 0;
 }
 
 // dist/runtime/trace/trace-store.js
@@ -44081,7 +44305,7 @@ var CompiledFlowBody = external_exports.object({
   default_selection: SelectionOverride.optional()
 }).strict();
 var issueAt3 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 var TOURNAMENT_FANOUT_CONTRACT_MESSAGE2 = "tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors";
 var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
@@ -44298,11 +44522,8 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
-import { createHash as createHash6 } from "node:crypto";
-var HEX643 = /^[0-9a-f]{64}$/;
-var ManifestHash = external_exports.string().regex(HEX643, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
+import { createHash as createHash3 } from "node:crypto";
+var ManifestHash = Sha256;
 var BASE64 = /^[A-Za-z0-9+/=\r\n]*$/;
 var ManifestSnapshot = external_exports.object({
   schema_version: external_exports.literal(1),
@@ -44320,23 +44541,23 @@ var ManifestSnapshot = external_exports.object({
     decoded = Buffer.from(snap.bytes_base64, "base64");
   } catch {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["bytes_base64"],
       message: "bytes_base64 failed to decode as base64"
     });
     return;
   }
-  const computed = createHash6("sha256").update(decoded).digest("hex");
+  const computed = createHash3("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["hash"],
       message: `manifest hash mismatch: declared=${snap.hash} computed=${computed} (sha256 over decoded bytes_base64)`
     });
   }
 });
 function computeManifestHash(bytes) {
-  return createHash6("sha256").update(bytes).digest("hex");
+  return createHash3("sha256").update(bytes).digest("hex");
 }
 
 // dist/runtime/run/graph-runner.js
@@ -45063,7 +45284,7 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
   const sourceReportRef = {
     kind: "report",
     ref: autoResolution.source_report,
-    sha256: sha256Hex(sourceText),
+    sha256: sha256OfString(sourceText),
     run_id: RunId.parse(context.runId),
     flow_id: CompiledFlowId.parse(context.flow.id)
   };
@@ -45169,7 +45390,7 @@ async function executeCheckpointResult(step, context) {
           responsePath: response.path
         });
         await context.files.writeJson(report, body);
-        checkpointReportSha256 = sha256Hex(await context.files.readText(report));
+        checkpointReportSha256 = sha256OfString(await context.files.readText(report));
         await context.trace.append({
           run_id: context.runId,
           kind: "step.report_written",
@@ -45188,7 +45409,7 @@ async function executeCheckpointResult(step, context) {
       });
       await context.files.writeJson(request, requestBody);
       const requestText = await context.files.readText(request);
-      checkpointRequestSha256 = sha256Hex(requestText);
+      checkpointRequestSha256 = sha256OfString(requestText);
       await context.trace.append({
         run_id: context.runId,
         kind: "checkpoint.requested",
@@ -45246,7 +45467,7 @@ async function executeCheckpointResult(step, context) {
     }
     const routeId = routeResult.routeId;
     if (checkpointRequestSha256 === void 0) {
-      checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
+      checkpointRequestSha256 = sha256OfString(await context.files.readText(request));
     }
     const guidance = await appendCheckpointResolutionGuidance(context, {
       stepId: step.id,
@@ -45420,6 +45641,42 @@ function stepExecutionContextFromContext(context, stepId, kind) {
   };
 }
 
+// dist/runtime/executors/shared.js
+function proofIdPart(value) {
+  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
+}
+function uniqueValues(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function proofAssessmentReportRef(input) {
+  return {
+    kind: "report",
+    ref: input.path,
+    sha256: sha256OfString(`${JSON.stringify(input.body, null, 2)}
+`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt
+  };
+}
+function stepCanCloseRun(step) {
+  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
+}
+function readRouteFromReport(body, path) {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
+      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
+    }
+    cursor = cursor[segment];
+  }
+  if (typeof cursor !== "string" || cursor.length === 0) {
+    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
+  }
+  return cursor;
+}
+
 // dist/runtime/executors/compose.js
 async function readJsonReport(context, path) {
   return await context.ports.runFiles.readJson(path);
@@ -45481,19 +45738,6 @@ async function writeRegisteredComposeReport(step, context) {
   }
   throw new Error(`no compose report writer registered for schema '${report.schema}' at compose step '${step.id}'`);
 }
-function readRouteFromReport(body, path) {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
-      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
-    }
-    cursor = cursor[segment];
-  }
-  if (typeof cursor !== "string" || cursor.length === 0) {
-    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
-  }
-  return cursor;
-}
 async function executeComposeResult(step, context) {
   return executeComposeWithPorts(step, stepExecutionContextFromContext(context, step.id, "compose"));
 }
@@ -45540,80 +45784,7 @@ async function executeCompose(step, context) {
 // dist/runtime/executors/fanout.js
 import { join as joinPath2 } from "node:path";
 
-// dist/shared/fanout-aggregate-report.js
-function buildFanoutAggregate(policy2, outcomes, winnerBranchId, rubric) {
-  return {
-    schema_version: 1,
-    join_policy: policy2,
-    branch_count: outcomes.length,
-    ...winnerBranchId === void 0 ? {} : { winner_branch_id: winnerBranchId },
-    branches: outcomes.map((outcome) => ({
-      branch_id: outcome.branch_id,
-      child_run_id: outcome.child_run_id,
-      child_outcome: outcome.child_outcome,
-      verdict: outcome.verdict,
-      admitted: outcome.admitted,
-      result_path: outcome.result_path,
-      duration_ms: outcome.duration_ms,
-      ...outcome.result_body === void 0 ? {} : { result_body: outcome.result_body },
-      ...rubricResultFields(rubric, outcome.result_body)
-    }))
-  };
-}
-function rubricResultFields(rubric, resultBody) {
-  if (rubric === void 0 || resultBody === void 0)
-    return {};
-  return { rubric_result: buildRubricResult(rubric, resultBody) };
-}
-function buildRubricResult(rubric, resultBody) {
-  const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
-  if (!isRecord2(rawJudgments)) {
-    throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
-  }
-  const dims = {};
-  for (const dimId of rubric.ordered_dims) {
-    const judgment = rawJudgments[dimId];
-    if (!isRubricJudgment(judgment)) {
-      throw new Error(`fanout rubric dim '${dimId}' is missing a valid model judgment`);
-    }
-    const source = rubric.runtime_signals[dimId];
-    if (source === void 0) {
-      throw new Error(`fanout rubric dim '${dimId}' is missing a runtime signal source`);
-    }
-    dims[dimId] = {
-      runtime_signal: runtimeSignalForSource(resultBody, source),
-      model_judgment: judgment
-    };
-  }
-  return combineRubricResult({
-    dims,
-    orderedDims: rubric.ordered_dims
-  });
-}
-function runtimeSignalForSource(resultBody, source) {
-  if (source.kind === "constant")
-    return source.signal;
-  const value = readPath(resultBody, source.path);
-  if (source.kind === "non_empty_array") {
-    return Array.isArray(value) && value.length > 0 ? "met" : "missing";
-  }
-  return typeof value === "string" && value.trim().length > 0 ? "met" : "missing";
-}
-function readPath(source, path) {
-  return path.split(".").reduce((current, segment) => {
-    if (!isRecord2(current))
-      return void 0;
-    return current[segment];
-  }, source);
-}
-function isRecord2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isRubricJudgment(value) {
-  return value === "pass" || value === "concern" || value === "fail";
-}
-
-// dist/shared/fanout-join-policy.js
+// dist/policy/fanout-join-policy.js
 function evaluateFanoutJoinPolicy(input) {
   const { policy: policy2, stepId, admitOrder: admitOrder2, outcomes } = input;
   if (policy2 === "pick-winner") {
@@ -45672,22 +45843,101 @@ function evaluateFanoutJoinPolicy(input) {
       failureReason: `tournament collapsed: fanout step '${stepId}' had ${parseableSurvivors.length} parseable survivor(s), need at least 2${detail}`
     };
   }
-  const allClosed = outcomes.every((outcome) => ["complete", "aborted", "handoff", "stopped", "escalated"].includes(outcome.child_outcome));
-  const allParseable = parseableSurvivors.length === outcomes.length;
-  if (!allClosed) {
-    return {
-      joinedSuccessfully: false,
-      failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`
+  if (policy2 === "aggregate-only") {
+    const allClosed = outcomes.every((outcome) => RunClosedOutcome.options.includes(outcome.child_outcome));
+    const allParseable = parseableSurvivors.length === outcomes.length;
+    if (!allClosed) {
+      return {
+        joinedSuccessfully: false,
+        failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`
+      };
+    }
+    if (!allParseable) {
+      const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== void 0);
+      return {
+        joinedSuccessfully: false,
+        failureReason: failedOutcome?.failure_reason === void 0 ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body` : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`
+      };
+    }
+    return { joinedSuccessfully: true };
+  }
+  return assertNever2(policy2);
+}
+function assertNever2(value) {
+  throw new Error(`evaluateFanoutJoinPolicy: unhandled join policy ${JSON.stringify(value)}`);
+}
+
+// dist/shared/fanout-aggregate-report.js
+function buildFanoutAggregate(policy2, outcomes, winnerBranchId, rubric) {
+  return {
+    schema_version: 1,
+    join_policy: policy2,
+    branch_count: outcomes.length,
+    ...winnerBranchId === void 0 ? {} : { winner_branch_id: winnerBranchId },
+    branches: outcomes.map((outcome) => ({
+      branch_id: outcome.branch_id,
+      child_run_id: outcome.child_run_id,
+      child_outcome: outcome.child_outcome,
+      verdict: outcome.verdict,
+      admitted: outcome.admitted,
+      result_path: outcome.result_path,
+      duration_ms: outcome.duration_ms,
+      ...outcome.result_body === void 0 ? {} : { result_body: outcome.result_body },
+      ...rubricResultFields(rubric, outcome.result_body)
+    }))
+  };
+}
+function rubricResultFields(rubric, resultBody) {
+  if (rubric === void 0 || resultBody === void 0)
+    return {};
+  return { rubric_result: buildRubricResult(rubric, resultBody) };
+}
+function buildRubricResult(rubric, resultBody) {
+  const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
+  if (!isRecord(rawJudgments)) {
+    throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
+  }
+  const dims = {};
+  for (const dimId of rubric.ordered_dims) {
+    const judgment = rawJudgments[dimId];
+    if (!isRubricJudgment(judgment)) {
+      throw new Error(`fanout rubric dim '${dimId}' is missing a valid model judgment`);
+    }
+    const source = rubric.runtime_signals[dimId];
+    if (source === void 0) {
+      throw new Error(`fanout rubric dim '${dimId}' is missing a runtime signal source`);
+    }
+    dims[dimId] = {
+      runtime_signal: runtimeSignalForSource(resultBody, source),
+      model_judgment: judgment
     };
   }
-  if (!allParseable) {
-    const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== void 0);
-    return {
-      joinedSuccessfully: false,
-      failureReason: failedOutcome?.failure_reason === void 0 ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body` : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`
-    };
+  return combineRubricResult({
+    dims,
+    orderedDims: rubric.ordered_dims
+  });
+}
+function runtimeSignalForSource(resultBody, source) {
+  if (source.kind === "constant")
+    return source.signal;
+  const value = readPath(resultBody, source.path);
+  if (source.kind === "non_empty_array") {
+    return Array.isArray(value) && value.length > 0 ? "met" : "missing";
   }
-  return { joinedSuccessfully: true };
+  return typeof value === "string" && value.trim().length > 0 ? "met" : "missing";
+}
+function readPath(source, path) {
+  return path.split(".").reduce((current, segment) => {
+    if (!isRecord(current))
+      return void 0;
+    return current[segment];
+  }, source);
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isRubricJudgment(value) {
+  return value === "pass" || value === "concern" || value === "fail";
 }
 
 // dist/runtime/fanout/branch-execution.js
@@ -45768,6 +46018,858 @@ function parseReport(schemaName, resultBody) {
   return { kind: "ok" };
 }
 
+// dist/shared/json-extraction.js
+function extractJsonObject(text) {
+  let cursor = 0;
+  while (cursor < text.length) {
+    const start = text.indexOf("{", cursor);
+    if (start === -1)
+      break;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (inString) {
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"')
+          inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{")
+        depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+    if (end === -1)
+      break;
+    const candidate = text.slice(start, end);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      cursor = start + 1;
+    }
+  }
+  return text;
+}
+
+// dist/connectors/subprocess.js
+import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
+var ConnectorSubprocessSpawnError = class extends Error {
+  phase;
+  constructor(phase, message) {
+    super(message);
+    this.phase = phase;
+    this.name = "ConnectorSubprocessSpawnError";
+  }
+};
+function isConnectorSubprocessSpawnError(error51) {
+  return error51 instanceof ConnectorSubprocessSpawnError || error51 instanceof Error && error51.name === "ConnectorSubprocessSpawnError";
+}
+function appendCapped(current, currentBytes, chunk, maxBytes) {
+  const chunkBytes = Buffer.byteLength(chunk, "utf8");
+  if (currentBytes + chunkBytes <= maxBytes) {
+    return { text: current + chunk, bytes: currentBytes + chunkBytes, capped: false };
+  }
+  const remaining = maxBytes - currentBytes;
+  if (remaining <= 0) {
+    return { text: current, bytes: currentBytes, capped: true };
+  }
+  return {
+    text: current + Buffer.from(chunk, "utf8").subarray(0, remaining).toString("utf8"),
+    bytes: maxBytes,
+    capped: true
+  };
+}
+function spawnErrorVerb(error51) {
+  return error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+}
+function cappedSuffix(capped, stream) {
+  return capped ? ` [${stream} capped]` : "";
+}
+function parseNdjsonObjects(stdout, label) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  const objects = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`${label} line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`${label} line ${idx + 1} is not a JSON object`);
+    }
+    objects.push(parsed);
+  }
+  return objects;
+}
+async function runConnectorSubprocess(input) {
+  const start = performance.now();
+  return await new Promise((resolve17, reject) => {
+    let child;
+    try {
+      child = spawn(input.executable, [...input.args], {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: input.env ?? process.env,
+        detached: true,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      reject(new ConnectorSubprocessSpawnError("spawn-failed", error51 instanceof Error ? error51.message : String(error51)));
+      return;
+    }
+    let stdout = "";
+    let stdoutBytes = 0;
+    let stderr = "";
+    let stderrBytes = 0;
+    let stdoutCapped = false;
+    let stderrCapped = false;
+    let timedOut = false;
+    let killGroupSucceeded = false;
+    const killProcessGroup = (signal) => {
+      const pid = child.pid;
+      if (typeof pid !== "number")
+        return false;
+      try {
+        process.kill(-pid, signal);
+        return true;
+      } catch {
+        try {
+          child.kill(signal);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+    let killGraceTimer;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killGroupSucceeded = killProcessGroup("SIGTERM");
+      killGraceTimer = setTimeout(() => {
+        killProcessGroup("SIGKILL");
+        killGraceTimer = void 0;
+      }, input.sigtermToSigkillGraceMs);
+    }, input.timeoutMs);
+    const clearAllTimers = () => {
+      clearTimeout(timer);
+      if (killGraceTimer !== void 0) {
+        clearTimeout(killGraceTimer);
+        killGraceTimer = void 0;
+      }
+    };
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk) => {
+      const next = appendCapped(stdout, stdoutBytes, chunk, input.stdoutMaxBytes);
+      stdout = next.text;
+      stdoutBytes = next.bytes;
+      stdoutCapped = stdoutCapped || next.capped;
+    });
+    child.stderr?.on("data", (chunk) => {
+      const next = appendCapped(stderr, stderrBytes, chunk, input.stderrMaxBytes);
+      stderr = next.text;
+      stderrBytes = next.bytes;
+      stderrCapped = stderrCapped || next.capped;
+    });
+    child.on("error", (error51) => {
+      clearAllTimers();
+      reject(new ConnectorSubprocessSpawnError("spawn-error", error51.message));
+    });
+    child.on("close", (code, signal) => {
+      clearAllTimers();
+      resolve17({
+        stdout,
+        stderr,
+        stdoutCapped,
+        stderrCapped,
+        timedOut,
+        killGroupSucceeded,
+        code,
+        signal,
+        durationMs: performance.now() - start
+      });
+    });
+  });
+}
+
+// dist/connectors/claude-code.js
+var CLAUDE_CODE_DISPATCH_FLAGS = [
+  "-p",
+  "--permission-mode",
+  "bypassPermissions",
+  "--strict-mcp-config",
+  "--disable-slash-commands",
+  "--setting-sources",
+  "",
+  "--settings",
+  "{}",
+  "--output-format",
+  "stream-json",
+  "--verbose",
+  "--no-session-persistence"
+];
+var CLAUDE_CODE_EXECUTABLE = "claude";
+var DEFAULT_TIMEOUT_MS = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS = 2e3;
+var STDOUT_MAX_BYTES = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES = 1024 * 1024;
+function selectedAnthropicModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "anthropic") {
+    throw new Error(`claude-code connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'anthropic'`);
+  }
+  return model.model;
+}
+function assertClaudeCodeEffort(effort) {
+  if (!CLAUDE_CODE_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`claude-code connector cannot honor effort '${effort}'; supported efforts: ${CLAUDE_CODE_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildClaudeCodeArgs(input) {
+  const args = [...CLAUDE_CODE_DISPATCH_FLAGS];
+  const model = selectedAnthropicModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertClaudeCodeEffort(effort);
+    args.push("--effort", effort);
+  }
+  if (input.responseSchema !== void 0 && isClaudeCodeStructuredOutputCompatible(input.responseSchema)) {
+    args.push("--json-schema", JSON.stringify(input.responseSchema));
+  }
+  args.push(input.prompt);
+  return args;
+}
+function claudeCodeStdoutDiagnostic(stdout) {
+  try {
+    parseClaudeCodeStdout(stdout, "", 0);
+    return void 0;
+  } catch (error51) {
+    return error51 instanceof Error ? error51.message : String(error51);
+  }
+}
+function isClaudeCodeStructuredOutputCompatible(schema) {
+  return schema.type === "object";
+}
+async function relayClaudeCode(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const args = buildClaudeCodeArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CLAUDE_CODE_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES,
+      stderrMaxBytes: STDERR_MAX_BYTES,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS,
+      env: process.env
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      throw new Error(`claude-code subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+    throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+    const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
+    const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
+    throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`claude-code subprocess stdout exceeded ${STDOUT_MAX_BYTES} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+  }
+  try {
+    return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
+  } catch (error51) {
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+    throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+  }
+}
+function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
+  const trace_entries = parseNdjsonObjects(stdout, "stream-json");
+  if (trace_entries.length === 0) {
+    throw new Error("stream-json stdout is empty");
+  }
+  const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
+  const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
+  const resultTraceEntry = resultTraceEntries[resultTraceEntries.length - 1];
+  if (initTraceEntry === void 0) {
+    throw new Error("system/init trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry === void 0) {
+    throw new Error("result trace_entry missing from subprocess stdout");
+  }
+  if (resultTraceEntry.is_error === true) {
+    const message = typeof resultTraceEntry.result === "string" ? resultTraceEntry.result : "<no message>";
+    throw new Error(`subprocess reported is_error: ${message}`);
+  }
+  const mcpServers = initTraceEntry.mcp_servers;
+  const slashCommands = initTraceEntry.slash_commands;
+  if (!Array.isArray(mcpServers) || mcpServers.length !== 0) {
+    throw new Error(`init.mcp_servers must be []; got ${JSON.stringify(mcpServers)}. CLAUDE_CODE_DISPATCH_FLAGS includes --strict-mcp-config to keep this surface closed.`);
+  }
+  if (!Array.isArray(slashCommands) || slashCommands.length !== 0) {
+    throw new Error(`init.slash_commands must be []; got ${JSON.stringify(slashCommands)}. CLAUDE_CODE_DISPATCH_FLAGS includes --disable-slash-commands to keep this surface closed.`);
+  }
+  const receipt_id = initTraceEntry.session_id;
+  const cli_version = initTraceEntry.claude_code_version;
+  if (typeof receipt_id !== "string" || receipt_id.length === 0) {
+    throw new Error("init.session_id missing or empty");
+  }
+  if (typeof cli_version !== "string" || cli_version.length === 0) {
+    throw new Error("init.claude_code_version missing or empty");
+  }
+  const structuredOutput = resultTraceEntry.structured_output;
+  let result_body;
+  if (structuredOutput !== void 0 && structuredOutput !== null) {
+    if (typeof structuredOutput !== "object") {
+      throw new Error("result.structured_output present but not an object");
+    }
+    result_body = JSON.stringify(structuredOutput);
+  } else {
+    const result_body_raw = resultTraceEntry.result;
+    if (typeof result_body_raw !== "string") {
+      throw new Error("result.result missing or not a string");
+    }
+    result_body = extractJsonObject(result_body_raw);
+  }
+  return {
+    request_payload: prompt,
+    receipt_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/codex.js
+import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
+var CODEX_WRITE_FLAGS = Object.freeze([
+  "exec",
+  "--json",
+  "-s",
+  "workspace-write",
+  "--ephemeral",
+  "--skip-git-repo-check",
+  "--ignore-user-config",
+  "--ignore-rules"
+]);
+var CODEX_EXECUTABLE = "codex";
+var CODEX_FORBIDDEN_ARGV_TOKENS = Object.freeze([
+  "--dangerously-bypass-approvals-and-sandbox",
+  "--full-auto",
+  "--add-dir",
+  "-o",
+  "--output-last-message",
+  "-c",
+  "--config",
+  "-p",
+  "--profile",
+  "--sandbox"
+]);
+var CODEX_REASONING_EFFORT_CONFIG_KEY = "model_reasoning_effort";
+if (!CODEX_WRITE_FLAGS.includes("-s") || !CODEX_WRITE_FLAGS.includes("workspace-write") || !CODEX_WRITE_FLAGS.includes("--ignore-user-config") || !CODEX_WRITE_FLAGS.includes("--ignore-rules")) {
+  throw new Error('CODEX_WRITE_FLAGS boundary invariant broken: must include "-s workspace-write", "--ignore-user-config", and "--ignore-rules"');
+}
+var flagsAsStringArray = CODEX_WRITE_FLAGS;
+for (const forbidden of CODEX_FORBIDDEN_ARGV_TOKENS) {
+  if (flagsAsStringArray.includes(forbidden)) {
+    throw new Error(`CODEX_WRITE_FLAGS boundary invariant broken: must NOT include "${forbidden}" (forbidden-token set)`);
+  }
+}
+var DEFAULT_TIMEOUT_MS2 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS2 = 2e3;
+var STDOUT_MAX_BYTES2 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES2 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS = 5e3;
+var cachedCodexVersion;
+function captureCodexVersion() {
+  if (cachedCodexVersion !== void 0)
+    return cachedCodexVersion;
+  let stdout;
+  try {
+    stdout = execFileSync(CODEX_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`codex --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("codex --version produced empty output");
+  }
+  cachedCodexVersion = version2;
+  return version2;
+}
+function assertCodexEffort(effort) {
+  if (!CODEX_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`codex connector cannot honor effort '${effort}'; supported efforts: ${CODEX_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function selectedOpenAIModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "openai") {
+    throw new Error(`codex connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'openai'`);
+  }
+  return model.model;
+}
+function codexReasoningEffortConfigValue(effort) {
+  return `${CODEX_REASONING_EFFORT_CONFIG_KEY}=${JSON.stringify(effort)}`;
+}
+function isForbiddenCodexArg(arg) {
+  return CODEX_FORBIDDEN_ARGV_TOKENS.some((token) => {
+    if (token === "-c")
+      return false;
+    if (arg === token)
+      return true;
+    return token.startsWith("--") && arg.startsWith(`${token}=`);
+  });
+}
+function isAllowedCodexConfigOverride(value) {
+  return value !== void 0 && CODEX_SUPPORTED_EFFORTS.some((effort) => value === codexReasoningEffortConfigValue(effort));
+}
+function assertCodexSpawnArgvBoundary(args) {
+  const sandboxFlagIndexes = args.map((arg, idx) => arg === "-s" ? idx : -1).filter((idx) => idx >= 0);
+  const sandboxFlagIndex = sandboxFlagIndexes[0];
+  if (sandboxFlagIndexes.length !== 1 || sandboxFlagIndex === void 0 || args[sandboxFlagIndex + 1] !== "workspace-write") {
+    throw new Error('codex spawn argv boundary broken: exactly one "-s workspace-write" pair is required');
+  }
+  let configOverrideCount = 0;
+  for (let idx = 0; idx < args.length; idx += 1) {
+    const arg = args[idx];
+    if (arg === void 0)
+      continue;
+    if (arg === "-c") {
+      configOverrideCount += 1;
+      if (configOverrideCount > 1) {
+        throw new Error("codex spawn argv boundary broken: at most one allowlisted -c override is allowed");
+      }
+      const value = args[idx + 1];
+      if (!isAllowedCodexConfigOverride(value)) {
+        throw new Error(`codex spawn argv boundary broken: only ${CODEX_REASONING_EFFORT_CONFIG_KEY}=<supported effort> is allowed after -c`);
+      }
+      idx += 1;
+      continue;
+    }
+    if (isForbiddenCodexArg(arg)) {
+      throw new Error(`codex spawn argv boundary broken: forbidden argv token "${arg}"`);
+    }
+  }
+}
+function buildCodexArgs(input, schemaPath) {
+  const args = [...CODEX_WRITE_FLAGS];
+  if (input.cwd !== void 0) {
+    args.push("--cd", input.cwd);
+  }
+  const model = selectedOpenAIModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("-m", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCodexEffort(effort);
+    args.push("-c", codexReasoningEffortConfigValue(effort));
+  }
+  if (schemaPath !== void 0) {
+    args.push("--output-schema", schemaPath);
+  }
+  args.push(input.prompt);
+  assertCodexSpawnArgvBoundary(args);
+  return args;
+}
+var CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS = /* @__PURE__ */ new Set([
+  "$id",
+  "$ref",
+  "$schema",
+  "$defs",
+  "allOf",
+  "anyOf",
+  "const",
+  "contains",
+  "definitions",
+  "dependentRequired",
+  "dependentSchemas",
+  "exclusiveMaximum",
+  "exclusiveMinimum",
+  "format",
+  "if",
+  "maxContains",
+  "maxItems",
+  "maxLength",
+  "maxProperties",
+  "maximum",
+  "minContains",
+  "minItems",
+  "minLength",
+  "minProperties",
+  "minimum",
+  "multipleOf",
+  "not",
+  "oneOf",
+  "pattern",
+  "patternProperties",
+  "propertyNames",
+  "then",
+  "uniqueItems"
+]);
+function isRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function everyObjectPropertyIsRequired(schema) {
+  if (!isRecord2(schema.properties))
+    return true;
+  if (!Array.isArray(schema.required))
+    return false;
+  const required2 = new Set(schema.required.filter((value) => typeof value === "string"));
+  const propertyNames = Object.keys(schema.properties);
+  return propertyNames.length === required2.size && propertyNames.every((property) => required2.has(property));
+}
+function isCodexOutputSchemaNodeCompatible(node) {
+  if (Array.isArray(node))
+    return node.every(isCodexOutputSchemaNodeCompatible);
+  if (!isRecord2(node))
+    return true;
+  for (const key of Object.keys(node)) {
+    if (CODEX_OUTPUT_SCHEMA_UNSUPPORTED_KEYWORDS.has(key))
+      return false;
+  }
+  if (Array.isArray(node.type))
+    return false;
+  if (node.type === "object") {
+    if (node.additionalProperties !== void 0 && node.additionalProperties !== false) {
+      return false;
+    }
+    if (!everyObjectPropertyIsRequired(node))
+      return false;
+  }
+  return Object.values(node).every(isCodexOutputSchemaNodeCompatible);
+}
+function isCodexOutputSchemaCompatible(schema) {
+  return schema.type === "object" && isCodexOutputSchemaNodeCompatible(schema);
+}
+async function writeSchemaTempFile(schema) {
+  const dir = await mkdtemp(joinPath(tmpdir(), "circuit-codex-schema-"));
+  try {
+    const path = joinPath(dir, "schema.json");
+    await writeFile(path, JSON.stringify(schema), "utf8");
+    return { dir, path };
+  } catch (err) {
+    await rm(dir, { recursive: true, force: true }).catch(() => void 0);
+    throw err;
+  }
+}
+async function cleanupSchemaTempDir(dir) {
+  if (dir === void 0)
+    return;
+  try {
+    await rm(dir, { recursive: true, force: true });
+  } catch {
+  }
+}
+async function relayCodex(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
+  const cli_version = captureCodexVersion();
+  let tempDir;
+  let schemaPath;
+  try {
+    if (input.responseSchema !== void 0 && isCodexOutputSchemaCompatible(input.responseSchema)) {
+      const allocated = await writeSchemaTempFile(input.responseSchema);
+      tempDir = allocated.dir;
+      schemaPath = allocated.path;
+    }
+    const args = buildCodexArgs(input, schemaPath);
+    let result;
+    try {
+      result = await runConnectorSubprocess({
+        executable: CODEX_EXECUTABLE,
+        args,
+        timeoutMs: timeoutMs2,
+        stdoutMaxBytes: STDOUT_MAX_BYTES2,
+        stderrMaxBytes: STDERR_MAX_BYTES2,
+        sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS2,
+        env: process.env,
+        ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+      });
+    } catch (error51) {
+      if (isConnectorSubprocessSpawnError(error51)) {
+        throw new Error(`codex subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
+      }
+      throw error51;
+    }
+    if (result.timedOut) {
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+      throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.code !== 0) {
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+      throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
+    }
+    if (result.stdoutCapped) {
+      throw new Error(`codex subprocess stdout exceeded ${STDOUT_MAX_BYTES2} bytes; capability-boundary check cannot be evaluated on truncated stream`);
+    }
+    try {
+      return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
+    } catch (error51) {
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+      throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
+    }
+  } finally {
+    await cleanupSchemaTempDir(tempDir);
+  }
+}
+var KNOWN_CODEX_ITEM_TYPES = /* @__PURE__ */ new Set([
+  "agent_message",
+  "command_execution",
+  "reasoning",
+  "file_change",
+  "todo_list"
+]);
+var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "thread.started",
+  "turn.started",
+  "item.started",
+  "item.updated",
+  "item.completed",
+  "turn.completed"
+]);
+var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
+function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
+  const trace_entries = parseNdjsonObjects(stdout, "codex --json");
+  if (trace_entries.length === 0) {
+    throw new Error("codex --json stdout is empty");
+  }
+  for (const [idx, trace_entry] of trace_entries.entries()) {
+    const type = trace_entry.type;
+    if (typeof type !== "string") {
+      throw new Error(`codex --json line ${idx + 1}: trace_entry has no string 'type' field`);
+    }
+    if (CODEX_FAILURE_EVENT_TYPES.has(type)) {
+      const msgField = typeof trace_entry.message === "string" ? trace_entry.message : typeof trace_entry.error === "string" ? trace_entry.error : JSON.stringify(trace_entry).slice(0, 200);
+      throw new Error(`codex reported ${type}: ${msgField}. If this recurs, examine whether the failure shape indicates a capability-boundary regression (e.g., a sandboxed write attempt surfacing as turn.failed).`);
+    }
+    if (!KNOWN_CODEX_EVENT_TYPES.has(type)) {
+      throw new Error(`codex --json line ${idx + 1}: unknown top-level trace_entry type '${type}' (allowlist: ${Array.from(KNOWN_CODEX_EVENT_TYPES).join(", ")}). A new Codex trace_entry type must be reviewed before the connector admits it.`);
+    }
+  }
+  const threadStarted = trace_entries.find((e) => e.type === "thread.started");
+  if (threadStarted === void 0) {
+    throw new Error("thread.started trace_entry missing from codex --json stdout");
+  }
+  const thread_id = threadStarted.thread_id;
+  if (typeof thread_id !== "string" || thread_id.length === 0) {
+    throw new Error("thread.started.thread_id missing or empty");
+  }
+  const turnCompleted = trace_entries.find((e) => e.type === "turn.completed");
+  if (turnCompleted === void 0) {
+    throw new Error("turn.completed trace_entry missing from codex --json stdout");
+  }
+  const itemCompleted = trace_entries.filter((e) => e.type === "item.completed");
+  for (const [idx, e] of itemCompleted.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.completed[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.completed[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.completed[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const itemUpdated = trace_entries.filter((e) => e.type === "item.updated");
+  for (const [idx, e] of itemUpdated.entries()) {
+    const item2 = e.item;
+    if (typeof item2 !== "object" || item2 === null) {
+      throw new Error(`item.updated[${idx}].item is not an object`);
+    }
+    const itemType = item2.type;
+    if (typeof itemType !== "string") {
+      throw new Error(`item.updated[${idx}].item.type is not a string`);
+    }
+    if (!KNOWN_CODEX_ITEM_TYPES.has(itemType)) {
+      throw new Error(`capability-boundary violation: item.updated[${idx}].item.type='${itemType}' is not in the known-types allowlist (${Array.from(KNOWN_CODEX_ITEM_TYPES).join(", ")}). A new Codex item type must be reviewed before the connector admits it.`);
+    }
+  }
+  const agentMessages = itemCompleted.filter((e) => {
+    const item2 = e.item;
+    return item2.type === "agent_message";
+  });
+  const terminalMessage = agentMessages[agentMessages.length - 1];
+  if (terminalMessage === void 0) {
+    throw new Error("no item.completed/agent_message trace_entry found in codex --json stdout");
+  }
+  const item = terminalMessage.item;
+  const result_body_raw = item.text;
+  if (typeof result_body_raw !== "string") {
+    throw new Error("terminal agent_message item.text missing or not a string");
+  }
+  const result_body = extractJsonObject(result_body_raw);
+  return {
+    request_payload: prompt,
+    receipt_id: thread_id,
+    result_body,
+    duration_ms,
+    cli_version
+  };
+}
+
+// dist/connectors/cursor-agent.js
+import { execFileSync as execFileSync2 } from "node:child_process";
+var CURSOR_AGENT_EXECUTABLE = "cursor-agent";
+var CURSOR_AGENT_DISPATCH_FLAGS = Object.freeze([
+  "--print",
+  "--output-format",
+  "text",
+  "--trust",
+  "--force"
+]);
+var DEFAULT_TIMEOUT_MS3 = 6e5;
+var SIGTERM_TO_SIGKILL_GRACE_MS3 = 2e3;
+var STDOUT_MAX_BYTES3 = 16 * 1024 * 1024;
+var STDERR_MAX_BYTES3 = 1024 * 1024;
+var VERSION_CAPTURE_TIMEOUT_MS2 = 5e3;
+var cachedCursorAgentVersion;
+function captureCursorAgentVersion() {
+  if (cachedCursorAgentVersion !== void 0)
+    return cachedCursorAgentVersion;
+  let stdout;
+  try {
+    stdout = execFileSync2(CURSOR_AGENT_EXECUTABLE, ["--version"], {
+      encoding: "utf8",
+      timeout: VERSION_CAPTURE_TIMEOUT_MS2,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (err) {
+    throw new Error(`cursor-agent --version failed: ${err.message}`);
+  }
+  const version2 = stdout.trim();
+  if (version2.length === 0) {
+    throw new Error("cursor-agent --version produced empty output");
+  }
+  cachedCursorAgentVersion = version2;
+  return version2;
+}
+function selectedGeminiModel(selection) {
+  const model = selection?.model;
+  if (model === void 0)
+    return void 0;
+  if (model.provider !== "gemini") {
+    throw new Error(`cursor-agent connector cannot honor model provider '${model.provider}' for model '${model.model}'; expected provider 'gemini'`);
+  }
+  return model.model;
+}
+function assertCursorAgentEffort(effort) {
+  if (!CURSOR_AGENT_SUPPORTED_EFFORTS.includes(effort)) {
+    throw new Error(`cursor-agent connector cannot honor effort '${effort}'; supported efforts: ${CURSOR_AGENT_SUPPORTED_EFFORTS.join(", ")}`);
+  }
+}
+function buildCursorAgentArgs(input) {
+  const args = [...CURSOR_AGENT_DISPATCH_FLAGS];
+  const model = selectedGeminiModel(input.resolvedSelection);
+  if (model !== void 0) {
+    args.push("--model", model);
+  }
+  const effort = input.resolvedSelection?.effort;
+  if (effort !== void 0) {
+    assertCursorAgentEffort(effort);
+  }
+  if (input.cwd !== void 0) {
+    args.push("--workspace", input.cwd);
+  }
+  args.push(input.prompt);
+  return args;
+}
+async function relayCursorAgent(input) {
+  const timeoutMs2 = input.timeoutMs ?? DEFAULT_TIMEOUT_MS3;
+  const cliVersion = captureCursorAgentVersion();
+  const args = buildCursorAgentArgs(input);
+  let result;
+  try {
+    result = await runConnectorSubprocess({
+      executable: CURSOR_AGENT_EXECUTABLE,
+      args,
+      timeoutMs: timeoutMs2,
+      stdoutMaxBytes: STDOUT_MAX_BYTES3,
+      stderrMaxBytes: STDERR_MAX_BYTES3,
+      sigtermToSigkillGraceMs: SIGTERM_TO_SIGKILL_GRACE_MS3,
+      env: process.env,
+      ...input.cwd === void 0 ? {} : { cwd: input.cwd }
+    });
+  } catch (error51) {
+    if (isConnectorSubprocessSpawnError(error51)) {
+      throw new Error(`cursor-agent subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
+    }
+    throw error51;
+  }
+  if (result.timedOut) {
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+    throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.code !== 0) {
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
+    throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
+  }
+  if (result.stdoutCapped) {
+    throw new Error(`cursor-agent subprocess stdout exceeded ${STDOUT_MAX_BYTES3} bytes; connector output cannot be evaluated on truncated stream`);
+  }
+  const resultBodyRaw = result.stdout.trim();
+  if (resultBodyRaw.length === 0) {
+    throw new Error("cursor-agent stdout is empty");
+  }
+  return {
+    request_payload: input.prompt,
+    receipt_id: sha256OfString(resultBodyRaw),
+    result_body: extractJsonObject(resultBodyRaw),
+    duration_ms: result.durationMs,
+    cli_version: cliVersion
+  };
+}
+
 // dist/connectors/custom.js
 import { mkdtemp as mkdtemp2, readFile as readFile2, rm as rm2, stat, writeFile as writeFile2 } from "node:fs/promises";
 import { tmpdir as tmpdir2 } from "node:os";
@@ -45820,8 +46922,7 @@ async function relayCustom(input) {
       });
     } catch (error51) {
       if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`custom connector '${descriptor.name}' ${verb}: ${error51.message}`);
+        throw new Error(`custom connector '${descriptor.name}' ${spawnErrorVerb(error51)}: ${error51.message}`);
       }
       throw error51;
     }
@@ -45841,8 +46942,8 @@ async function relayCustom(input) {
         cli_version: `custom:${descriptor.name}`
       };
     } catch (error51) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
       throw new Error(`custom connector '${descriptor.name}': ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
     }
   } finally {
@@ -45851,16 +46952,8 @@ async function relayCustom(input) {
 }
 
 // dist/shared/proof-assessment.js
-import { createHash as createHash7 } from "node:crypto";
-function stableJson4(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha2563(value) {
-  return createHash7("sha256").update(stableJson4(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function traceRef(entry) {
   return {
@@ -45925,7 +47018,7 @@ function evidenceFromAcceptanceCriteriaTrace(input) {
 }
 
 // dist/shared/relay-support.js
-import { existsSync as existsSync10, readFileSync as readFileSync20 } from "node:fs";
+import { existsSync as existsSync10, readFileSync as readFileSync21 } from "node:fs";
 
 // dist/flows/registries/shape-hints/registry.js
 var SCHEMA_HINTS = buildSchemaHintMap(flowPackages);
@@ -46127,42 +47220,42 @@ var MemoryInputV0 = external_exports.object({
 }).strict().superRefine((memory, ctx) => {
   if (memory.source.sha256 !== void 0 && memory.source.ref.sha256 !== void 0 && memory.source.sha256 !== memory.source.ref.sha256) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "sha256"],
       message: "source.sha256 must match source.ref.sha256 when both are present"
     });
   }
   if (memory.kind === "continuity" && memory.source.ref.kind !== "report") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "kind"],
       message: "continuity memory must point at a continuity report ref"
     });
   }
   if (memory.kind === "continuity" && !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "ref"],
       message: "continuity memory must point at continuity/records/<record>.json"
     });
   }
   if (memory.kind === "handoff_brief" && memory.source.ref.kind !== "report" && memory.source.ref.kind !== "context_packet") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "kind"],
       message: "handoff brief memory must point at report or context_packet refs"
     });
   }
   if (memory.staleness.status === "unknown" && !memory.staleness.reason_codes.includes("memory_unverified")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["staleness", "reason_codes"],
       message: "unknown memory staleness requires memory_unverified reason code"
     });
   }
   if (memory.staleness.status === "stale" && !memory.staleness.reason_codes.includes("memory_stale")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["staleness", "reason_codes"],
       message: "stale memory requires memory_stale reason code"
     });
@@ -46171,7 +47264,7 @@ var MemoryInputV0 = external_exports.object({
   for (const [index, hint] of memory.hints.entries()) {
     if (seenHints.has(hint.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["hints", index, "id"],
         message: `duplicate memory hint id: ${hint.id}`
       });
@@ -46198,14 +47291,14 @@ var ProgressPresentation = external_exports.object({
 }).strict().superRefine((presentation, ctx) => {
   if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["slot_id"],
       message: "slot_id is required when line_mode is replace_slot"
     });
   }
   if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status_text"],
       message: "status_text is required unless line_mode is suppress"
     });
@@ -46501,14 +47594,14 @@ var ProcessEvidenceProjection = external_exports.object({
 }).strict().superRefine((projection, ctx) => {
   if (projection.child_run_ref.kind !== "trace") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["child_run_ref", "kind"],
       message: "child_run_ref must point to the child run trace"
     });
   }
   if (projection.result_ref !== void 0 && projection.result_ref.kind !== "report") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result_ref", "kind"],
       message: "result_ref must point to a report"
     });
@@ -46516,7 +47609,7 @@ var ProcessEvidenceProjection = external_exports.object({
   for (const [index, ref] of projection.evidence_refs.entries()) {
     if (ref.ref.startsWith("/")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "ref"],
         message: "process evidence refs must be run-relative"
       });
@@ -46525,7 +47618,7 @@ var ProcessEvidenceProjection = external_exports.object({
       const allowed = new Set([projection.result_ref?.ref, ...projection.declared_report_paths].filter((path) => path !== void 0));
       if (!allowed.has(ref.ref)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence_refs", index, "ref"],
           message: "process report refs must use declared process evidence paths"
         });
@@ -46533,14 +47626,14 @@ var ProcessEvidenceProjection = external_exports.object({
     }
     if (ref.kind === "request" && ref.ref !== projection.checkpoint?.request_ref.ref) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "ref"],
         message: "request refs are only allowed for the active checkpoint request"
       });
     }
     if (!["report", "request", "operator_input", "evidence"].includes(ref.kind)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "kind"],
         message: `process evidence cannot use ${ref.kind} refs`
       });
@@ -46549,14 +47642,14 @@ var ProcessEvidenceProjection = external_exports.object({
   if (projection.outcome === "checkpoint_waiting") {
     if (projection.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["result_ref"],
         message: "checkpoint_waiting projections must not have a result ref"
       });
     }
     if (projection.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["checkpoint"],
         message: "checkpoint_waiting projections require checkpoint metadata"
       });
@@ -46565,28 +47658,28 @@ var ProcessEvidenceProjection = external_exports.object({
   }
   if (projection.result_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result_ref"],
       message: "closed process projections require a result ref"
     });
   }
   if (projection.checkpoint !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["checkpoint"],
       message: "closed process projections must not carry checkpoint metadata"
     });
   }
   if (projection.outcome === "complete" && projection.missing_evidence.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_evidence"],
       message: "complete process projections cannot have missing evidence"
     });
   }
   if (["blocked", "failed"].includes(projection.outcome) && projection.blocked_reason === void 0 && projection.next_action === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocked_reason"],
       message: "blocked or failed process projections require a reason or next action"
     });
@@ -46596,20 +47689,13 @@ var ProcessEvidenceProjection = external_exports.object({
 // dist/schemas/run.js
 var RunTraceBody = external_exports.array(TraceEntry).min(1);
 var issueAt4 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 function isGuidanceDecision(entry) {
   return entry.kind === "guidance.decision";
 }
-function stableJson5(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sameJson(a, b) {
-  return stableJson5(a) === stableJson5(b);
+  return canonicalJson(a) === canonicalJson(b);
 }
 function selectedRecord(entry) {
   return entry.selected;
@@ -47142,7 +48228,7 @@ var RunEvidenceRef = external_exports.object({
   const allowed = EvidenceSourceRefKind[evidence2.source];
   if (!allowed.includes(evidence2.ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["ref", "kind"],
       message: `${evidence2.source} evidence cannot use ${evidence2.ref.kind} refs`
     });
@@ -47167,7 +48253,7 @@ var RunDoneClaim = external_exports.object({
 }).strict().superRefine((claim, ctx) => {
   if (!claim.required_evidence.some((evidence2) => evidence2.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_evidence"],
       message: "each done_when item must include at least one required evidence entry"
     });
@@ -47260,14 +48346,14 @@ var RunProcessAttempt = external_exports.object({
   if (attempt.outcome === "checkpoint_waiting") {
     if (attempt.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["checkpoint"],
         message: "checkpoint_waiting attempts require checkpoint metadata"
       });
     }
     if (attempt.child_run.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "result_ref"],
         message: "checkpoint_waiting attempts must not have a child result ref"
       });
@@ -47304,7 +48390,7 @@ var RunCompletionGate = external_exports.object({
   const lenses = new Set(gate.gate_passes.map((pass) => pass.attack_lens));
   if (lenses.size !== gate.gate_passes.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["gate_passes"],
       message: "gate passes must use distinct attack lenses"
     });
@@ -47313,21 +48399,21 @@ var RunCompletionGate = external_exports.object({
   if (gate.verdict === "complete") {
     if (!allClaimsProved) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claim_results"],
         message: "complete gate verdict requires every claim result to be proved"
       });
     }
     if (gate.clean_streak < gate.required_passes || gate.gate_passes.filter((pass) => pass.verdict === "gate-pass").length < gate.required_passes) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate_passes"],
         message: "complete gate verdict requires two clean gate passes"
       });
     }
     if (gate.next_action !== "close") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["next_action"],
         message: "complete gate verdict requires close next_action"
       });
@@ -47382,14 +48468,14 @@ var RunMemoryUpdateEvent = external_exports.object({
 }).strict().superRefine((event, ctx) => {
   if ((event.action === "proposed" || event.action === "recorded") && event.operator_indicator === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["operator_indicator"],
       message: "proposed and recorded memory updates require an operator indicator"
     });
   }
   if (event.scope === "flow" && event.flow_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["flow_id"],
       message: "flow-scoped memory updates require flow_id"
     });
@@ -47436,14 +48522,14 @@ var RunEnvelopeShadowRecord = external_exports.object({
   if (record2.child_run.outcome === "checkpoint_waiting") {
     if (record2.child_run.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "result_ref"],
         message: "checkpoint_waiting shadow records must not include a result ref"
       });
     }
     if (record2.child_run.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "checkpoint"],
         message: "checkpoint_waiting shadow records require checkpoint metadata"
       });
@@ -47452,7 +48538,7 @@ var RunEnvelopeShadowRecord = external_exports.object({
   }
   if (record2.child_run.result_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["child_run", "result_ref"],
       message: "closed child runs require a result ref"
     });
@@ -47480,7 +48566,7 @@ var RunEnvelopeRecord = external_exports.object({
 }).strict().superRefine((record2, ctx) => {
   if (record2.surface_output.outcome !== record2.outcome) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["surface_output", "outcome"],
       message: "surface output outcome must match record outcome"
     });
@@ -47490,14 +48576,14 @@ var RunEnvelopeRecord = external_exports.object({
   const requiredClaimsProved = requiredClaimIds.every((claimId) => claimResults.get(claimId)?.status === "proved");
   if (record2.outcome === "complete" && record2.completion_gate.verdict !== "complete") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["completion_gate", "verdict"],
       message: "complete record outcome requires complete gate verdict"
     });
   }
   if (record2.outcome === "complete" && !requiredClaimsProved) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["completion_gate", "claim_results"],
       message: "complete record outcome requires all required claims to be proved"
     });
@@ -47507,14 +48593,14 @@ var RunEnvelopeRecord = external_exports.object({
     const hasFollowupAttempt = record2.process_plan.planned_attempts.some((attempt) => !executedAttemptIds.has(attempt.attempt_id) && attempt.followup_for !== void 0 && executedAttemptIds.has(attempt.followup_for.prior_attempt_id) && (attempt.depends_on_attempt_ids.includes(attempt.followup_for.prior_attempt_id) || record2.process_attempts.length === 0));
     if (!hasFollowupAttempt && record2.decision_packets.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["process_plan", "planned_attempts"],
         message: "needs_followup requires a planned follow-up attempt with missing claim provenance or a decision packet"
       });
     }
     if (record2.outcome === "complete") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "needs_followup gate must not close the record complete"
       });
@@ -47524,14 +48610,14 @@ var RunEnvelopeRecord = external_exports.object({
   if (record2.outcome === "blocked") {
     if (record2.completion_gate.verdict !== "blocked" && !hasBlockedOrFailedAttempt) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["completion_gate", "verdict"],
         message: "blocked record outcome requires a blocked gate or blocked process attempt"
       });
     }
     if (record2.surface_output.next_action === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["surface_output", "next_action"],
         message: "blocked record outcome requires a next operator action"
       });
@@ -47539,7 +48625,7 @@ var RunEnvelopeRecord = external_exports.object({
   }
   if (record2.outcome !== "complete" && /\b(?:done|complete|completed)\b/i.test(record2.surface_output.status_text)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["surface_output", "status_text"],
       message: "non-complete surface output must not claim completion"
     });
@@ -47551,7 +48637,7 @@ var RunEnvelopeRecord = external_exports.object({
     const matchingAttempt = record2.process_attempts.find((attempt) => attempt.outcome === "checkpoint_waiting" && attempt.child_run.run_id === target.run_id && attempt.checkpoint !== void 0 && attempt.checkpoint.step_id === target.step_id && attempt.checkpoint.request_ref.ref === target.request_ref.ref);
     if (matchingAttempt === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["decision_packets"],
         message: "process-checkpoint decision packets require a matching waiting attempt"
       });
@@ -47707,7 +48793,7 @@ var HistoryManifestV1 = external_exports.object({
   run_count: external_exports.number().int().nonnegative(),
   document_count: external_exports.number().int().nonnegative(),
   source_fingerprint: external_exports.object({
-    run_folder_names_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/),
+    run_folder_names_sha256: Sha256,
     latest_source_mtime_ms: external_exports.number().int().nonnegative()
   }).strict(),
   warnings: external_exports.array(HistoryWarningV1)
@@ -47723,7 +48809,7 @@ var HistoryDocumentV1 = external_exports.object({
   run_folder: external_exports.string().min(1),
   source_path: external_exports.string().min(1),
   source_ref: Ref,
-  source_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/).optional(),
+  source_sha256: Sha256.optional(),
   source_mtime_ms: external_exports.number().int().nonnegative().optional(),
   report_schema: external_exports.string().min(1).optional(),
   step_id: external_exports.string().min(1).optional(),
@@ -47748,14 +48834,14 @@ var HistoryStalenessV1 = external_exports.object({
 }).strict().superRefine((staleness, ctx) => {
   if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "unknown history staleness requires memory_unverified reason code"
     });
   }
   if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "stale history staleness requires memory_stale reason code"
     });
@@ -47817,28 +48903,28 @@ var HistoryRecallReportV1 = external_exports.object({
 }).strict().superRefine((report, ctx) => {
   if (report.memory_input_count !== report.memory_inputs.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_input_count"],
       message: "memory_input_count must equal memory_inputs.length"
     });
   }
   if (report.status === "used" && report.memory_inputs.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: "status 'used' requires at least one memory input"
     });
   }
   if (report.status !== "used" && report.memory_inputs.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_inputs"],
       message: "only status 'used' may include memory inputs"
     });
   }
   if (report.status === "unavailable" && report.index_state !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["index_state"],
       message: "status 'unavailable' must not claim an index_state"
     });
@@ -48000,7 +49086,7 @@ function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryF
     if (!existsSync10(abs))
       return `[reads unavailable: ${path}]`;
     return `--- ${path} ---
-${readFileSync20(abs, "utf8")}`;
+${readFileSync21(abs, "utf8")}`;
   }).join("\n\n");
   const skillsSection = selectedSkillsSection(loadedSkills);
   const criteriaSection = acceptanceCriteriaSection(step);
@@ -48315,10 +49401,9 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
-import { createHash as createHash8 } from "node:crypto";
-import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
+import { existsSync as existsSync11, readFileSync as readFileSync22, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join as join6, resolve as resolve5 } from "node:path";
+import { join as join6, resolve as resolve6 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
 var UserSkillFrontmatter = UserSkillEntry.pick({
   name: true,
@@ -48327,9 +49412,6 @@ var UserSkillFrontmatter = UserSkillEntry.pick({
 }).passthrough();
 function defaultUserSkillRoots(homeDir = homedir()) {
   return [join6(homeDir, ".agents", "skills"), join6(homeDir, ".claude", "skills")];
-}
-function sha256Hex2(text) {
-  return createHash8("sha256").update(text, "utf8").digest("hex");
 }
 function parseSkillMarkdown(text, skillPath) {
   if (!text.startsWith("---"))
@@ -48360,7 +49442,7 @@ function parseSkillMarkdown(text, skillPath) {
 function discoverCandidates(roots) {
   const candidates = /* @__PURE__ */ new Map();
   for (const root of roots) {
-    const rootAbs = resolve5(root);
+    const rootAbs = resolve6(root);
     if (!existsSync11(rootAbs))
       continue;
     for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
@@ -48387,7 +49469,7 @@ function discoverCandidates(roots) {
 function loadCandidate(candidate) {
   let text;
   try {
-    text = readFileSync21(candidate.path, "utf8");
+    text = readFileSync22(candidate.path, "utf8");
   } catch (err) {
     throw new Error(`selected skill '${candidate.id}' could not be read at ${candidate.path}: ${err.message}`);
   }
@@ -48397,7 +49479,7 @@ function loadCandidate(candidate) {
     ...parsed.metadata,
     root: candidate.root,
     path: candidate.path,
-    sha256: sha256Hex2(text),
+    sha256: sha256OfString(text),
     bytes: Buffer.byteLength(text, "utf8")
   });
   return { entry, body: parsed.body };
@@ -48405,7 +49487,7 @@ function loadCandidate(candidate) {
 function createUserSkillRegistry(options = {}) {
   const roots = options.roots ?? defaultUserSkillRoots(options.homeDir);
   const candidates = discoverCandidates(roots);
-  const searchedRoots = roots.map((root) => resolve5(root));
+  const searchedRoots = roots.map((root) => resolve6(root));
   return {
     roots: searchedRoots,
     list() {
@@ -48720,29 +49802,19 @@ async function relayWithResolvedConnector(connector, input) {
     ...input.resolvedSelection === void 0 ? {} : { resolvedSelection: ResolvedSelection.parse(input.resolvedSelection) },
     ...input.responseSchema === void 0 ? {} : { responseSchema: input.responseSchema }
   };
-  if (connector.kind === "builtin" && connector.name === "claude-code") {
-    return relayClaudeCode(relayInput);
-  }
-  if (connector.kind === "builtin" && connector.name === "codex") {
-    return relayCodex(relayInput);
-  }
-  if (connector.kind === "builtin" && connector.name === "cursor-agent") {
-    return relayCursorAgent(relayInput);
-  }
   if (connector.kind === "custom") {
     return relayCustom({ ...relayInput, descriptor: connector });
   }
-  throw new Error(`unsupported relay connector '${connector.name}'`);
+  return BUILTIN_CONNECTOR_RELAYERS[connector.name](relayInput);
 }
+var BUILTIN_CONNECTOR_RELAYERS = {
+  "claude-code": relayClaudeCode,
+  codex: relayCodex,
+  "cursor-agent": relayCursorAgent
+};
 function timeoutMs(step) {
   const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === "number" ? wallClock : void 0;
-}
-function proofIdPart(value) {
-  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
-}
-function uniqueValues(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 function acceptanceProofStatus(evidence2) {
   if (evidence2.some((item) => item.result === "fail"))
@@ -48789,21 +49861,6 @@ function declaredRecoveryForAcceptanceProof(input) {
     route_id: binding.route_id,
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status)
-  };
-}
-function stepCanCloseRun(step) {
-  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
-}
-function proofAssessmentReportRef(input) {
-  return {
-    kind: "report",
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
-`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt
   };
 }
 async function writeAcceptanceProofAssessment(input) {
@@ -48896,28 +49953,8 @@ async function writeAcceptanceProofAssessment(input) {
     close_allowed: closeAllowed
   });
 }
-function readRouteFromReportBody(body, path) {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
-      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
-    }
-    cursor = cursor[segment];
-  }
-  if (typeof cursor !== "string" || cursor.length === 0) {
-    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
-  }
-  return cursor;
-}
-function stableJson6(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sameJson2(left, right) {
-  return stableJson6(left) === stableJson6(right);
+  return canonicalJson(left) === canonicalJson(right);
 }
 function relaySkillIdentities(skills) {
   return skills.map((skill) => ({
@@ -49040,7 +50077,7 @@ async function executeProductionRelayAttempt(input) {
     throw new Error(`relay step '${step.id}' requires writes.request, writes.receipt, and writes.result`);
   }
   await context.files.writeText(request, prompt);
-  const requestPayloadHash = sha256Hex(prompt);
+  const requestPayloadHash = sha256OfString(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
   const relayGuidance = await appendRelayExecutionGuidance(context, {
@@ -49147,7 +50184,7 @@ async function executeProductionRelayAttempt(input) {
     kind: "relay.result",
     step_id: step.id,
     attempt,
-    result_report_hash: sha256Hex(relayResult.result_body)
+    result_report_hash: sha256OfString(relayResult.result_body)
   });
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
   let evaluation = checkEvaluation;
@@ -49310,7 +50347,7 @@ async function executeProductionRelay(step, context) {
   const { evaluation } = relayAttempt;
   if (evaluation.kind === "pass") {
     if (step.routeFromReport !== void 0) {
-      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      const route = readRouteFromReport(relayAttempt.parsed_body, step.routeFromReport.path);
       if (!Object.hasOwn(step.routes, route)) {
         throw new Error(`relay step '${step.id}' route_from_report selected undeclared route '${route}'`);
       }
@@ -49362,6 +50399,20 @@ async function executeProductionRelay(step, context) {
 }
 
 // dist/runtime/fanout/branch-execution.js
+async function appendFanoutBranchStarted(context, fields) {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: "fanout.branch_started",
+    ...fields
+  });
+}
+async function appendFanoutBranchCompleted(context, fields) {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: "fanout.branch_completed",
+    ...fields
+  });
+}
 function admitList(step) {
   const admit = step.check.verdicts?.admit;
   return Array.isArray(admit) ? admit.filter((entry) => typeof entry === "string") : [];
@@ -49505,9 +50556,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
   const childRunId = randomUUID();
   const resultPath2 = `${branchDirRel}/result.json`;
   const reportPath = `${branchDirRel}/report.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: "fanout.branch_started",
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -49548,9 +50597,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
         admitted: false,
         failure_reason: relayAttempt.evaluation.reason
       };
-      await context.trace.append({
-        run_id: context.runId,
-        kind: "fanout.branch_completed",
+      await appendFanoutBranchCompleted(context, {
         step_id: step.id,
         attempt,
         branch_id: branch.branch_id,
@@ -49596,9 +50643,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     await context.files.writeText(`${branchDirRel}/receipt.txt`, `stub relay receipt for ${branch.branch_id}
 `);
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49623,9 +50668,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     };
   } catch (error51) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49654,9 +50697,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
   const attempt = context.activeStepAttempt ?? 1;
   const childRunId = randomUUID();
   const resultPath2 = `${branchDirRel}/result.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: "fanout.branch_started",
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -49667,9 +50708,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
   if (context.childCompiledFlowResolver === void 0 || context.childRunner === void 0) {
     const failureReason = `fanout step '${step.id}': child resolver and child runner are required for sub-run branches`;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49732,9 +50771,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     const evaluation = branchResult(childResult, admitList(step));
     const admitted = childResult.outcome === "complete" && evaluation.admitted;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49758,9 +50795,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     };
   } catch (error51) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49882,9 +50917,6 @@ function aggregateRef(step) {
   const aggregate2 = step.writes?.aggregate;
   if (aggregate2 !== void 0)
     return aggregate2;
-  const joinAggregate = step.join.aggregate;
-  if (joinAggregate !== void 0)
-    return joinAggregate;
   throw new Error(`fanout step '${step.id}' is missing writes.aggregate`);
 }
 function branchesDir(step) {
@@ -50327,30 +51359,12 @@ function verificationFailureReason(stepId, error51) {
   const message = error51 instanceof Error ? error51.message : String(error51);
   return `verification step '${stepId}': report writer failed (${message})`;
 }
-function proofIdPart2(value) {
-  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
-}
-function uniqueValues2(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-function proofAssessmentReportRef2(input) {
-  return {
-    kind: "report",
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
-`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt
-  };
-}
 function commandEvidenceRef(input) {
   const { observation } = input;
   return {
     kind: "command",
     ref: `verification/${input.stepId}/${input.attempt}/${observation.command.id}`,
-    sha256: sha256Hex(`${JSON.stringify({
+    sha256: sha256OfString(`${JSON.stringify({
       command_id: observation.command.id,
       cwd: observation.command.cwd,
       argv: observation.command.argv,
@@ -50387,13 +51401,10 @@ function verificationProofMissing(input) {
     return ["no runtime verification commands ran"];
   return ["verification report did not prove required commands passed"];
 }
-function stepCanCloseRun2(step) {
-  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
-}
 async function writeVerificationProofAssessment(input) {
   if (input.context.workContractRef === void 0)
     return;
-  const claimId = `claim.verification:${proofIdPart2(input.step.id)}:${input.attempt}`;
+  const claimId = `claim.verification:${proofIdPart(input.step.id)}:${input.attempt}`;
   const evidence2 = input.observations.map((observation, index) => {
     const ref = commandEvidenceRef({
       context: input.context,
@@ -50403,7 +51414,7 @@ async function writeVerificationProofAssessment(input) {
     });
     return Evidence.parse({
       schema_version: 1,
-      id: `evidence.verification:${proofIdPart2(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart2(observation.command.id)}`,
+      id: `evidence.verification:${proofIdPart(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart(observation.command.id)}`,
       kind: "command",
       producer: "runtime",
       independence: "runtime",
@@ -50423,8 +51434,8 @@ async function writeVerificationProofAssessment(input) {
     stepId: input.step.id,
     attempt: input.attempt,
     requiredClaimKinds: ["verification_passed"],
-    requiredEvidenceKinds: uniqueValues2(evidence2.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed || stepCanCloseRun2(input.step),
+    requiredEvidenceKinds: uniqueValues(evidence2.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed || stepCanCloseRun(input.step),
     inputRefs: evidence2.flatMap((item) => [item.ref, ...item.input_refs])
   });
   if (proofPolicy === void 0)
@@ -50432,7 +51443,7 @@ async function writeVerificationProofAssessment(input) {
   const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
   const assessment = ProofAssessment.parse({
     schema_version: 1,
-    assessment_id: `proof.verification:${proofIdPart2(input.step.id)}:${input.attempt}`,
+    assessment_id: `proof.verification:${proofIdPart(input.step.id)}:${input.attempt}`,
     scope: {
       run_id: input.context.runId,
       flow_id: input.context.flow.id,
@@ -50466,7 +51477,7 @@ async function writeVerificationProofAssessment(input) {
     close_allowed: closeAllowed
   });
   await input.context.files.writeJson(path, assessment);
-  const assessmentRef = proofAssessmentReportRef2({
+  const assessmentRef = proofAssessmentReportRef({
     context: input.context,
     stepId: input.step.id,
     attempt: input.attempt,
@@ -50610,39 +51621,22 @@ async function executeVerification(step, context) {
 function unsupportedStep(step) {
   throw new Error(`step kind '${step.kind}' is not implemented in runtime baseline`);
 }
+function bindExecutor(kind, execute) {
+  return async (step, context) => {
+    if (step.kind !== kind)
+      return unsupportedStep(step);
+    return execute(step, context);
+  };
+}
 function createDefaultExecutors(options = {}) {
   const relayConnector = options.relayConnector;
   return {
-    compose: async (step, context) => {
-      if (step.kind !== "compose")
-        return unsupportedStep(step);
-      return executeCompose(step, context);
-    },
-    relay: async (step, context) => {
-      if (step.kind !== "relay")
-        return unsupportedStep(step);
-      return executeRelay(step, context, relayConnector);
-    },
-    verification: async (step, context) => {
-      if (step.kind !== "verification")
-        return unsupportedStep(step);
-      return executeVerification(step, context);
-    },
-    checkpoint: async (step, context) => {
-      if (step.kind !== "checkpoint")
-        return unsupportedStep(step);
-      return executeCheckpoint(step, context);
-    },
-    "sub-run": async (step, context) => {
-      if (step.kind !== "sub-run")
-        return unsupportedStep(step);
-      return executeSubRun(step, context);
-    },
-    fanout: async (step, context) => {
-      if (step.kind !== "fanout")
-        return unsupportedStep(step);
-      return executeFanout(step, context, relayConnector);
-    }
+    compose: bindExecutor("compose", (step, context) => executeCompose(step, context)),
+    relay: bindExecutor("relay", (step, context) => executeRelay(step, context, relayConnector)),
+    verification: bindExecutor("verification", (step, context) => executeVerification(step, context)),
+    checkpoint: bindExecutor("checkpoint", (step, context) => executeCheckpoint(step, context)),
+    "sub-run": bindExecutor("sub-run", (step, context) => executeSubRun(step, context)),
+    fanout: bindExecutor("fanout", (step, context) => executeFanout(step, context, relayConnector))
   };
 }
 
@@ -50793,6 +51787,161 @@ async function readRuntimeCompiledFlowManifestSnapshot(input) {
   return { snapshot, flowBytes, flow };
 }
 
+// dist/runtime/run/recovery-binding-verdict.js
+var OK = { kind: "ok" };
+function recoveryCauseAllowed(binding, cause) {
+  return binding.allowed_failure_causes.includes(cause);
+}
+function missingRecoveryBindingReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
+}
+function recoveryCauseNotAllowedReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(", ")}`;
+}
+function missingFailureEvidenceReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' without failure evidence`;
+}
+function recoveryBindingVerdict(input) {
+  if (input.workContractRef === void 0)
+    return OK;
+  if (input.stepKind !== "checkpoint" && input.routeHasRecoveryMechanics && input.recoveryFailure === void 0) {
+    return {
+      kind: "abort",
+      reason: missingFailureEvidenceReason({ stepId: input.stepId, route: input.route })
+    };
+  }
+  if (input.recoveryFailure !== void 0) {
+    if (input.recoveryBinding === void 0) {
+      return {
+        kind: "abort",
+        reason: missingRecoveryBindingReason({
+          stepId: input.stepId,
+          route: input.route,
+          cause: input.recoveryFailure.cause
+        })
+      };
+    }
+    if (!recoveryCauseAllowed(input.recoveryBinding, input.recoveryFailure.cause)) {
+      return {
+        kind: "abort",
+        reason: recoveryCauseNotAllowedReason({
+          stepId: input.stepId,
+          route: input.route,
+          cause: input.recoveryFailure.cause,
+          binding: input.recoveryBinding
+        })
+      };
+    }
+  }
+  return OK;
+}
+
+// dist/runtime/run/recovery-corridor.js
+var RecoveryCorridor = class {
+  deps;
+  active;
+  constructor(deps) {
+    this.deps = deps;
+  }
+  /** True when `route` is the recovery route this corridor is currently traversing. */
+  isActiveRoute(route) {
+    return route !== void 0 && this.active?.route === route;
+  }
+  /**
+   * True when stepping into `stepId` via `route` is a return toward the corridor
+   * origin through non-recovery routes (so re-entering a completed step is legal).
+   */
+  isReturnToOrigin(input) {
+    const active = this.active;
+    if (active === void 0 || this.isActiveRoute(input.route))
+      return false;
+    return this.canReachStepViaNonRecoveryRoutes({
+      fromStepId: input.stepId,
+      targetStepId: active.originStepId
+    });
+  }
+  /** The "; last recovery reason: ..." suffix for cycle/budget abort messages. */
+  lastReasonSuffix() {
+    return this.active?.reason === void 0 ? "" : `; last recovery reason: ${this.active.reason}`;
+  }
+  /**
+   * Acceptance-retry feedback to surface when `stepId` re-enters as the corridor
+   * origin via the active recovery route.
+   */
+  acceptanceFeedbackForReentry(input) {
+    if (this.active?.originStepId !== input.stepId)
+      return void 0;
+    if (!this.isActiveRoute(input.incomingRoute))
+      return void 0;
+    return this.active.acceptanceFeedback;
+  }
+  /**
+   * Failure evidence derived from the active corridor (when the completed route
+   * has recovery mechanics but no direct failure evidence of its own).
+   */
+  evidenceFor(input) {
+    const active = this.active;
+    if (active?.failure === void 0)
+      return void 0;
+    const ref = this.deps.latestStepReportOrRelayRef({
+      stepId: input.stepId,
+      attempt: input.attempt
+    });
+    if (ref === void 0)
+      return void 0;
+    return { ref, cause: corridorCause(active, input.binding) };
+  }
+  /** Enter / advance the corridor when a step takes a recovery route. */
+  enter(input) {
+    const base = {
+      originStepId: input.originStepId,
+      route: input.route,
+      ...input.recoveryFailure === void 0 ? {} : { failure: input.recoveryFailure },
+      ...input.acceptanceFeedback === void 0 ? {} : { acceptanceFeedback: input.acceptanceFeedback }
+    };
+    this.active = typeof input.recoveryReason === "string" ? { ...base, reason: input.recoveryReason } : base;
+  }
+  /**
+   * Clear the corridor when its origin step completes without taking a recovery
+   * route (the corridor has returned and exited).
+   */
+  clearIfExitingOrigin(input) {
+    if (this.active !== void 0 && this.active.originStepId === input.stepId && !input.routeHasRecoveryMechanics) {
+      this.active = void 0;
+    }
+  }
+  canReachStepViaNonRecoveryRoutes(input) {
+    if (input.fromStepId === input.targetStepId)
+      return true;
+    const seen = /* @__PURE__ */ new Set();
+    const queue = [input.fromStepId];
+    for (let index = 0; index < queue.length; index += 1) {
+      const stepId = queue[index];
+      if (stepId === void 0 || seen.has(stepId))
+        continue;
+      seen.add(stepId);
+      const step = this.deps.steps.get(stepId);
+      if (step === void 0)
+        continue;
+      for (const [route, target] of Object.entries(step.routes)) {
+        if (this.deps.routeHasRecoveryMechanics({ step, route }) || target.kind !== "step") {
+          continue;
+        }
+        if (target.stepId === input.targetStepId)
+          return true;
+        queue.push(target.stepId);
+      }
+    }
+    return false;
+  }
+};
+function corridorCause(active, binding) {
+  if (binding?.kind === "checkpoint_authority" && binding.allowed_failure_causes.includes("checkpoint_boundary")) {
+    return "checkpoint_boundary";
+  }
+  return active.failure?.cause ?? "unknown_failure";
+}
+
 // dist/shared/result-path.js
 import { join as join10 } from "node:path";
 var RUN_RESULT_RELATIVE_PATH = "reports/result.json";
@@ -50806,7 +51955,7 @@ async function writeRuntimeRunResult(files, result) {
 }
 
 // dist/runtime/run/run-boundary.js
-import { readFileSync as readFileSync22 } from "node:fs";
+import { readFileSync as readFileSync23 } from "node:fs";
 import { lstat, mkdir as mkdir4, readdir } from "node:fs/promises";
 
 // dist/runtime/projections/progress.js
@@ -50920,27 +52069,6 @@ function tournamentCheckpointPresentation(input) {
 }
 
 // dist/runtime/projections/progress.js
-function connectorFilesystemCapability(connector) {
-  return connector.kind === "builtin" ? BUILTIN_CONNECTOR_CAPABILITIES[connector.name].filesystem : connector.capabilities.filesystem;
-}
-function connectorFromTrace(entry) {
-  const connector = entry.connector;
-  if (connector === void 0 || connector === null || typeof connector !== "object") {
-    return void 0;
-  }
-  const record2 = connector;
-  if (record2.kind === "builtin" && (record2.name === "claude-code" || record2.name === "codex")) {
-    return { kind: "builtin", name: record2.name };
-  }
-  if (record2.kind === "custom" && typeof record2.name === "string" && Array.isArray(record2.command) && record2.capabilities !== void 0) {
-    return connector;
-  }
-  return void 0;
-}
-function relayRoleFromTrace(entry) {
-  const role = entry.role;
-  return role === "researcher" || role === "reviewer" || role === "implementer" ? role : void 0;
-}
 function stepTitle(input) {
   if (input.stepId === void 0)
     return "<unknown step>";
@@ -51038,9 +52166,6 @@ function warningRecordsFromReport(body) {
   });
 }
 function reportEvidenceProgress(input) {
-  if (input.traceEntry.step_id === void 0 || input.traceEntry.report_path === void 0 || input.traceEntry.report_schema === void 0) {
-    return;
-  }
   let body;
   try {
     body = readJsonReport2(input.files, input.runDir, input.traceEntry.report_path);
@@ -51086,23 +52211,6 @@ function reportEvidenceProgress(input) {
     });
   }
 }
-function runOutcome(entry) {
-  const outcome = entry.outcome;
-  if (outcome === "complete" || outcome === "stopped" || outcome === "handoff" || outcome === "escalated" || outcome === "aborted") {
-    return outcome;
-  }
-  return "aborted";
-}
-function runReason(entry) {
-  const reason = entry.reason;
-  return typeof reason === "string" && reason.length > 0 ? reason : void 0;
-}
-function stringArray(value) {
-  if (!Array.isArray(value))
-    return void 0;
-  const entries = value.filter((entry) => typeof entry === "string");
-  return entries.length === value.length && entries.length > 0 ? entries : void 0;
-}
 function checkpointPrompt(files, requestPath) {
   try {
     const text = files.readText(requestPath);
@@ -51123,23 +52231,6 @@ function checkpointChoiceLabel(choice) {
 }
 function checkpointRequestPath(runDir, requestPath) {
   return requestPath.startsWith("/") ? requestPath : join11(runDir, requestPath);
-}
-function fanoutChildOutcome(value) {
-  if (value === "complete" || value === "aborted" || value === "handoff" || value === "stopped" || value === "escalated") {
-    return value;
-  }
-  return void 0;
-}
-function fanoutPolicy(value) {
-  if (value === "pick-winner" || value === "disjoint-merge" || value === "aggregate-only" || value === "aggregate-survivors") {
-    return value;
-  }
-  return void 0;
-}
-function fanoutBranchKind(value) {
-  if (value === "relay" || value === "sub-run")
-    return value;
-  return void 0;
 }
 function shouldWarnAboutWriteCapableWorker(flow) {
   return flowMayInvokeWriteCapableWorker(flow.id) || flow.steps.some((step) => step.kind === "relay" && step.role === "implementer");
@@ -51302,7 +52393,7 @@ function createProgressProjector(input) {
       }
       case "fanout.started": {
         const stepId = entry.step_id;
-        const branchIds = stringArray(entry.branch_ids);
+        const branchIds = stringArrayValue(entry.branch_ids);
         if (stepId === void 0 || branchIds === void 0)
           break;
         const title = stepTitle({ flow: input.flow, stepId });
@@ -51349,7 +52440,7 @@ function createProgressProjector(input) {
       }
       case "fanout.branch_completed": {
         const stepId = entry.step_id;
-        const childOutcome = fanoutChildOutcome(entry.child_outcome);
+        const childOutcome = optionalRunClosedOutcome(entry.child_outcome);
         const branchKind = fanoutBranchKind(entry.branch_kind);
         if (stepId === void 0 || entry.branch_id === void 0 || branchKind === void 0 || childOutcome === void 0 || entry.verdict === void 0 || entry.duration_ms === void 0) {
           break;
@@ -51403,7 +52494,7 @@ function createProgressProjector(input) {
       }
       case "checkpoint.requested": {
         const stepId = entry.step_id;
-        const allowedChoices = stringArray(entry.options);
+        const allowedChoices = stringArrayValue(entry.options);
         if (stepId === void 0 || entry.request_path === void 0 || allowedChoices === void 0) {
           break;
         }
@@ -51760,7 +52851,7 @@ async function openRunBoundary(options) {
     files: {
       readText(path) {
         try {
-          return readFileSync22(path, "utf8");
+          return readFileSync23(path, "utf8");
         } catch {
           return void 0;
         }
@@ -51838,7 +52929,12 @@ async function terminalOutcomeBoundToPrimaryResult(context, outcome) {
   const primaryResultPath = pkg.runtimeSurface?.primaryResult?.path;
   if (primaryResultPath === void 0)
     return void 0;
-  const primaryResult = await context.files.readJson(primaryResultPath);
+  let primaryResult;
+  try {
+    primaryResult = await context.files.readJson(primaryResultPath);
+  } catch {
+    return void 0;
+  }
   if (typeof primaryResult !== "object" || primaryResult === null)
     return void 0;
   const primaryOutcome = primaryResult.outcome;
@@ -51912,9 +53008,13 @@ function traceRefForEntry(input) {
 }
 function latestRecoveryFailureEvidence(input) {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
+    if (entry.kind !== "check.evaluated" && entry.kind !== "relay.failed")
+      continue;
     if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
       continue;
-    if (entry.kind === "check.evaluated" && entry.outcome === "fail") {
+    if (entry.kind === "check.evaluated") {
+      if (entry.outcome !== "fail")
+        continue;
       return {
         ref: traceRefForEntry({
           context: input.context,
@@ -51925,25 +53025,23 @@ function latestRecoveryFailureEvidence(input) {
         cause: isAcceptanceRetryFeedback(input.details.acceptance_feedback) ? "failed_acceptance_criteria" : "failed_check"
       };
     }
-    if (entry.kind === "relay.failed") {
-      return {
-        ref: traceRefForEntry({
-          context: input.context,
-          stepId: input.stepId,
-          attempt: input.attempt,
-          sequence: entry.sequence
-        }),
-        cause: "relay_connector_failed"
-      };
-    }
+    return {
+      ref: traceRefForEntry({
+        context: input.context,
+        stepId: input.stepId,
+        attempt: input.attempt,
+        sequence: entry.sequence
+      }),
+      cause: "relay_connector_failed"
+    };
   }
   return void 0;
 }
 function latestStepReportOrRelayRef(input) {
   for (const entry of [...input.context.trace.getAll()].reverse()) {
-    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
-      continue;
     if (entry.kind !== "step.report_written" && entry.kind !== "relay.result")
+      continue;
+    if (entry.step_id !== input.stepId || entry.attempt !== input.attempt)
       continue;
     return traceRefForEntry({
       context: input.context,
@@ -51964,73 +53062,6 @@ function reportSelectedCheckpointBoundaryEvidence(input) {
   const ref = latestStepReportOrRelayRef(input);
   return ref === void 0 ? void 0 : { ref, cause: "checkpoint_boundary" };
 }
-function activeRecoveryCorridorCause(input) {
-  if (input.binding?.kind === "checkpoint_authority" && input.binding.allowed_failure_causes.includes("checkpoint_boundary")) {
-    return "checkpoint_boundary";
-  }
-  return input.activeRecovery.failure?.cause ?? "unknown_failure";
-}
-function latestActiveRecoveryCorridorEvidence(input) {
-  if (input.activeRecovery?.failure === void 0)
-    return void 0;
-  const ref = latestStepReportOrRelayRef(input);
-  if (ref === void 0)
-    return void 0;
-  return {
-    ref,
-    cause: activeRecoveryCorridorCause({
-      activeRecovery: input.activeRecovery,
-      binding: input.binding
-    })
-  };
-}
-function recoveryCauseAllowed(binding, cause) {
-  return binding.allowed_failure_causes.includes(cause);
-}
-function missingRecoveryBindingReason(input) {
-  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
-}
-function recoveryCauseNotAllowedReason(input) {
-  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(", ")}`;
-}
-function isActiveRecoveryRoute(activeRecovery, route) {
-  return route !== void 0 && activeRecovery?.route === route;
-}
-function canReachStepViaNonRecoveryRoutes(input) {
-  if (input.fromStepId === input.targetStepId)
-    return true;
-  const seen = /* @__PURE__ */ new Set();
-  const queue = [input.fromStepId];
-  for (let index = 0; index < queue.length; index += 1) {
-    const stepId = queue[index];
-    if (stepId === void 0 || seen.has(stepId))
-      continue;
-    seen.add(stepId);
-    const step = input.steps.get(stepId);
-    if (step === void 0)
-      continue;
-    for (const [route, target] of Object.entries(step.routes)) {
-      if (isRecoveryRouteForMechanics({ bindings: input.bindings, step, route }) || target.kind !== "step") {
-        continue;
-      }
-      if (target.stepId === input.targetStepId)
-        return true;
-      queue.push(target.stepId);
-    }
-  }
-  return false;
-}
-function isRecoveryReturnCorridor(input) {
-  if (input.activeRecovery === void 0 || isActiveRecoveryRoute(input.activeRecovery, input.route)) {
-    return false;
-  }
-  return canReachStepViaNonRecoveryRoutes({
-    steps: input.steps,
-    bindings: input.bindings,
-    fromStepId: input.stepId,
-    targetStepId: input.activeRecovery.originStepId
-  });
-}
 function configuredMaxAttempts(step) {
   const budgets = step.budgets;
   if (budgets === void 0 || budgets === null || typeof budgets !== "object")
@@ -52045,22 +53076,20 @@ function configuredMaxAttempts(step) {
 function maxAttemptsForRoute(step, recoveryRoute) {
   return configuredMaxAttempts(step) ?? (recoveryRoute ? 2 : 1);
 }
-function bootstrapChangeKind(input) {
-  const defaultKind = input.flow.entryModes?.find((mode) => mode.name === input.entryModeName)?.defaultChangeKind ?? "ratchet-advance";
-  if (defaultKind !== "ratchet-advance" && defaultKind !== "equivalence-refactor" && defaultKind !== "discovery" && defaultKind !== "disposable") {
-    return {
-      change_kind: "ratchet-advance",
-      failure_mode: "runtime execution cannot produce required reports",
-      acceptance_evidence: "trace entries, reports, and result files satisfy their schemas",
-      alternate_framing: "start a fresh flow with a narrower goal"
-    };
-  }
+function standardChangeKindDeclaration(changeKind) {
   return {
-    change_kind: defaultKind,
+    change_kind: changeKind,
     failure_mode: "runtime execution cannot produce required reports",
     acceptance_evidence: "trace entries, reports, and result files satisfy their schemas",
     alternate_framing: "start a fresh flow with a narrower goal"
   };
+}
+function bootstrapChangeKind(input) {
+  const defaultKind = input.flow.entryModes?.find((mode) => mode.name === input.entryModeName)?.defaultChangeKind ?? "ratchet-advance";
+  if (defaultKind !== "ratchet-advance" && defaultKind !== "equivalence-refactor" && defaultKind !== "discovery" && defaultKind !== "disposable") {
+    return standardChangeKindDeclaration("ratchet-advance");
+  }
+  return standardChangeKindDeclaration(defaultKind);
 }
 function completedStepCountsFromTrace(entries) {
   const counts = /* @__PURE__ */ new Map();
@@ -52243,8 +53272,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
   }
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken;
-  let activeRecovery;
   const recoveryRouteBindings = options.recoveryRouteBindings ?? (options.workContractRef === void 0 ? void 0 : []);
+  const corridor = new RecoveryCorridor({
+    steps,
+    bindings: recoveryRouteBindings,
+    routeHasRecoveryMechanics: ({ step, route }) => isRecoveryRouteForMechanics({ bindings: recoveryRouteBindings, step, route }),
+    latestStepReportOrRelayRef: ({ stepId, attempt }) => latestStepReportOrRelayRef({ context, stepId, attempt })
+  });
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
     if (step === void 0) {
@@ -52252,18 +53286,15 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     }
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
-    const incomingIsActiveRecovery = isActiveRecoveryRoute(activeRecovery, incomingRouteTaken);
+    const incomingIsActiveRecovery = corridor.isActiveRoute(incomingRouteTaken);
     const maxAttempts = maxAttemptsForRoute(step, incomingIsActiveRecovery);
-    const isRecoveryOriginReentry = isRecoveryReturnCorridor({
-      steps,
-      bindings: recoveryRouteBindings,
-      activeRecovery,
+    const isRecoveryOriginReentry = corridor.isReturnToOrigin({
       stepId: step.id,
       route: incomingRouteTaken
     });
     const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
     if (!isResumedCheckpoint && completedCount > 0 && !isRecoveryOriginReentry && (!incomingIsActiveRecovery || completedCount >= maxAttempts)) {
-      const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
+      const recoverySuffix = corridor.lastReasonSuffix();
       const reason = incomingRouteTaken === void 0 ? `route cycle detected at step '${step.id}'; aborting before re-entering an already completed step` : `route '${incomingRouteTaken}' for step '${step.id}' exhausted max_attempts=${maxAttempts}${recoverySuffix}`;
       await trace.append({
         run_id: runId,
@@ -52280,7 +53311,10 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     let route;
     let details;
     try {
-      const acceptanceRetryFeedback = activeRecovery?.originStepId === step.id && isActiveRecoveryRoute(activeRecovery, incomingRouteTaken) ? activeRecovery.acceptanceFeedback : void 0;
+      const acceptanceRetryFeedback = corridor.acceptanceFeedbackForReentry({
+        stepId: step.id,
+        incomingRoute: incomingRouteTaken
+      });
       const stepContext = {
         ...context,
         activeStepAttempt: attempt,
@@ -52348,56 +53382,29 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       details,
       binding: recoveryBinding
     });
-    const recoveryFailure = directRecoveryFailure ?? (routeHasRecoveryMechanics ? latestActiveRecoveryCorridorEvidence({
-      context,
+    const recoveryFailure = directRecoveryFailure ?? (routeHasRecoveryMechanics ? corridor.evidenceFor({
       stepId: step.id,
       attempt,
-      binding: recoveryBinding,
-      activeRecovery
+      binding: recoveryBinding
     }) : void 0);
-    if (context.workContractRef !== void 0 && step.kind !== "checkpoint" && routeHasRecoveryMechanics && recoveryFailure === void 0) {
-      const reason = `step '${step.id}' selected recovery route '${route}' without failure evidence`;
+    const bindingVerdict = recoveryBindingVerdict({
+      workContractRef: context.workContractRef,
+      stepId: step.id,
+      stepKind: step.kind,
+      route,
+      routeHasRecoveryMechanics,
+      recoveryFailure,
+      recoveryBinding
+    });
+    if (bindingVerdict.kind === "abort") {
       await trace.append({
         run_id: runId,
         kind: "step.aborted",
         step_id: step.id,
         attempt,
-        reason
+        reason: bindingVerdict.reason
       });
-      return await closeRun(context, "aborted", void 0, reason);
-    }
-    if (context.workContractRef !== void 0 && recoveryFailure !== void 0) {
-      if (recoveryBinding === void 0) {
-        const reason = missingRecoveryBindingReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause
-        });
-        await trace.append({
-          run_id: runId,
-          kind: "step.aborted",
-          step_id: step.id,
-          attempt,
-          reason
-        });
-        return await closeRun(context, "aborted", void 0, reason);
-      }
-      if (!recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
-        const reason = recoveryCauseNotAllowedReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause,
-          binding: recoveryBinding
-        });
-        await trace.append({
-          run_id: runId,
-          kind: "step.aborted",
-          step_id: step.id,
-          attempt,
-          reason
-        });
-        return await closeRun(context, "aborted", void 0, reason);
-      }
+      return await closeRun(context, "aborted", void 0, bindingVerdict.reason);
     }
     if (target.kind === "step" && target.stepId === step.id && route === "pass") {
       const reason = `route cycle detected: step '${step.id}' routes via '${route}' to itself`;
@@ -52413,16 +53420,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     if (target.kind === "step") {
       const targetCompletedCount = completedStepCounts.get(target.stepId) ?? 0;
       const targetStep = steps.get(target.stepId);
-      const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
-        steps,
-        bindings: recoveryRouteBindings,
-        activeRecovery,
+      const isRecoveryReturnToOrigin = corridor.isReturnToOrigin({
         stepId: target.stepId,
         route
       });
       const targetMaxAttempts = targetStep === void 0 ? maxAttemptsForRoute(step, routeHasRecoveryMechanics) : maxAttemptsForRoute(targetStep, routeHasRecoveryMechanics);
       if (targetCompletedCount > 0 && !isRecoveryReturnToOrigin && (!routeHasRecoveryMechanics || targetCompletedCount >= targetMaxAttempts)) {
-        const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
+        const recoverySuffix = corridor.lastReasonSuffix();
         const reason = routeHasRecoveryMechanics ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}` : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
         await trace.append({
           run_id: runId,
@@ -52435,20 +53439,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       }
     }
     if (routeHasRecoveryMechanics) {
-      const recoveryReason = details.reason;
-      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0;
-      activeRecovery = typeof recoveryReason === "string" ? {
+      corridor.enter({
         originStepId: step.id,
         route,
-        reason: recoveryReason,
-        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
-        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-      } : {
-        originStepId: step.id,
-        route,
-        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
-        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-      };
+        recoveryReason: details.reason,
+        recoveryFailure,
+        acceptanceFeedback: isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0
+      });
     }
     if (recoveryBinding !== void 0) {
       if (recoveryFailure !== void 0 && recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
@@ -52463,9 +53460,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
         });
       }
     }
-    if (activeRecovery !== void 0 && activeRecovery.originStepId === step.id && !routeHasRecoveryMechanics) {
-      activeRecovery = void 0;
-    }
+    corridor.clearIfExitingOrigin({ stepId: step.id, routeHasRecoveryMechanics });
     await trace.append({
       run_id: runId,
       kind: "step.completed",
@@ -52606,16 +53601,6 @@ function isCheckpointResumeRejectedResult(result) {
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-function traceString(entry, key) {
-  const value = entry?.[key];
-  return typeof value === "string" && value.length > 0 ? value : void 0;
-}
-function stringArray2(value) {
-  if (!Array.isArray(value))
-    return void 0;
-  const entries = value.filter((entry) => typeof entry === "string");
-  return entries.length === value.length && entries.length > 0 ? entries : void 0;
-}
 function sameStringArray(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -52675,11 +53660,11 @@ function readCheckpointRequestContextResult(input) {
   const requestAbs = resolveRunFilePath(input.runDir, input.requestPath);
   let requestText;
   try {
-    requestText = readFileSync23(requestAbs, "utf8");
+    requestText = readFileSync24(requestAbs, "utf8");
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
-  if (sha256Hex(requestText) !== input.expectedRequestHash) {
+  if (sha256OfString(requestText) !== input.expectedRequestHash) {
     return checkpointResumeRejected("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
   let raw;
@@ -52694,7 +53679,7 @@ function readCheckpointRequestContextResult(input) {
   if (raw.schema_version !== 1 || raw.step_id !== input.step.id) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request for '${input.step.id}' is stale`);
   }
-  const requestChoices = stringArray2(raw.allowed_choices);
+  const requestChoices = stringArrayValue(raw.allowed_choices);
   const expectedChoices = input.step.choices.length === 0 && requestChoices !== void 0 ? requestChoices : input.step.choices;
   if (requestChoices === void 0 || requestChoices.length !== expectedChoices.length || requestChoices.some((choice, index) => choice !== expectedChoices[index])) {
     return checkpointResumeRejected(`runtime checkpoint resume rejected: request choices for '${input.step.id}' are stale`);
@@ -52905,7 +53890,7 @@ async function resumeCompiledFlowResult(options) {
   const attempt = requested.attempt;
   const requestPath = traceString(requested, "request_path");
   const requestHash = traceString(requested, "request_report_hash");
-  const allowedChoices = stringArray2(requested.options);
+  const allowedChoices = stringArrayValue(requested.options);
   if (stepId === void 0 || attempt === void 0 || requestPath === void 0 || requestHash === void 0 || allowedChoices === void 0) {
     return checkpointResumeRejected("runtime checkpoint resume rejected: checkpoint request trace is incomplete");
   }
@@ -53012,125 +53997,82 @@ async function resumeCompiledFlow(options) {
   return result.result;
 }
 
-// dist/flows/router.js
-var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
-var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
-var ROUTABLE_WORKFLOWS = Object.freeze(ROUTABLE_PACKAGES.map((entry) => entry.pkg.id));
-var PLANNING_ARTIFACT_SIGNAL = /\b(?:proposal|plan|brief|matrix|evaluation\s+matrix|design\s+doc|design\s+document|spec|specification|rfc|memo|document|doc|guide|analysis|evaluation|selection|strategy|outline|report|comparison|recommendation|write-?up|options|approaches)\b/i;
-var QUICK_FIX_SIGNAL = /^\s*(?:(?:quick|small|tiny|simple)\s+fix\s*:|fix\s*:\s*(?:quick|small|tiny|simple)\b)/i;
-var DEEP_FIX_SIGNAL = /\b(?:regression|flaky|intermittent|incident|outage|crash|failure|failing\s+(?:test|build)|debug|diagnose|reproduce|root\s+cause)\b/i;
-var PLAN_EXECUTION_SIGNAL = /^\s*(?:execute|run|start|begin|work\s+through|carry\s+out|tackle)\s+(?:this\s+|the\s+)?(?:[\w-]+\s+){0,3}(?:plan|backlog|checklist|roadmap|doc|document)(?::|\b)/i;
-function classifyPlanExecutionRequest(taskText) {
-  if (!PLAN_EXECUTION_SIGNAL.test(taskText))
-    return void 0;
-  const lower = taskText.toLowerCase();
-  if (/\b(?:decide|decision|choose|choice|option|options|tradeoff|trade-off)\b/.test(lower)) {
-    return {
-      flowName: "explore",
-      source: "classifier",
-      matched_signal: "plan-execution",
-      reason: "matched plan-execution request; selected Explore tournament for a blocking decision",
-      inferredEntryModeName: "tournament",
-      inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
-    };
-  }
-  if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
-    return {
-      flowName: "fix",
-      source: "classifier",
-      matched_signal: "plan-execution",
-      reason: "matched plan-execution request; selected Fix for the first bug-fix slice",
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched bug-fix-oriented plan execution; selected deep thoroughness"
-    };
-  }
-  return {
-    flowName: "build",
-    source: "classifier",
-    matched_signal: "plan-execution",
-    reason: "matched plan-execution request; selected Build to start the first executable slice",
-    inferredEntryModeName: "default",
-    inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
-  };
+// dist/app/history/indexer.js
+import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, readdirSync as readdirSync4, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
+import { basename as basename2, join as join12, resolve as resolve9 } from "node:path";
+
+// dist/shared/run-artifact-io.js
+import { statSync } from "node:fs";
+import { isAbsolute as isAbsolute8, relative as relative8 } from "node:path";
+function runRelativePath(runFolder, path) {
+  return isAbsolute8(path) ? relative8(runFolder, path) : path;
 }
-function inferEntryMode(flowName, taskText) {
-  if (flowName === "build" && /^\s*develop\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "default",
-      inferredEntryModeReason: "matched develop intent; selected default Build thoroughness"
-    };
-  }
-  if (flowName === "explore" && /^\s*decide\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "tournament",
-      inferredEntryModeReason: "matched decide intent; selected Explore tournament mode"
-    };
-  }
-  if (flowName !== "fix")
-    return {};
-  if (/\bflaky\b/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched flaky signal; selected deep thoroughness"
-    };
-  }
-  const deepMatch = taskText.match(DEEP_FIX_SIGNAL);
-  if (deepMatch?.[0] !== void 0) {
-    return {
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: `matched ${deepMatch[0]} signal; selected deep thoroughness`
-    };
-  }
-  if (QUICK_FIX_SIGNAL.test(taskText)) {
-    return {
-      inferredEntryModeName: "lite",
-      inferredEntryModeReason: "matched quick Fix intent; selected lite thoroughness"
-    };
-  }
-  return {};
+function mtimeMs(path) {
+  return Math.trunc(statSync(path).mtimeMs);
 }
-function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
-  const planExecution = classifyPlanExecutionRequest(taskText);
-  if (planExecution !== void 0)
-    return planExecution;
-  const hasPlanningReport = PLANNING_ARTIFACT_SIGNAL.test(taskText);
-  for (const { pkg, routing } of routables) {
-    if (routing.isDefault)
+
+// dist/app/history/extract.js
+import { existsSync as existsSync13, lstatSync as lstatSync6, readFileSync as readFileSync25, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
+import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve8 } from "node:path";
+
+// dist/app/history/run-source-files.js
+import { existsSync as existsSync12, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
+import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve7 } from "node:path";
+function collectRunSourceFiles(runFolder) {
+  const runFolderAbs = resolve7(runFolder);
+  const files = /* @__PURE__ */ new Set();
+  for (const candidate of [
+    resolve7(runFolderAbs, "manifest.snapshot.json"),
+    resolve7(runFolderAbs, "trace.ndjson")
+  ]) {
+    if (existsSync12(candidate) && !isSymlink(candidate))
+      files.add(candidate);
+  }
+  const reportsRoot2 = resolve7(runFolderAbs, "reports");
+  for (const absPath of walkReportJsonFiles(reportsRoot2)) {
+    files.add(absPath);
+  }
+  return [...files].sort();
+}
+function isSymlink(absPath) {
+  try {
+    return lstatSync5(absPath).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function isInside3(root, target) {
+  const fromRoot = relative9(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
+}
+function walkReportJsonFiles(reportsRoot2) {
+  if (!existsSync12(reportsRoot2))
+    return [];
+  const rootReal = realpathSync4.native(reportsRoot2);
+  const out = [];
+  const stack = [reportsRoot2];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === void 0)
       continue;
-    for (const signal of routing.signals) {
-      if (!signal.pattern.test(taskText))
+    for (const entry of readdirSync2(current, { withFileTypes: true })) {
+      const absPath = resolve7(current, entry.name);
+      if (entry.isSymbolicLink() || lstatSync5(absPath).isSymbolicLink())
         continue;
-      if (routing.skipOnPlanningReport === true && hasPlanningReport) {
-        break;
+      const real = realpathSync4.native(absPath);
+      if (!isInside3(rootReal, real))
+        continue;
+      if (entry.isDirectory()) {
+        stack.push(absPath);
+      } else if (entry.isFile() && entry.name.endsWith(".json")) {
+        out.push(absPath);
       }
-      return {
-        flowName: pkg.id,
-        source: "classifier",
-        matched_signal: signal.label,
-        reason: routing.reasonForMatch(signal),
-        ...inferEntryMode(pkg.id, taskText)
-      };
     }
   }
-  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText);
-  return {
-    flowName: defaultPackage.pkg.id,
-    source: "classifier",
-    reason: inferred.inferredEntryModeReason ?? defaultPackage.routing.defaultReason ?? `no signal matched; routed to ${defaultPackage.pkg.id} as the conservative default`,
-    ...inferred
-  };
-}
-function classifyCompiledFlowTask(taskText) {
-  return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
+  return out;
 }
 
-// dist/history/indexer.js
-import { existsSync as existsSync13, mkdirSync, readFileSync as readFileSync25, readdirSync as readdirSync3, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
-import { basename as basename2, join as join12, resolve as resolve7 } from "node:path";
-
-// dist/history/extract.js
-import { existsSync as existsSync12, lstatSync as lstatSync5, readFileSync as readFileSync24, readdirSync as readdirSync2, realpathSync as realpathSync4, statSync } from "node:fs";
-import { basename, isAbsolute as isAbsolute7, relative as relative7, resolve as resolve6 } from "node:path";
+// dist/app/history/extract.js
 var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
   "goal",
   "objective",
@@ -53162,7 +54104,7 @@ var NOISY_FIELDS = /* @__PURE__ */ new Set([
 var REPORT_TEXT_LIMIT = 8e3;
 var HIGH_VALUE_TEXT_LIMIT = 2e3;
 var NORMAL_TEXT_LIMIT = 500;
-function isObject2(value) {
+function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function stringValue(value) {
@@ -53178,39 +54120,36 @@ function safeDateString(value) {
   return Number.isNaN(Date.parse(raw)) ? void 0 : new Date(raw).toISOString();
 }
 function readJson2(path) {
-  return JSON.parse(readFileSync24(path, "utf8"));
+  return JSON.parse(readFileSync25(path, "utf8"));
 }
 function readJsonRecord(path) {
   try {
     const parsed = readJson2(path);
-    return isObject2(parsed) ? parsed : void 0;
+    return isObject3(parsed) ? parsed : void 0;
   } catch {
     return void 0;
   }
 }
 function sha256File(path) {
-  return sha256Hex(readFileSync24(path, "utf8"));
+  return sha256OfString(readFileSync25(path, "utf8"));
 }
-function mtimeMs(path) {
-  return Math.trunc(statSync(path).mtimeMs);
-}
-function isInside2(root, target) {
-  const fromRoot = relative7(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+function isInside4(root, target) {
+  const fromRoot = relative10(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute10(fromRoot);
 }
 function listFiles(root, prefix = "") {
-  const absRoot = resolve6(root);
-  if (!existsSync12(absRoot))
+  const absRoot = resolve8(root);
+  if (!existsSync13(absRoot))
     return [];
-  const rootReal = realpathSync4.native(absRoot);
+  const rootReal = realpathSync5.native(absRoot);
   const out = [];
   function walk(absDir, relDir) {
-    for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
-      const absPath = resolve6(absDir, entry.name);
-      if (lstatSync5(absPath).isSymbolicLink())
+    for (const entry of readdirSync3(absDir, { withFileTypes: true })) {
+      const absPath = resolve8(absDir, entry.name);
+      if (lstatSync6(absPath).isSymbolicLink())
         continue;
-      const real = realpathSync4.native(absPath);
-      if (!isInside2(rootReal, real))
+      const real = realpathSync5.native(absPath);
+      if (!isInside4(rootReal, real))
         continue;
       const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
       if (entry.isDirectory()) {
@@ -53244,13 +54183,13 @@ function validStepId(value) {
   return StepId.safeParse(value).success ? value : void 0;
 }
 function parseTrace(runFolder, runFolderName) {
-  const tracePath = resolve6(runFolder, "trace.ndjson");
-  if (!existsSync12(tracePath)) {
+  const tracePath = resolve8(runFolder, "trace.ndjson");
+  if (!existsSync13(tracePath)) {
     return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
   }
   let entries = [];
   try {
-    entries = readFileSync24(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject2);
+    entries = readFileSync25(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject3);
   } catch (error51) {
     return {
       entries: [],
@@ -53327,7 +54266,7 @@ function extractText(value, options) {
         visit(item, [...path, String(index)]);
       return;
     }
-    if (isObject2(current)) {
+    if (isObject3(current)) {
       for (const [key, item] of Object.entries(current)) {
         if (options.allowCheckpointResponseFields && ["selection", "route_id", "resolution_source"].includes(key)) {
           visit(item, [...path, key]);
@@ -53423,7 +54362,7 @@ function traceSourceRef(input) {
   return Ref.parse(ref);
 }
 function docId(input) {
-  return `${input.runId}/${input.docKind}/${sha256Hex(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
+  return `${input.runId}/${input.docKind}/${sha256OfString(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
 }
 function skipReport(relPath) {
   const name = basename(relPath);
@@ -53469,8 +54408,8 @@ function resolveRunIdentity(input) {
 }
 function makeRunDocument(input) {
   const sourcePath = input.resultPath ?? "trace.ndjson";
-  const sourceAbs = resolve6(input.runFolder, sourcePath);
-  if (!existsSync12(sourceAbs))
+  const sourceAbs = resolve8(input.runFolder, sourcePath);
+  if (!existsSync13(sourceAbs))
     return void 0;
   const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
   if (sourceSha === void 0)
@@ -53685,28 +54624,21 @@ function makeTraceDocument(input) {
   });
 }
 function extractRunHistoryDocuments(runFolder) {
-  const runFolderAbs = resolve6(runFolder);
+  const runFolderAbs = resolve8(runFolder);
   const runFolderName = basename(runFolderAbs);
   const warnings = [];
   const documents = [];
-  const sourceFiles = /* @__PURE__ */ new Set();
-  const manifestPath2 = resolve6(runFolderAbs, "manifest.snapshot.json");
-  const resultPath2 = resolve6(runFolderAbs, "reports/result.json");
-  const manifest = existsSync12(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
-  const result = existsSync12(resultPath2) ? readJsonRecord(resultPath2) : void 0;
-  if (existsSync12(manifestPath2))
-    sourceFiles.add(manifestPath2);
-  if (existsSync12(resultPath2))
-    sourceFiles.add(resultPath2);
+  const manifestPath2 = resolve8(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve8(runFolderAbs, "reports/result.json");
+  const manifest = existsSync13(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
+  const result = existsSync13(resultPath2) ? readJsonRecord(resultPath2) : void 0;
   const trace = parseTrace(runFolderAbs, runFolderName);
   if (trace.warning !== void 0)
     warnings.push(trace.warning);
-  const tracePath = resolve6(runFolderAbs, "trace.ndjson");
-  const traceExists = existsSync12(tracePath);
+  const tracePath = resolve8(runFolderAbs, "trace.ndjson");
+  const traceExists = existsSync13(tracePath);
   const traceSha = traceExists ? sha256File(tracePath) : void 0;
   const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
-  if (traceExists)
-    sourceFiles.add(tracePath);
   const identity = resolveRunIdentity({
     runFolderName,
     traceEntries: trace.entries,
@@ -53716,7 +54648,7 @@ function extractRunHistoryDocuments(runFolder) {
   const runDocument = makeRunDocument({
     runFolder: runFolderAbs,
     identity,
-    ...existsSync12(resultPath2) ? { resultPath: "reports/result.json" } : {},
+    ...existsSync13(resultPath2) ? { resultPath: "reports/result.json" } : {},
     result,
     traceEntries: trace.entries,
     traceSha,
@@ -53724,12 +54656,11 @@ function extractRunHistoryDocuments(runFolder) {
   });
   if (runDocument !== void 0)
     documents.push(runDocument);
-  const reportRoot = resolve6(runFolderAbs, "reports");
+  const reportRoot = resolve8(runFolderAbs, "reports");
   for (const relPath of listFiles(reportRoot, "reports")) {
-    const absPath = resolve6(runFolderAbs, relPath);
+    const absPath = resolve8(runFolderAbs, relPath);
     if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
       continue;
-    sourceFiles.add(absPath);
     if (skipReport(relPath))
       continue;
     const validation = validateRunFilePath(relPath);
@@ -53745,7 +54676,7 @@ function extractRunHistoryDocuments(runFolder) {
     let body;
     try {
       const parsed = readJson2(absPath);
-      body = isObject2(parsed) ? parsed : void 0;
+      body = isObject3(parsed) ? parsed : void 0;
     } catch (error51) {
       warnings.push({
         code: "report_skipped",
@@ -53787,11 +54718,11 @@ function extractRunHistoryDocuments(runFolder) {
   return {
     documents,
     warnings,
-    sourceFiles: [...sourceFiles].sort()
+    sourceFiles: collectRunSourceFiles(runFolderAbs)
   };
 }
 
-// dist/history/indexer.js
+// dist/app/history/indexer.js
 var DEFAULT_RUNS_BASE = ".circuit/runs";
 var DEFAULT_INDEX_DIR = ".circuit/history";
 var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
@@ -53806,9 +54737,9 @@ var HistoryCommandError = class extends Error {
   }
 };
 function resolveHistoryPaths(options = {}) {
-  const repoRoot = resolve7(options.repoRoot ?? process.cwd());
-  const runsBase = resolve7(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
-  const indexDir = resolve7(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  const repoRoot = resolve9(options.repoRoot ?? process.cwd());
+  const runsBase = resolve9(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve9(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
   return {
     repoRoot,
     runsBase,
@@ -53818,10 +54749,10 @@ function resolveHistoryPaths(options = {}) {
   };
 }
 function isCandidateRunFolder(runFolder) {
-  return existsSync13(join12(runFolder, "manifest.snapshot.json")) || existsSync13(join12(runFolder, "trace.ndjson")) || existsSync13(join12(runFolder, "reports/result.json"));
+  return existsSync14(join12(runFolder, "manifest.snapshot.json")) || existsSync14(join12(runFolder, "trace.ndjson")) || existsSync14(join12(runFolder, "reports/result.json"));
 }
 function listCandidateRunFolders(runsBase) {
-  if (!existsSync13(runsBase)) {
+  if (!existsSync14(runsBase)) {
     throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
       runsBase
     });
@@ -53838,19 +54769,19 @@ function listCandidateRunFolders(runsBase) {
     });
   }
   try {
-    return readdirSync3(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
+    return readdirSync4(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
   } catch (error51) {
     throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
   }
 }
 function computeRunFolderNamesHash(runFolders) {
-  return sha256Hex(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
+  return sha256OfString(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
 }
 function computeLatestSourceMtime(sourceFiles) {
   let latest = 0;
   for (const file2 of sourceFiles) {
     try {
-      latest = Math.max(latest, Math.trunc(statSync2(file2).mtimeMs));
+      latest = Math.max(latest, mtimeMs(file2));
     } catch {
     }
   }
@@ -53866,31 +54797,7 @@ function computeHistoryFingerprint(input) {
 function collectSourceFiles(runFolders) {
   const files = [];
   for (const runFolder of runFolders) {
-    for (const candidate of [
-      join12(runFolder, "manifest.snapshot.json"),
-      join12(runFolder, "trace.ndjson"),
-      join12(runFolder, "reports/result.json")
-    ]) {
-      if (existsSync13(candidate))
-        files.push(candidate);
-    }
-    const reportsRoot2 = join12(runFolder, "reports");
-    if (!existsSync13(reportsRoot2))
-      continue;
-    const stack = [reportsRoot2];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === void 0)
-        continue;
-      for (const entry of readdirSync3(current, { withFileTypes: true })) {
-        const path = join12(current, entry.name);
-        if (entry.isDirectory()) {
-          stack.push(path);
-        } else if (entry.isFile() && entry.name.endsWith(".json")) {
-          files.push(path);
-        }
-      }
-    }
+    files.push(...collectRunSourceFiles(runFolder));
   }
   return files.sort();
 }
@@ -53951,8 +54858,8 @@ function rebuildHistoryIndex(options = {}) {
   const manifestTmp = `${paths.manifestPath}.tmp-${process.pid}`;
   writeFileSync(documentsTmp, documentsJsonl, "utf8");
   writeFileSync(manifestTmp, manifestJson, "utf8");
-  HistoryManifestV1.parse(JSON.parse(readFileSync25(manifestTmp, "utf8")));
-  for (const line of readFileSync25(documentsTmp, "utf8").split("\n")) {
+  HistoryManifestV1.parse(JSON.parse(readFileSync26(manifestTmp, "utf8")));
+  for (const line of readFileSync26(documentsTmp, "utf8").split("\n")) {
     if (line.trim().length === 0)
       continue;
     HistoryDocumentV1.parse(JSON.parse(line));
@@ -53965,7 +54872,7 @@ function rebuildHistoryIndex(options = {}) {
   };
 }
 function readHistoryManifest(paths) {
-  if (!existsSync13(paths.manifestPath) || !existsSync13(paths.documentsPath)) {
+  if (!existsSync14(paths.manifestPath) || !existsSync14(paths.documentsPath)) {
     throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
       runsBase: paths.runsBase,
       indexDir: paths.indexDir
@@ -53973,7 +54880,7 @@ function readHistoryManifest(paths) {
   }
   let raw;
   try {
-    raw = JSON.parse(readFileSync25(paths.manifestPath, "utf8"));
+    raw = JSON.parse(readFileSync26(paths.manifestPath, "utf8"));
   } catch (error51) {
     throw new HistoryCommandError("index_corrupt", `history manifest corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
   }
@@ -53997,7 +54904,7 @@ function readHistoryIndex(options = {}) {
   const manifest = readHistoryManifest(paths);
   let documentsRaw = "";
   try {
-    documentsRaw = readFileSync25(paths.documentsPath, "utf8");
+    documentsRaw = readFileSync26(paths.documentsPath, "utf8");
   } catch (error51) {
     throw new HistoryCommandError("index_corrupt", `history documents unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
   }
@@ -54066,7 +54973,7 @@ function historyStatus(options = {}) {
   }
 }
 
-// dist/history/memory-preview.js
+// dist/app/history/memory-preview.js
 function fileStem(value) {
   const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
   const trimmed = normalized.replace(/^[^a-z0-9]+/, "").slice(0, 96);
@@ -54094,7 +55001,7 @@ function historyMemoryInputPreview(input) {
   for (const hit of input.hits) {
     if (!hit.doc.memory_safe)
       continue;
-    const hash2 = sha256Hex(hit.doc.doc_id).slice(0, 12);
+    const hash2 = sha256OfString(hit.doc.doc_id).slice(0, 12);
     const runPrefix = fileStem(hit.doc.run_id).slice(0, 32);
     const memoryId = `prior-run-${runPrefix}-${hash2}`.slice(0, 128);
     const source = hit.doc.source_ref.sha256 !== void 0 && hit.doc.source_sha256 !== void 0 && hit.doc.source_ref.sha256 === hit.doc.source_sha256 ? {
@@ -54147,8 +55054,8 @@ function historyMemoryInputPreview(input) {
   });
 }
 
-// dist/history/query.js
-import { existsSync as existsSync14, readFileSync as readFileSync26 } from "node:fs";
+// dist/app/history/query.js
+import { existsSync as existsSync15, readFileSync as readFileSync27 } from "node:fs";
 var STOPWORDS = /* @__PURE__ */ new Set([
   "the",
   "and",
@@ -54304,14 +55211,14 @@ function sourceStaleness(doc, checkedAt) {
   }
   try {
     const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
-    if (!existsSync14(sourcePath)) {
+    if (!existsSync15(sourcePath)) {
       return {
         status: "stale",
         reason_codes: ["memory_stale"],
         checked_at: checkedAt
       };
     }
-    const currentHash = sha256Hex(readFileSync26(sourcePath, "utf8"));
+    const currentHash = sha256OfString(readFileSync27(sourcePath, "utf8"));
     return currentHash === doc.source_sha256 ? {
       status: "fresh",
       reason_codes: ["source_hash_verified"],
@@ -54395,7 +55302,7 @@ function queryHistory(options) {
   const runCounts = /* @__PURE__ */ new Map();
   const selected = [];
   for (const candidate of scored) {
-    const textHash = sha256Hex(normalizeText(candidate.doc.text));
+    const textHash = sha256OfString(normalizeText(candidate.doc.text));
     if (seenText.has(textHash))
       continue;
     const runCount = runCounts.get(candidate.doc.run_id) ?? 0;
@@ -54434,7 +55341,7 @@ function queryHistory(options) {
   });
 }
 
-// dist/history/run-start-recall.js
+// dist/app/history/run-start-recall.js
 var HISTORY_RECALL_REPORT_PATH = "reports/history/recall.json";
 var DEFAULT_RECALL_LIMIT = 3;
 function unavailableWarning(error51) {
@@ -54507,16 +55414,9 @@ function prepareRunStartHistoryRecall(options) {
   }
 }
 
-// dist/process-evidence/projection.js
-import { createHash as createHash9 } from "node:crypto";
-import { existsSync as existsSync15, mkdirSync as mkdirSync2, readFileSync as readFileSync27, writeFileSync as writeFileSync2 } from "node:fs";
-import { dirname as dirname5, isAbsolute as isAbsolute8, join as join13, relative as relative8 } from "node:path";
-function sha256File2(path) {
-  return Sha256.parse(createHash9("sha256").update(readFileSync27(path)).digest("hex"));
-}
-function runRelativePath(runFolder, path) {
-  return isAbsolute8(path) ? relative8(runFolder, path) : path;
-}
+// dist/app/process-evidence/projection.js
+import { existsSync as existsSync16, mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { dirname as dirname5, join as join13 } from "node:path";
 function traceRef2(runId) {
   return {
     kind: "trace",
@@ -54529,7 +55429,7 @@ function reportRef(input) {
   return {
     kind: "report",
     ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256File2(input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId)
   };
@@ -54538,7 +55438,7 @@ function requestRef(input) {
   return {
     kind: "request",
     ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256File2(input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId),
     step_id: StepId.parse(input.stepId)
@@ -54573,7 +55473,7 @@ function projectClosedProcessEvidence(input) {
     runId: input.runResult.run_id,
     flowId
   });
-  const declaredReportRefs = declaredPaths.filter((path) => existsSync15(join13(input.runFolder, path))).map((path) => reportRef({
+  const declaredReportRefs = declaredPaths.filter((path) => existsSync16(join13(input.runFolder, path))).map((path) => reportRef({
     runFolder: input.runFolder,
     path: join13(input.runFolder, path),
     runId: input.runResult.run_id,
@@ -54644,7 +55544,7 @@ function writeProcessEvidenceProjection(input) {
   return { path: outPath, projection };
 }
 
-// dist/run-envelope/contract-quality.js
+// dist/app/run-envelope/contract-quality.js
 var IMPLEMENTATION_INTENT = /\b(build|fix|implement|add|change|create|refactor|ship|integrate|update|wire)\b/;
 var REVIEW_INTENT2 = /\b(review|audit|assess|inspect|findings?)\b/;
 var EXPLORE_INTENT2 = /\b(explore|compare|decide|decision|tradeoffs?|options?)\b/;
@@ -54683,7 +55583,7 @@ function contractQualityReview(contract) {
   };
 }
 
-// dist/run-envelope/no-progress.js
+// dist/app/run-envelope/no-progress.js
 function sameSet(a, b) {
   if (a.length !== b.length)
     return false;
@@ -54716,30 +55616,20 @@ function detectNoProgress(attempts) {
   return { escalate: false, reason: null };
 }
 
-// dist/run-envelope/source-record.js
-import { createHash as createHash10 } from "node:crypto";
-import { mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync3 } from "node:fs";
-import { dirname as dirname6, isAbsolute as isAbsolute9, join as join14, relative as relative9 } from "node:path";
+// dist/app/run-envelope/source-record.js
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync3 } from "node:fs";
+import { dirname as dirname6, join as join14 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
 var RUN_SURFACE_RELATIVE_PATH = "reports/run-surface.md";
 var RUN_DECISION_PACKET_RELATIVE_DIR = "reports/decision-packets";
-function sha256File3(path) {
-  return Sha256.parse(createHash10("sha256").update(readFileSync28(path)).digest("hex"));
-}
-function sha256Text(text) {
-  return Sha256.parse(createHash10("sha256").update(text).digest("hex"));
-}
-function runRelativePath2(runFolder, path) {
-  return isAbsolute9(path) ? relative9(runFolder, path) : path;
-}
 function childRunIdFromProjection(projection) {
   return RunId.parse(projection.child_run_ref.run_id);
 }
 function evidenceFileRef(input) {
   return {
     kind: "evidence",
-    ref: runRelativePath2(input.runFolder, input.path),
-    sha256: sha256File3(input.path),
+    ref: runRelativePath(input.runFolder, input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId)
   };
@@ -55053,7 +55943,7 @@ function decisionPacketArtifacts(input) {
       ref: {
         kind: "report",
         ref: decisionPacketRelativePath(packet),
-        sha256: sha256Text(body),
+        sha256: Sha256.parse(sha256OfString(body)),
         run_id: input.runId
       }
     };
@@ -55286,7 +56176,7 @@ function writeRunEnvelopeRecord(input) {
   };
 }
 
-// dist/run-envelope/continuation-loop.js
+// dist/app/run-envelope/continuation-loop.js
 async function runContinuationLoop(input) {
   const quality = contractQualityReview(input.contract);
   if (quality.verdict === "blocked") {
@@ -55348,7 +56238,7 @@ async function runContinuationLoop(input) {
   };
 }
 
-// dist/run-envelope/autonomous-run.js
+// dist/app/run-envelope/autonomous-run.js
 function attemptOutcomeFromProjection(projection, missing) {
   switch (projection.outcome) {
     case "complete":
@@ -55389,190 +56279,100 @@ async function runAutonomousContinuation(input) {
   });
 }
 
-// dist/run-envelope/shadow-record.js
-import { createHash as createHash11 } from "node:crypto";
-import { mkdirSync as mkdirSync4, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname7, isAbsolute as isAbsolute10, join as join15, relative as relative10 } from "node:path";
-var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
-function sha256File4(path) {
-  return Sha256.parse(createHash11("sha256").update(readFileSync29(path)).digest("hex"));
-}
-function runRelativePath3(runFolder, path) {
-  return isAbsolute10(path) ? relative10(runFolder, path) : path;
-}
-function reportRef2(input) {
-  return {
-    kind: "report",
-    ref: runRelativePath3(input.runFolder, input.path),
-    sha256: sha256File4(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId)
-  };
-}
-function requestRef2(input) {
-  return {
-    kind: "request",
-    ref: runRelativePath3(input.runFolder, input.path),
-    sha256: sha256File4(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId),
-    step_id: StepId.parse(input.stepId)
-  };
-}
-function childResultEvidence(input) {
-  return {
-    source: "child_result",
-    ref: reportRef2(input)
-  };
-}
-function writeRunEnvelopeShadowRecord(input) {
-  const selectedProcess = {
-    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
-    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
-    router_reason: input.selectedProcess.router_reason,
-    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
-  };
-  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
-    const resultRef = childResultEvidence({
-      runFolder: input.runFolder,
-      path: input.child.resultPath,
-      runId: input.child.runResult.run_id,
-      flowId: input.child.runResult.flow_id
-    });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.runResult.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
-        outcome: input.child.runResult.outcome,
-        trace_entries_observed: input.child.runResult.trace_entries_observed,
-        manifest_hash: input.child.runResult.manifest_hash,
-        result_ref: resultRef
-      },
-      artifactLinks: [resultRef.ref]
-    };
-  })() : (() => {
-    const checkpointRequestRef = requestRef2({
-      runFolder: input.runFolder,
-      path: input.child.checkpoint.request_path,
-      runId: input.child.run_id,
-      flowId: input.child.flow_id,
-      stepId: input.child.checkpoint.step_id
-    });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.flow_id),
-        outcome: "checkpoint_waiting",
-        trace_entries_observed: input.child.trace_entries_observed,
-        manifest_hash: input.child.manifest_hash,
-        checkpoint: {
-          step_id: StepId.parse(input.child.checkpoint.step_id),
-          request_ref: checkpointRequestRef,
-          allowed_choices: [...input.child.checkpoint.allowed_choices]
-        }
-      },
-      artifactLinks: [checkpointRequestRef]
-    };
-  })();
-  const record2 = RunEnvelopeShadowRecord.parse({
-    schema: "run.envelope-shadow@v0",
-    mode: "shadow",
-    shadow_reason: "source-owned-run-not-active",
-    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
-    operator_intent: input.operatorIntent,
-    recorded_at: input.recordedAt,
-    selected_process: selectedProcess,
-    child_run: childRun,
-    artifact_links: artifactLinks
-  });
-  const outPath = join15(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
-  mkdirSync4(dirname7(outPath), { recursive: true });
-  writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
-`);
-  return { path: outPath, record: record2 };
-}
-
-// dist/shared/config-loader.js
-var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync16, readFileSync as readFileSync30 } from "node:fs";
-import { homedir as homedir2 } from "node:os";
-import { join as join16, resolve as resolve8 } from "node:path";
-var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
-var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
-function userGlobalConfigPath(homeDir = homedir2()) {
-  return join16(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
-}
-function projectConfigPath(cwd = process.cwd()) {
-  return join16(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
-}
-function parseConfigYaml(text, sourcePath) {
-  try {
-    return (0, import_yaml2.parse)(text);
-  } catch (err) {
-    throw new Error(`config YAML parse failed at ${sourcePath}: ${err.message}`);
+// dist/flows/router.js
+var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
+var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
+var ROUTABLE_WORKFLOWS = Object.freeze(ROUTABLE_PACKAGES.map((entry) => entry.pkg.id));
+var PLANNING_ARTIFACT_SIGNAL = /\b(?:proposal|plan|brief|matrix|evaluation\s+matrix|design\s+doc|design\s+document|spec|specification|rfc|memo|document|doc|guide|analysis|evaluation|selection|strategy|outline|report|comparison|recommendation|write-?up|options|approaches)\b/i;
+var PLAN_EXECUTION_SIGNAL = /^\s*(?:execute|run|start|begin|work\s+through|carry\s+out|tackle)\s+(?:this\s+|the\s+)?(?:[\w-]+\s+){0,3}(?:plan|backlog|checklist|roadmap|doc|document)(?::|\b)/i;
+function resolvePlanExecutionFlowName(flowId, routables, defaultPackage) {
+  if (defaultPackage.pkg.id === flowId)
+    return defaultPackage.pkg.id;
+  const match = routables.find((entry) => entry.pkg.id === flowId);
+  if (match === void 0) {
+    throw new Error(`plan-execution target '${flowId}' is not a routable flow`);
   }
+  return match.pkg.id;
 }
-function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve8(sourcePath);
-  if (!existsSync16(abs))
+function classifyPlanExecutionRequest(taskText, routables, defaultPackage) {
+  if (!PLAN_EXECUTION_SIGNAL.test(taskText))
     return void 0;
-  const raw = parseConfigYaml(readFileSync30(abs, "utf8"), abs);
-  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
-    const schemaVersion = raw.schema_version;
-    if (schemaVersion === 2) {
-      try {
-        return {
-          policy: PolicyLayer.parse({
-            source: layer,
-            source_path: abs,
-            envelope: PolicyEnvelopeV2.parse(raw)
-          })
-        };
-      } catch (err) {
-        throw new Error(`policy validation failed for ${layer} at ${abs}: ${err.message}`);
+  const lower = taskText.toLowerCase();
+  let target;
+  if (/\b(?:decide|decision|choose|choice|option|options|tradeoff|trade-off)\b/.test(lower)) {
+    target = {
+      flowId: "explore",
+      reason: "matched plan-execution request; selected Explore tournament for a blocking decision",
+      inferredEntryModeName: "tournament",
+      inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
+    };
+  } else if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
+    target = {
+      flowId: "fix",
+      reason: "matched plan-execution request; selected Fix for the first bug-fix slice",
+      inferredEntryModeName: "deep",
+      inferredEntryModeReason: "matched bug-fix-oriented plan execution; selected deep thoroughness"
+    };
+  } else {
+    target = {
+      flowId: "build",
+      reason: "matched plan-execution request; selected Build to start the first executable slice",
+      inferredEntryModeName: "default",
+      inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
+    };
+  }
+  return {
+    flowName: resolvePlanExecutionFlowName(target.flowId, routables, defaultPackage),
+    source: "classifier",
+    matched_signal: "plan-execution",
+    reason: target.reason,
+    inferredEntryModeName: target.inferredEntryModeName,
+    inferredEntryModeReason: target.inferredEntryModeReason
+  };
+}
+function inferEntryMode(flowName, taskText, routables, defaultPackage) {
+  const entry = defaultPackage.pkg.id === flowName ? defaultPackage : routables.find((candidate) => candidate.pkg.id === flowName);
+  const inferred = entry?.routing.inferEntryMode?.(taskText);
+  if (inferred === void 0)
+    return {};
+  return {
+    inferredEntryModeName: inferred.name,
+    inferredEntryModeReason: inferred.reason
+  };
+}
+function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
+  const planExecution = classifyPlanExecutionRequest(taskText, routables, defaultPackage);
+  if (planExecution !== void 0)
+    return planExecution;
+  const hasPlanningReport = PLANNING_ARTIFACT_SIGNAL.test(taskText);
+  for (const { pkg, routing } of routables) {
+    if (routing.isDefault)
+      continue;
+    for (const signal of routing.signals) {
+      if (!signal.pattern.test(taskText))
+        continue;
+      if (routing.skipOnPlanningReport === true && hasPlanningReport) {
+        break;
       }
+      return {
+        flowName: pkg.id,
+        source: "classifier",
+        matched_signal: signal.label,
+        reason: routing.reasonForMatch(signal),
+        ...inferEntryMode(pkg.id, taskText, routables, defaultPackage)
+      };
     }
   }
-  try {
-    return {
-      selection: LayeredConfig.parse({
-        layer,
-        source_path: abs,
-        config: Config.parse(raw)
-      })
-    };
-  } catch (err) {
-    throw new Error(`config validation failed for ${layer} at ${abs}: ${err.message}`);
-  }
+  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText, routables, defaultPackage);
+  return {
+    flowName: defaultPackage.pkg.id,
+    source: "classifier",
+    reason: inferred.inferredEntryModeReason ?? defaultPackage.routing.defaultReason ?? `no signal matched; routed to ${defaultPackage.pkg.id} as the conservative default`,
+    ...inferred
+  };
 }
-function discoverRuntimeConfigLayers(options = {}) {
-  const selectionConfigLayers = [];
-  const policyLayers = [];
-  for (const [layer, path] of [
-    ["user-global", userGlobalConfigPath(options.homeDir)],
-    ["project", projectConfigPath(options.cwd)]
-  ]) {
-    const loaded = loadRuntimeConfigLayerFromPath(layer, path);
-    if (loaded?.selection !== void 0)
-      selectionConfigLayers.push(loaded.selection);
-    if (loaded?.policy !== void 0)
-      policyLayers.push(loaded.policy);
-  }
-  if (options.invocationConfig !== void 0) {
-    selectionConfigLayers.push(LayeredConfig.parse({
-      layer: "invocation",
-      config: options.invocationConfig
-    }));
-  }
-  if (options.invocationPolicy !== void 0) {
-    policyLayers.push(PolicyLayer.parse({
-      source: "invocation",
-      envelope: options.invocationPolicy
-    }));
-  }
-  return { selectionConfigLayers, policyLayers };
+function classifyCompiledFlowTask(taskText) {
+  return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
 }
 
 // dist/flows/canonical-stage-policy.js
@@ -55592,7 +56392,7 @@ for (const definition of flowDefinitions) {
 var FLOW_CANONICAL_STAGE_POLICY_BY_ID = canonicalStagePolicyById;
 var FLOW_CANONICAL_STAGE_POLICY_EXEMPT_IDS = canonicalStagePolicyExemptIds;
 
-// dist/shared/flow-kind-policy-core.js
+// dist/policy/flow-kind-policy-core.js
 var FLOW_KIND_CANONICAL_SETS = FLOW_CANONICAL_STAGE_POLICY_BY_ID;
 var EXEMPT_FLOW_IDS = FLOW_CANONICAL_STAGE_POLICY_EXEMPT_IDS;
 function objectRecord(value) {
@@ -55782,7 +56582,7 @@ function checkCompiledFlowKindCanonicalPolicy(fixture) {
   };
 }
 
-// dist/shared/flow-kind-policy.js
+// dist/policy/flow-kind-policy.js
 function humanizeZodIssueMessage(message) {
   return message.replace(/, received undefined/g, " (missing)").replace(/\breceived undefined\b/g, "missing");
 }
@@ -55812,1057 +56612,101 @@ ${issueSummary}${more}`
   };
 }
 
-// dist/shared/operator-summary-writer.js
-import { existsSync as existsSync18, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
-import { dirname as dirname8, isAbsolute as isAbsolute12, join as join17, relative as relative12, resolve as resolve10 } from "node:path";
-
-// dist/shared/html/page.js
-var ESCAPE_MAP = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;"
-};
-function buildSanitizePattern() {
-  const ranges = [
-    [0, 8],
-    [11, 12],
-    [14, 31],
-    [8234, 8238],
-    [8294, 8297]
-  ];
-  const klass = ranges.map(([lo, hi]) => {
-    const loEsc = `\\u${lo.toString(16).padStart(4, "0")}`;
-    const hiEsc = `\\u${hi.toString(16).padStart(4, "0")}`;
-    return `${loEsc}-${hiEsc}`;
-  }).join("");
-  return new RegExp(`[${klass}]`, "g");
+// dist/shared/config-loader.js
+var import_yaml2 = __toESM(require_dist(), 1);
+import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import { join as join15, resolve as resolve10 } from "node:path";
+var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
+var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
+function userGlobalConfigPath(homeDir = homedir2()) {
+  return join15(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
-var SANITIZE_PATTERN = buildSanitizePattern();
-var MAX_BULLET_LEN = 4096;
-var MAX_PROMPT_LEN = 32768;
-function sanitizeForRender(value) {
-  return value.replace(SANITIZE_PATTERN, "");
+function projectConfigPath(cwd = process.cwd()) {
+  return join15(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
-function escapeHtmlChars(value) {
-  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+function parseConfigYaml(text, sourcePath) {
+  try {
+    return (0, import_yaml2.parse)(text);
+  } catch (err) {
+    throw new Error(`config YAML parse failed at ${sourcePath}: ${err.message}`);
+  }
 }
-function escapeHtml(value) {
-  return escapeHtmlChars(sanitizeForRender(value));
-}
-function truncate(value, max) {
-  return value.length > max ? `${value.slice(0, max - 1)}\u2026` : value;
-}
-function styles() {
-  return `:root{--bg:#fafaf9;--surface:#fff;--surface-2:#f5f5f4;--border:#e7e5e4;--border-strong:#d6d3d1;--text:#1c1917;--text-2:#57534e;--text-3:#a8a29e;--accent:#0f172a;--intent-positive:#166534;--intent-positive-soft:#f0fdf4;--intent-info:#1e40af;--intent-info-soft:#eff6ff;--intent-attention:#9a3412;--intent-attention-soft:#fff7ed;--intent-negative:#991b1b;--intent-negative-soft:#fef2f2}@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--surface:#1c1917;--surface-2:#292524;--border:#292524;--border-strong:#44403c;--text:#fafaf9;--text-2:#a8a29e;--text-3:#78716c;--accent:#fafaf9;--intent-positive:#4ade80;--intent-positive-soft:#052e16;--intent-info:#93c5fd;--intent-info-soft:#172554;--intent-attention:#fb923c;--intent-attention-soft:#431407;--intent-negative:#f87171;--intent-negative-soft:#450a0a}}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}.wrap{max-width:1200px;margin:0 auto;padding:48px 32px 96px}header.top{margin-bottom:24px}.meta{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}h1{font:600 28px/1.25 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;margin:0 0 8px;letter-spacing:-.01em}.subtitle{color:var(--text-2);font-size:16px;margin:0}.verdict{margin:24px 0 32px;padding:16px 20px;background:var(--intent-info-soft);border:1px solid var(--intent-info);border-radius:8px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.verdict.intent-positive{background:var(--intent-positive-soft);border-color:var(--intent-positive)}.verdict.intent-attention{background:var(--intent-attention-soft);border-color:var(--intent-attention)}.verdict.intent-negative{background:var(--intent-negative-soft);border-color:var(--intent-negative)}.verdict .badge{font:600 11px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--intent-info);padding:4px 8px;border:1px solid var(--intent-info);border-radius:4px}.verdict.intent-positive .badge{color:var(--intent-positive);border-color:var(--intent-positive)}.verdict.intent-attention .badge{color:var(--intent-attention);border-color:var(--intent-attention)}.verdict.intent-negative .badge{color:var(--intent-negative);border-color:var(--intent-negative)}.verdict .text{color:var(--text);font-size:14px;flex:1;min-width:200px}.verdict .text strong{font-weight:600}.verdict .confidence{font-size:12px;color:var(--text-2);text-transform:lowercase}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative}.card.intent-info{border-color:var(--intent-info);box-shadow:0 0 0 3px var(--intent-info-soft)}.card.intent-positive{border-color:var(--intent-positive);box-shadow:0 0 0 3px var(--intent-positive-soft)}.card.intent-attention{border-color:var(--intent-attention);box-shadow:0 0 0 3px var(--intent-attention-soft)}.card.intent-negative{border-color:var(--intent-negative);box-shadow:0 0 0 3px var(--intent-negative-soft)}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.card-id{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);letter-spacing:.05em}.card h2{font:600 17px/1.3 -apple-system,system-ui,sans-serif;margin:4px 0 0;letter-spacing:-.005em}.intent-badge{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:4px;white-space:nowrap;color:var(--intent-info);background:var(--intent-info-soft)}.intent-badge.intent-positive{color:var(--intent-positive);background:var(--intent-positive-soft)}.intent-badge.intent-attention{color:var(--intent-attention);background:var(--intent-attention-soft)}.intent-badge.intent-negative{color:var(--intent-negative);background:var(--intent-negative-soft)}.summary{color:var(--text-2);font-size:14px;margin:0}.section-label{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:0 0 8px}ul.tradeoffs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}ul.tradeoffs li{font-size:13px;color:var(--text);padding-left:18px;position:relative;line-height:1.5}ul.tradeoffs li::before{content:"\\2022";position:absolute;left:6px;color:var(--text-3);font-weight:700}.evidence{display:flex;flex-wrap:wrap;gap:6px}.chip{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:4px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text-2)}.actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}button.copy{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}button.copy:hover{background:var(--surface-2)}button.copy.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}button.copy.primary:hover{opacity:.9}details{margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px}details summary{cursor:pointer;font:500 13px/1.4 -apple-system,system-ui,sans-serif;color:var(--text-2);user-select:none}details[open] summary{margin-bottom:12px}details .body{font-size:13px;color:var(--text-2)}details ul{margin:6px 0;padding-left:20px}details li{margin-bottom:4px}footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}footer code{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace}`;
-}
-function clipboardScript() {
-  return `document.querySelectorAll('button.copy').forEach(btn=>{btn.addEventListener('click',async()=>{const p=btn.dataset.prompt;if(!p)return;try{await navigator.clipboard.writeText(p);const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.textContent=o;},1200);}catch(e){btn.textContent='Copy failed';}});});`;
-}
-function renderPage(input) {
-  const footerLeft = input.footerLeft === void 0 ? "" : `<span>${escapeHtml(input.footerLeft)}</span>`;
-  const footerRight = input.footerRight === void 0 ? "" : `<span><code>${escapeHtml(input.footerRight)}</code></span>`;
-  const wrapClassName = input.wrapClassName ?? "wrap";
-  const extraStyles = input.extraStyles === void 0 ? "" : input.extraStyles;
-  const extraScript = input.extraScript === void 0 ? "" : input.extraScript;
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(input.title)}</title>
-<style>${styles()}${extraStyles}</style>
-</head>
-<body>
-<div class="${escapeHtml(wrapClassName)}">
-  <header class="top">
-    <div class="meta">${escapeHtml(input.metaLine)}</div>
-    <h1>${escapeHtml(input.headline)}</h1>
-    <p class="subtitle">${escapeHtml(input.subtitle)}</p>
-  </header>
-${input.bodyHtml}
-  <footer>
-    ${footerLeft}
-    ${footerRight}
-  </footer>
-</div>
-<script>${clipboardScript()}${extraScript}</script>
-</body>
-</html>
-`;
-}
-
-// dist/shared/html/components.js
-function intentClass(intent) {
-  return intent === "neutral" || intent === "info" ? "" : `intent-${intent}`;
-}
-function intentBadge(input) {
-  const classes = ["intent-badge"];
-  const className = intentClass(input.intent);
-  if (className.length > 0)
-    classes.push(className);
-  return `<span class="${classes.join(" ")}">${escapeHtml(input.text)}</span>`;
-}
-function chip(text) {
-  return `<span class="chip">${escapeHtml(truncate(text, MAX_BULLET_LEN))}</span>`;
-}
-function card(input) {
-  const intent = input.intent ?? "neutral";
-  const classes = ["card"];
-  const intentClassName = intentClass(intent);
-  if (intentClassName.length > 0)
-    classes.push(intentClassName);
-  const eyebrowMarkup = input.eyebrow === void 0 ? "" : `<div class="card-id">${escapeHtml(input.eyebrow)}</div>`;
-  const badgeMarkup = input.badge === void 0 ? "" : intentBadge(input.badge);
-  return `    <article class="${classes.join(" ")}">
-      <div class="card-head">
-        <div>
-          ${eyebrowMarkup}
-          <h2>${escapeHtml(input.title)}</h2>
-        </div>
-        ${badgeMarkup}
-      </div>
-${input.bodyHtml}
-    </article>`;
-}
-function verdictBanner(input) {
-  const classes = ["verdict"];
-  const intentClassName = intentClass(input.intent);
-  if (intentClassName.length > 0)
-    classes.push(intentClassName);
-  const aside = input.aside === void 0 ? "" : `<span class="confidence">${escapeHtml(input.aside)}</span>`;
-  return `  <div class="${classes.join(" ")}">
-    <span class="badge">${escapeHtml(input.badgeText)}</span>
-    <span class="text">${input.mainHtml}</span>
-    ${aside}
-  </div>`;
-}
-
-// dist/shared/html/build-checkpoint.js
-var BUILD_BRIEF_PATH = "reports/build/brief.json";
-function bulletList(items) {
-  return `<ul class="tradeoffs">
-          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
-        </ul>`;
-}
-function commandText(command) {
-  return `${command.cwd}$ ${command.argv.join(" ")}`;
-}
-function renderCommandChips(commands) {
-  return `<div class="evidence">
-          ${commands.map((command) => chip(commandText(command))).join("\n          ")}
-        </div>`;
-}
-function choiceIntent(choiceId, recommendedId) {
-  return choiceId === recommendedId ? "positive" : "neutral";
-}
-function shellSingleQuote(value) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-function resumeCommandForChoice(runFolder, choiceId) {
-  return `circuit resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
-}
-function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
-  const isRecommended = choice.id === recommendedChoiceId2;
-  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
-      <div>
-        <p class="section-label">Executable route</p>
-        <div class="evidence">
-          ${chip(`${choice.route.key} -> ${choice.route.target}`)}
-        </div>
-      </div>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
-      </div>`;
-  return card({
-    intent: choiceIntent(choice.id, recommendedChoiceId2),
-    eyebrow: choice.id,
-    title: choice.label,
-    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
-    bodyHtml
-  });
-}
-function renderArtifactCard(brief, packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.artifact.preview)}</p>
-      <div>
-        <p class="section-label">Scope</p>
-        <p class="summary">${escapeHtml(packet.artifact.scope)}</p>
-      </div>
-      <div>
-        <p class="section-label">Success bar</p>
-        ${bulletList(packet.artifact.success_criteria)}
-      </div>`;
-  return card({
-    intent: "info",
-    eyebrow: packet.artifact.title,
-    title: brief.objective,
-    bodyHtml
-  });
-}
-function renderProofCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.proof.summary)}</p>
-      <div>
-        <p class="section-label">Planned checks</p>
-        ${renderCommandChips(packet.proof.commands)}
-      </div>
-      <div>
-        <p class="section-label">Proof state</p>
-        ${bulletList(packet.proof.evidence)}
-      </div>`;
-  return card({
-    intent: packet.proof.status === "missing" ? "attention" : "neutral",
-    eyebrow: packet.proof.status,
-    title: "Proof",
-    bodyHtml
-  });
-}
-function renderRiskCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.risk.summary)}</p>
-      <div>
-        <p class="section-label">Tradeoffs</p>
-        ${bulletList(packet.risk.tradeoffs)}
-      </div>`;
-  return card({
-    intent: "attention",
-    eyebrow: "manager judgment",
-    title: "Risk",
-    bodyHtml
-  });
-}
-function renderSalienceCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.salience.summary)}</p>
-      <div>
-        <p class="section-label">Why now</p>
-        ${bulletList(packet.salience.why_now)}
-      </div>
-      <div>
-        <p class="section-label">Stays internal</p>
-        ${bulletList(packet.salience.hidden_routine_work)}
-      </div>`;
-  return card({
-    intent: "neutral",
-    eyebrow: "salience",
-    title: "Why this needs you",
-    bodyHtml
-  });
-}
-function filteredChoices(packetChoices, allowedChoices) {
-  const allowed = new Set(allowedChoices);
-  return packetChoices.filter((choice) => allowed.has(choice.id));
-}
-function loadBrief(readJsonRunRelative) {
-  const raw = readJsonRunRelative(BUILD_BRIEF_PATH);
-  const parsed = BuildBrief.safeParse(raw);
-  return parsed.success ? parsed.data : void 0;
-}
-var buildCheckpointProjector = (ctx) => {
-  if (ctx.flowId !== "build" || ctx.runOutcome !== "checkpoint_waiting")
+function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
+  const abs = resolve10(sourcePath);
+  if (!existsSync17(abs))
     return void 0;
-  if (ctx.checkpoint === void 0)
-    return void 0;
-  const brief = loadBrief(ctx.readJsonRunRelative);
-  if (brief === void 0)
-    return void 0;
-  const packet = brief.checkpoint_packet;
-  if (packet === void 0)
-    return void 0;
-  const choices = filteredChoices(packet.choices, ctx.checkpoint.allowed_choices);
-  if (choices.length === 0)
-    return void 0;
-  const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
-  if (recommendedChoice === void 0)
-    return void 0;
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
-  const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
-  const banner = verdictBanner({
-    intent: "positive",
-    badgeText: "Recommended",
-    mainHtml: `<strong>${escapeHtml(packet.recommendation.label)}</strong> &mdash; ${escapeHtml(packet.recommendation.rationale)}`,
-    aside: "waiting for choice"
-  });
-  const choiceCards = choices.map((choice) => renderChoiceCard(choice, recommendedChoice.id, ctx.runFolder)).join("\n\n");
-  const rawEvidence = [
-    BUILD_BRIEF_PATH,
-    packet.internal.request_path,
-    packet.internal.response_path,
-    ...packet.internal.raw_evidence,
-    ctx.checkpoint.request_path
-  ];
-  const bodyHtml = `${banner}
-
-  <div class="grid">
-${renderArtifactCard(brief, packet)}
-
-${renderSalienceCard(packet)}
-
-${renderRiskCard(packet)}
-
-${renderProofCard(packet)}
-  </div>
-
-  <div class="grid" style="margin-top:16px">
-${choiceCards}
-  </div>
-
-  <details>
-    <summary>Raw evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Decision.</strong> ${escapeHtml(packet.decision.question)}</p>
-      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${rawEvidence.map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${brief.objective} \xB7 Circuit Build checkpoint`,
-    metaLine: `Build checkpoint \xB7 ${ctx.runId}`,
-    headline: brief.objective,
-    subtitle,
-    bodyHtml,
-    footerLeft: `circuit \xB7 build \xB7 ${ctx.runId}`,
-    footerRight: BUILD_BRIEF_PATH
-  });
-};
-
-// dist/shared/html/explore-tournament.js
-function stringField(report, key) {
-  const value = report?.[key];
-  return typeof value === "string" && value.length > 0 ? value : void 0;
-}
-function isObject3(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-function verdictBadgeText(verdict) {
-  if (verdict === "recommend")
-    return "Recommended";
-  if (verdict === "no-clear-winner")
-    return "No clear winner";
-  return "Operator decision";
-}
-function verdictIntent(verdict) {
-  if (verdict === "recommend")
-    return "info";
-  if (verdict === "no-clear-winner")
-    return "attention";
-  return "attention";
-}
-function confidenceText(confidence) {
-  return `${confidence} confidence`;
-}
-function renderOptionCard(option, isRecommended, isSelected) {
-  const intent = isSelected ? "positive" : isRecommended ? "info" : "neutral";
-  const badge = isSelected ? { text: "Selected", intent: "positive" } : isRecommended ? { text: "Recommended", intent: "info" } : void 0;
-  const tradeoffsMarkup = option.tradeoffs.map((tradeoff) => `<li>${escapeHtml(truncate(tradeoff, MAX_BULLET_LEN))}</li>`).join("\n          ");
-  const evidenceMarkup = option.evidence_refs.map((ref) => chip(ref)).join("\n          ");
-  const bodyHtml = `      <p class="summary">${escapeHtml(option.summary)}</p>
-      <div>
-        <p class="section-label">Tradeoffs</p>
-        <ul class="tradeoffs">
-          ${tradeoffsMarkup}
-        </ul>
-      </div>
-      <div>
-        <p class="section-label">Evidence</p>
-        <div class="evidence">
-          ${evidenceMarkup}
-        </div>
-      </div>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(option.best_case_prompt, MAX_PROMPT_LEN))}">Copy as prompt</button>
-      </div>`;
-  return card({
-    intent,
-    eyebrow: option.id,
-    title: option.label,
-    ...badge === void 0 ? {} : { badge },
-    bodyHtml
-  });
-}
-function renderTournamentVerdictBanner(review, decisionOptions, decision2) {
-  const recommendedOption = decisionOptions.options.find((option) => option.id === review.recommended_option_id);
-  const recommendedLabel = recommendedOption?.label ?? review.recommended_option_id;
-  const decisionText = decision2.decision;
-  return verdictBanner({
-    intent: verdictIntent(review.verdict),
-    badgeText: verdictBadgeText(review.verdict),
-    mainHtml: `<strong>${escapeHtml(recommendedLabel)}</strong> &mdash; ${escapeHtml(decisionText)}`,
-    aside: confidenceText(review.confidence)
-  });
-}
-function renderTournamentDetails(review, decision2) {
-  const sections = [];
-  sections.push(`<p><strong>Comparison.</strong> ${escapeHtml(review.comparison)}</p>`);
-  if (review.objections.length > 0) {
-    const items = review.objections.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Objections.</strong></p><ul>${items}</ul>`);
-  }
-  if (review.missing_evidence.length > 0) {
-    const items = review.missing_evidence.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Missing evidence.</strong></p><ul>${items}</ul>`);
-  }
-  if (review.tradeoff_question.length > 0) {
-    sections.push(`<p><strong>Tradeoff question.</strong> ${escapeHtml(review.tradeoff_question)}</p>`);
-  }
-  sections.push(`<p><strong>Rationale.</strong> ${escapeHtml(decision2.rationale)}</p>`);
-  if (decision2.residual_risks.length > 0) {
-    const items = decision2.residual_risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Residual risks.</strong></p><ul>${items}</ul>`);
-  }
-  sections.push(`<p><strong>Next action.</strong> ${escapeHtml(decision2.next_action)}</p>`);
-  return sections.join("\n      ");
-}
-function formatScore(value) {
-  if (value === null || value === void 0)
-    return "n/a";
-  return value.toFixed(3).replace(/\.?0+$/, "");
-}
-function formatSignedScore(value) {
-  if (value === null || value === void 0)
-    return "n/a";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${formatScore(value)}`;
-}
-function autoResolutionLine(record2) {
-  const label = record2.checkpoint_label ?? record2.checkpoint_id;
-  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
-  return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
-}
-function renderAutoResolutions(records) {
-  if (records === void 0 || records.length === 0)
-    return "";
-  const items = records.map((record2) => `<li>${escapeHtml(autoResolutionLine(record2))}</li>`).join("");
-  return `
-  <section>
-    <h2>Auto-resolutions</h2>
-    <ul>${items}</ul>
-  </section>
-`;
-}
-function loadHtmlPayload(flowReport, readEvidenceReportById) {
-  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
-  if (stringField(snapshot, "decision_verdict") !== "decided")
-    return void 0;
-  const optionsRaw = readEvidenceReportById("explore.decision-options");
-  const reviewRaw = readEvidenceReportById("explore.tournament-review");
-  const decisionRaw = readEvidenceReportById("explore.decision");
-  if (optionsRaw === void 0 || reviewRaw === void 0 || decisionRaw === void 0) {
-    return void 0;
-  }
-  const optionsParsed = ExploreDecisionOptions.safeParse(optionsRaw);
-  const reviewParsed = ExploreTournamentReview.safeParse(reviewRaw);
-  const decisionParsed = ExploreDecision.safeParse(decisionRaw);
-  if (!optionsParsed.success || !reviewParsed.success || !decisionParsed.success)
-    return void 0;
-  return {
-    decisionOptions: optionsParsed.data,
-    tournamentReview: reviewParsed.data,
-    decision: decisionParsed.data
-  };
-}
-var exploreTournamentProjector = (ctx) => {
-  const payload = loadHtmlPayload(ctx.flowReport, ctx.readEvidenceReportById);
-  if (payload === void 0)
-    return void 0;
-  const { decisionOptions, tournamentReview, decision: decision2 } = payload;
-  const recommendedId = tournamentReview.recommended_option_id;
-  const selectedId = decision2.selected_option_id;
-  const subtitle = `${decisionOptions.options.length} options surfaced. Tournament review: ${tournamentReview.verdict.replace(/-/g, " ")} (${tournamentReview.confidence} confidence).`;
-  const cards = decisionOptions.options.map((option) => renderOptionCard(option, option.id === recommendedId, option.id === selectedId)).join("\n\n");
-  const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision2);
-  const detailsBody = renderTournamentDetails(tournamentReview, decision2);
-  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
-  const bodyHtml = `${banner}
-
-  <div class="grid">
-${cards}
-  </div>
-
-${autoResolutions}
-
-  <details>
-    <summary>Tournament reasoning &middot; why this recommendation?</summary>
-    <div class="body">
-      ${detailsBody}
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${decisionOptions.decision_question} \xB7 Circuit Explore`,
-    metaLine: `Explore \xB7 ${ctx.flowId} \xB7 ${ctx.runId}`,
-    headline: decisionOptions.decision_question,
-    subtitle,
-    bodyHtml,
-    footerLeft: `circuit \xB7 explore \xB7 ${ctx.runId}`,
-    footerRight: decisionOptions.recommendation_basis
-  });
-};
-
-// dist/shared/html/multi-variant.js
-import { isAbsolute as isAbsolute11, relative as relative11, resolve as resolve9 } from "node:path";
-import { pathToFileURL } from "node:url";
-var PREVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
-  ".gif",
-  ".htm",
-  ".html",
-  ".jpeg",
-  ".jpg",
-  ".pdf",
-  ".png",
-  ".svg",
-  ".webp"
-]);
-function withoutQueryOrHash(value) {
-  const queryIndex = value.search(/[?#]/);
-  return queryIndex === -1 ? value : value.slice(0, queryIndex);
-}
-function extensionForPath(value) {
-  const cleaned = withoutQueryOrHash(value).toLowerCase();
-  const dotIndex = cleaned.lastIndexOf(".");
-  if (dotIndex === -1)
-    return "";
-  const slashIndex = cleaned.lastIndexOf("/");
-  return dotIndex > slashIndex ? cleaned.slice(dotIndex) : "";
-}
-function isPreviewableArtifactPath(value) {
-  return PREVIEWABLE_EXTENSIONS.has(extensionForPath(value));
-}
-function toBrowserPath(value) {
-  return value.replace(/\\/g, "/");
-}
-function encodeUrlPath(value) {
-  return value.split("/").map((part) => part === ".." || part === "." ? part : encodeURIComponent(part)).join("/");
-}
-function isInside3(root, target) {
-  const fromRoot = relative11(root, target);
-  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute11(fromRoot);
-}
-function runIdFromFolder(runFolder) {
-  const parts = toBrowserPath(resolve9(runFolder)).split("/").filter((part) => part.length > 0);
-  return parts.at(-1);
-}
-function runArtifactPreviewHref(input) {
-  if (!isPreviewableArtifactPath(input.entryPath))
-    return void 0;
-  const reportsDir = resolve9(input.runFolder, "reports");
-  const runRoot = resolve9(input.runFolder);
-  if (isAbsolute11(input.entryPath)) {
-    const absoluteEntry = resolve9(input.entryPath);
-    if (!isInside3(runRoot, absoluteEntry))
-      return void 0;
-    return encodeUrlPath(toBrowserPath(relative11(reportsDir, absoluteEntry)));
-  }
-  const normalized = toBrowserPath(input.entryPath).replace(/^\.\//, "");
-  if (normalized.split("/").some((part) => part === ".."))
-    return void 0;
-  if (normalized.startsWith("prototype-files/"))
-    return encodeUrlPath(`../${normalized}`);
-  const runId = runIdFromFolder(input.runFolder);
-  const currentRunPrefix = runId === void 0 ? void 0 : `.circuit/runs/${runId}/`;
-  if (currentRunPrefix !== void 0 && normalized.startsWith(currentRunPrefix)) {
-    return encodeUrlPath(`../${normalized.slice(currentRunPrefix.length)}`);
-  }
-  if (input.projectRoot !== void 0) {
-    const projectRoot = resolve9(input.projectRoot);
-    const absoluteEntry = resolve9(projectRoot, normalized);
-    if (!isInside3(projectRoot, absoluteEntry))
-      return void 0;
-    return pathToFileURL(absoluteEntry).href;
-  }
-  return void 0;
-}
-function previewForEntryPoints(input) {
-  for (const entryPoint of input.entryPoints) {
-    const href = runArtifactPreviewHref({
-      entryPath: entryPoint,
-      runFolder: input.runFolder,
-      projectRoot: input.projectRoot
-    });
-    if (href !== void 0)
-      return { href, sourcePath: entryPoint };
-  }
-  return void 0;
-}
-function multiVariantStyles() {
-  return `.mv-wrap{--mv-pad:clamp(18px,2.4vw,44px);--mv-top:clamp(30px,3vw,50px);--mv-rail-width:clamp(420px,32vw,640px);--mv-rail-gap:clamp(34px,4vw,72px);max-width:1280px}.mv-wrap.mv-visual{max-width:none;width:100%;padding:var(--mv-top) calc(var(--mv-rail-width) + var(--mv-pad) + var(--mv-rail-gap)) 96px var(--mv-pad)}.mv-decision{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin:24px 0 28px;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}.mv-decision strong{display:block;font-size:15px;line-height:1.35;margin-bottom:3px;font-weight:560}.mv-decision span{color:var(--text-2)}.mv-count{font-size:12px;color:var(--text-3);white-space:nowrap}.mv-compare{display:block}.mv-list-head,.mv-row{display:grid;grid-template-columns:minmax(150px,190px) minmax(30ch,1fr) minmax(240px,.9fr);gap:clamp(18px,2vw,34px);align-items:start}.mv-list-head{padding:0 0 10px;color:var(--text-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0}.mv-row{position:relative;width:100%;padding:18px 0;border-top:1px solid var(--border)}.mv-row:last-child{border-bottom:1px solid var(--border)}.mv-row[data-selected="true"]::before{content:"";position:absolute;left:-14px;top:18px;bottom:18px;width:2px;border-radius:999px;background:var(--intent-positive)}.mv-name{display:flex;flex-direction:column;gap:6px}.mv-name strong{font-size:15.5px;line-height:1.3;font-weight:560}.mv-tag{width:max-content;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:500}.mv-tag.good{color:var(--intent-positive);border-color:var(--intent-positive)}.mv-copy p{margin:0 0 9px;color:var(--text)}.mv-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;color:var(--text-2);font-size:13px}.mv-facts b{display:block;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0;font-weight:600;margin-bottom:2px}.mv-evidence-cell{display:flex;flex-direction:column;gap:10px;min-width:0}.mv-actions{display:flex;gap:8px;flex-wrap:wrap}.mv-preview-trigger{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}.mv-preview-trigger:hover{background:var(--surface-2)}.mv-detail{position:fixed;top:var(--mv-top);right:var(--mv-pad);bottom:28px;width:var(--mv-rail-width);border-left:1px solid var(--border);padding-left:clamp(24px,2.4vw,40px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.mv-detail h2{font-size:18px;line-height:1.3;margin:0 0 12px;letter-spacing:0;font-weight:560}.mv-frame{border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);min-height:clamp(280px,42vh,470px);box-shadow:0 16px 42px rgba(22,28,24,.07);overflow:hidden}.mv-frame iframe{display:block;width:100%;height:clamp(280px,42vh,470px);border:0;background:white}.mv-empty-preview{padding:18px;color:var(--text-2);font-size:13px}.mv-detail-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px}.mv-open-link{font-size:13px;color:var(--intent-info);text-decoration:none}.mv-open-link:hover{text-decoration:underline}.mv-detail-source{font:500 11px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);overflow-wrap:anywhere}.mv-wrap.mv-evidence .mv-row{grid-template-columns:minmax(150px,210px) minmax(32ch,1fr) minmax(260px,.8fr)}@media (max-width:1320px){.mv-wrap.mv-visual{max-width:1280px;margin:0 auto;padding:var(--mv-top) var(--mv-pad) 96px}.mv-detail{position:static;width:auto;overflow:visible;border-left:0;border-top:1px solid var(--border);padding-left:0;padding-top:22px;margin-top:24px}.mv-frame iframe{height:420px}}@media (max-width:760px){.mv-decision{grid-template-columns:1fr}.mv-count{white-space:normal}.mv-list-head{display:none}.mv-row,.mv-wrap.mv-evidence .mv-row{grid-template-columns:1fr;gap:12px}.mv-facts{grid-template-columns:1fr}.mv-frame iframe{height:340px}}`;
-}
-function multiVariantScript() {
-  return `(()=>{const frame=document.querySelector('[data-mv-frame]');const title=document.querySelector('[data-mv-title]');const source=document.querySelector('[data-mv-source]');const link=document.querySelector('[data-mv-open]');const empty=document.querySelector('[data-mv-empty]');const rows=[...document.querySelectorAll('[data-mv-row]')];const triggers=[...document.querySelectorAll('[data-mv-preview-trigger]')];if(!frame||!title||!source||!link||!empty)return;function select(trigger){const id=trigger.dataset.mvVariantId||'';const src=trigger.dataset.mvPreviewSrc||'';title.textContent=trigger.dataset.mvPreviewTitle||'';source.textContent=trigger.dataset.mvPreviewSource||'';rows.forEach(row=>{row.dataset.selected=String(row.dataset.mvVariantId===id);});if(src.length>0){frame.hidden=false;empty.hidden=true;frame.setAttribute('src',src);link.hidden=false;link.setAttribute('href',src);}else{frame.hidden=true;empty.hidden=false;link.hidden=true;link.removeAttribute('href');}}triggers.forEach(trigger=>{trigger.addEventListener('click',()=>select(trigger));});})();`;
-}
-function renderFacts(facts) {
-  if (facts.length === 0)
-    return "";
-  return `<div class="mv-facts">
-          ${facts.map((fact) => `<span><b>${escapeHtml(fact.label)}</b>${escapeHtml(truncate(fact.value, MAX_BULLET_LEN))}</span>`).join("\n          ")}
-        </div>`;
-}
-function renderRisks(risks) {
-  if (risks === void 0 || risks.length === 0)
-    return "";
-  return `<div>
-          <p class="section-label">Risks</p>
-          <ul class="tradeoffs">
-            ${risks.map((risk) => `<li>${escapeHtml(truncate(risk, MAX_BULLET_LEN))}</li>`).join("\n            ")}
-          </ul>
-        </div>`;
-}
-function renderAction(action) {
-  if (action === void 0)
-    return "";
-  const classes = action.primary === false ? "copy" : "copy primary";
-  return `<button class="${classes}" data-prompt="${escapeHtml(truncate(action.prompt, MAX_PROMPT_LEN))}">${escapeHtml(action.label)}</button>`;
-}
-function renderVariantRow(input) {
-  const { selected, variant, visual } = input;
-  const previewButton = visual && variant.preview !== void 0 ? `<button class="mv-preview-trigger" type="button" data-mv-preview-trigger data-mv-variant-id="${escapeHtml(variant.id)}" data-mv-preview-src="${escapeHtml(variant.preview.href)}" data-mv-preview-title="${escapeHtml(variant.label)}" data-mv-preview-source="${escapeHtml(variant.preview.sourcePath)}">Preview</button>` : "";
-  const evidence2 = variant.evidence.length === 0 ? "" : variant.evidence.map((item) => chip(item)).join("\n          ");
-  return `      <article class="mv-row" data-mv-row data-mv-variant-id="${escapeHtml(variant.id)}" data-selected="${selected ? "true" : "false"}">
-        <div class="mv-name">
-          <strong>${escapeHtml(variant.label)}</strong>
-          <span class="mv-tag${variant.recommended ? " good" : ""}">${escapeHtml(variant.recommended ? "Recommended" : variant.id)}</span>
-        </div>
-        <div class="mv-copy">
-          <p>${escapeHtml(truncate(variant.description, MAX_BULLET_LEN))}</p>
-          ${renderFacts(variant.facts)}
-          ${renderRisks(variant.risks)}
-        </div>
-        <div class="mv-evidence-cell">
-          <div class="evidence">
-          ${evidence2}
-          </div>
-          <div class="mv-actions">
-            ${previewButton}
-            ${renderAction(variant.action)}
-          </div>
-        </div>
-      </article>`;
-}
-function renderVisualDetail(variant) {
-  const preview = variant.preview;
-  const frameHtml = preview === void 0 ? '<iframe data-mv-frame hidden title=""></iframe><p class="mv-empty-preview" data-mv-empty>No visual preview is available for this variant.</p>' : `<iframe data-mv-frame src="${escapeHtml(preview.href)}" title="${escapeHtml(`${variant.label} preview`)}" sandbox="allow-scripts allow-forms allow-pointer-lock" loading="lazy"></iframe><p class="mv-empty-preview" data-mv-empty hidden>No visual preview is available for this variant.</p>`;
-  const source = preview?.sourcePath ?? "No visual artifact path";
-  const link = preview === void 0 ? '<a class="mv-open-link" data-mv-open hidden>Open artifact</a>' : `<a class="mv-open-link" data-mv-open href="${escapeHtml(preview.href)}" target="_blank" rel="noreferrer">Open artifact</a>`;
-  return `    <aside class="mv-detail" aria-label="Selected variant preview">
-      <h2 data-mv-title>${escapeHtml(variant.label)}</h2>
-      <div class="mv-frame">
-        ${frameHtml}
-      </div>
-      <div class="mv-detail-meta">
-        ${link}
-        <div class="mv-detail-source" data-mv-source>${escapeHtml(source)}</div>
-      </div>
-    </aside>`;
-}
-function renderMultiVariantComparisonPage(input) {
-  if (input.variants.length === 0) {
-    throw new Error("multi-variant comparison requires at least one variant");
-  }
-  const recommended = input.variants.find((variant) => variant.recommended) ?? input.variants[0];
-  if (recommended === void 0) {
-    throw new Error("multi-variant comparison could not choose a default variant");
-  }
-  const visual = input.variants.some((variant) => variant.preview !== void 0);
-  const defaultVariant = visual ? input.variants.find((variant) => variant.recommended && variant.preview !== void 0) ?? input.variants.find((variant) => variant.preview !== void 0) ?? recommended : recommended;
-  const rows = input.variants.map((variant) => renderVariantRow({ variant, visual, selected: variant.id === defaultVariant.id })).join("\n");
-  const banner = verdictBanner({
-    intent: input.recommendation.intent,
-    badgeText: input.recommendation.badgeText,
-    mainHtml: `<strong>${escapeHtml(input.recommendation.label)}</strong> &mdash; ${escapeHtml(input.recommendation.rationale)}`,
-    ...input.recommendation.aside === void 0 ? {} : { aside: input.recommendation.aside }
-  });
-  const details = input.detailsHtml === void 0 ? "" : input.detailsHtml;
-  const bodyHtml = `${banner}
-
-  <section class="mv-decision" aria-label="Checkpoint decision">
-    <div>
-      <strong>Recommended: ${escapeHtml(recommended.label)}</strong>
-      <span>${escapeHtml(input.recommendation.rationale)}</span>
-    </div>
-    <div class="mv-count">${input.variants.length} variants compared</div>
-  </section>
-
-  <div class="mv-compare">
-    <section aria-label="Variant comparison">
-      <div class="mv-list-head">
-        <div>Variant</div>
-        <div>What changes</div>
-        <div>${visual ? "Evidence and preview" : "Evidence"}</div>
-      </div>
-${rows}
-    </section>
-${visual ? renderVisualDetail(defaultVariant) : ""}
-  </div>
-
-${details}
-`;
-  return renderPage({
-    title: input.title,
-    metaLine: input.metaLine,
-    headline: input.headline,
-    subtitle: input.subtitle,
-    bodyHtml,
-    ...input.footerLeft === void 0 ? {} : { footerLeft: input.footerLeft },
-    ...input.footerRight === void 0 ? {} : { footerRight: input.footerRight },
-    wrapClassName: visual ? "wrap mv-wrap mv-visual" : "wrap mv-wrap mv-evidence",
-    extraStyles: multiVariantStyles(),
-    ...visual ? { extraScript: multiVariantScript() } : {}
-  });
-}
-
-// dist/shared/html/prototype-checkpoint.js
-var PROTOTYPE_BRIEF_PATH = "reports/prototype/brief.json";
-var PROTOTYPE_PLAN_PATH = "reports/prototype/plan.json";
-var PROTOTYPE_ARTIFACT_PATH = "reports/prototype/artifact.json";
-var PROTOTYPE_VERIFICATION_PATH = "reports/prototype/verification.json";
-var PROTOTYPE_VARIANT_AGGREGATE_PATH = "reports/prototype/variant-aggregate.json";
-var PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH = "reports/prototype/variant-provider-evidence.json";
-var PROTOTYPE_VARIANT_VERIFICATION_PATH = "reports/prototype/variant-verification.json";
-var PROTOTYPE_VARIANT_REVIEW_PATH = "reports/prototype/variant-review.json";
-var PROTOTYPE_VARIANT_CHOICES_PATH = "reports/prototype/variant-choice-options.json";
-var CHOICES = [
-  {
-    id: "keep-prototype",
-    label: "Keep Prototype",
-    description: "Save the prototype as useful evidence and stop here.",
-    intent: "positive"
-  },
-  {
-    id: "save-build-input",
-    label: "Save Build Input",
-    description: "Close with a Build-ready follow-up prompt, without running Build.",
-    intent: "info"
-  },
-  {
-    id: "discard-prototype",
-    label: "Discard Prototype",
-    description: "Mark the prototype as discarded while keeping the evidence trail.",
-    intent: "attention"
-  }
-];
-function bulletList2(items) {
-  return `<ul class="tradeoffs">
-          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
-        </ul>`;
-}
-function commandText2(command) {
-  return `${command.cwd}$ ${command.argv.join(" ")}`;
-}
-function shellSingleQuote2(value) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-function resumeCommandForChoice2(runFolder, choiceId) {
-  return `circuit resume --run-folder ${shellSingleQuote2(runFolder)} --checkpoint-choice ${shellSingleQuote2(choiceId)}`;
-}
-function load(readJsonRunRelative, relPath, parse3) {
-  const parsed = parse3(readJsonRunRelative(relPath));
-  return parsed.success ? parsed.data : void 0;
-}
-function renderArtifactCard2(artifact) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(artifact.summary)}</p>
-      <div>
-        <p class="section-label">Prototype root</p>
-        <div class="evidence">${chip(artifact.prototype_root)}</div>
-      </div>
-      <div>
-        <p class="section-label">Entry points</p>
-        <div class="evidence">
-          ${artifact.entry_points.map((entry) => chip(entry)).join("\n          ")}
-        </div>
-      </div>
-      <div>
-        <p class="section-label">Preview</p>
-        <p class="summary">${escapeHtml(artifact.preview_instructions)}</p>
-      </div>`;
-  return card({
-    intent: "positive",
-    eyebrow: "artifact",
-    title: "Prototype files",
-    bodyHtml
-  });
-}
-function renderVerificationCard(verification) {
-  const status = verification.overall_status;
-  const bodyHtml = `      <p class="summary">${escapeHtml(status === "passed" ? "Artifact integrity and target checks passed." : "One or more checks failed.")}</p>
-      <div>
-        <p class="section-label">Checks</p>
-        <div class="evidence">
-          ${verification.commands.map((command) => chip(commandText2(command))).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: status === "passed" ? "positive" : "negative",
-    eyebrow: status,
-    title: "Verification",
-    bodyHtml
-  });
-}
-function renderRiskCard2(artifact, brief) {
-  const limits = [...brief.claim_limits, ...artifact.claim_limits];
-  const bodyHtml = `      <p class="summary">Prototype is local evidence, not a production or deployed result.</p>
-      <div>
-        <p class="section-label">Known limitations</p>
-        ${artifact.known_limitations.length === 0 ? '<p class="summary">No limitations were reported.</p>' : bulletList2(artifact.known_limitations)}
-      </div>
-      <div>
-        <p class="section-label">Claim limits</p>
-        <div class="evidence">
-          ${Array.from(new Set(limits)).map((limit) => chip(limit)).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: "attention",
-    eyebrow: "limits",
-    title: "Read Before Reuse",
-    bodyHtml
-  });
-}
-function renderPlanCard(plan) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(plan.preview_instructions)}</p>
-      <div>
-        <p class="section-label">Planned files</p>
-        <div class="evidence">
-          ${plan.files_to_create.map((file2) => chip(file2)).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: "neutral",
-    eyebrow: "plan",
-    title: "Artifact Plan",
-    bodyHtml
-  });
-}
-function renderChoice(choice, runFolder, recommendedId) {
-  const isRecommended = choice.id === recommendedId;
-  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
-      </div>`;
-  return card({
-    intent: isRecommended ? "positive" : choice.intent,
-    eyebrow: choice.id,
-    title: choice.label,
-    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
-    bodyHtml
-  });
-}
-function filteredChoices2(allowedChoices) {
-  const allowed = new Set(allowedChoices);
-  return CHOICES.filter((choice) => allowed.has(choice.id));
-}
-function relaySelectionLine(evidence2) {
-  if (evidence2?.status === "captured" && evidence2.provider !== void 0 && evidence2.model !== void 0 && evidence2.effort !== void 0) {
-    return `${evidence2.provider}/${evidence2.model} (${evidence2.effort})`;
-  }
-  return "No captured relay selection evidence";
-}
-function renderVariantDetails(input) {
-  const missingEvidenceHtml = input.providerEvidence.missing_evidence.length === 0 && input.review.missing_evidence.length === 0 ? "" : `<p><strong>Missing evidence.</strong> ${escapeHtml([
-    ...input.providerEvidence.missing_evidence.map((item) => `${item.variant_id}: ${item.reason}`),
-    ...input.review.missing_evidence
-  ].join("; "))}</p>`;
-  const strengthsHtml = input.review.strengths.length === 0 ? "" : `<p><strong>Strengths.</strong></p><ul>${input.review.strengths.map((item) => `<li>${escapeHtml(`${item.variant_id}: ${item.note}`)}</li>`).join("")}</ul>`;
-  const risksHtml = input.review.risks.length === 0 ? "" : `<p><strong>Risks.</strong></p><ul>${input.review.risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("")}</ul>`;
-  return `  <details>
-    <summary>Comparison evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Comparison.</strong> ${escapeHtml(input.review.comparison_summary)}</p>
-      ${strengthsHtml}
-      ${risksHtml}
-      <p><strong>Verification.</strong> ${escapeHtml(input.verification.overall_status)}</p>
-      ${missingEvidenceHtml}
-      <p><strong>Resume command.</strong> <code>${escapeHtml(input.resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${[
-    PROTOTYPE_VARIANT_AGGREGATE_PATH,
-    PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
-    PROTOTYPE_VARIANT_VERIFICATION_PATH,
-    PROTOTYPE_VARIANT_REVIEW_PATH,
-    PROTOTYPE_VARIANT_CHOICES_PATH,
-    input.checkpointRequestPath ?? ""
-  ].filter((item) => item.length > 0).map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>`;
-}
-function variantComparisonItems(input) {
-  return input.choices.map((choice) => {
-    const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === choice.id);
-    const artifact = branch?.result_body;
-    const evidence2 = input.providerEvidence.variants.find((candidate) => candidate.variant_id === choice.id);
-    const entryPoints = artifact?.entry_points ?? choice.entry_points;
-    const createdFiles = artifact?.created_files ?? [];
-    const artifactEvidence = artifact?.evidence ?? [];
-    const risks = artifact?.known_limitations ?? [];
-    const providerLine = evidence2?.status === "captured" ? relaySelectionLine(evidence2) : "No captured relay selection evidence";
-    const preview = previewForEntryPoints({
-      entryPoints,
-      runFolder: input.runFolder,
-      projectRoot: input.projectRoot
-    });
-    return {
-      id: choice.id,
-      label: choice.label,
-      description: artifact?.summary ?? choice.description,
-      recommended: choice.id === input.recommendedChoiceId,
-      facts: [
-        { label: "Relay", value: providerLine },
-        { label: "Verification", value: choice.verification_status },
-        { label: "Verdict", value: branch?.verdict ?? "not reported" },
-        { label: "Review", value: choice.review_recommendation ? "recommended" : "compared" }
-      ],
-      evidence: [...entryPoints, ...createdFiles, ...artifactEvidence],
-      risks,
-      ...preview === void 0 ? {} : { preview },
-      action: {
-        label: "Copy resume command",
-        prompt: resumeCommandForChoice2(input.runFolder, choice.id),
-        primary: true
+  const raw = parseConfigYaml(readFileSync28(abs, "utf8"), abs);
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+    const schemaVersion = raw.schema_version;
+    if (schemaVersion === 2) {
+      try {
+        return {
+          policy: PolicyLayer.parse({
+            source: layer,
+            source_path: abs,
+            envelope: PolicyEnvelopeV2.parse(raw)
+          })
+        };
+      } catch (err) {
+        throw new Error(`policy validation failed for ${layer} at ${abs}: ${err.message}`);
       }
+    }
+  }
+  try {
+    return {
+      selection: LayeredConfig.parse({
+        layer,
+        source_path: abs,
+        config: Config.parse(raw)
+      })
     };
-  });
+  } catch (err) {
+    throw new Error(`config validation failed for ${layer} at ${abs}: ${err.message}`);
+  }
 }
-function renderVariantCheckpoint(ctx) {
-  const aggregate2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_AGGREGATE_PATH, (raw) => PrototypeVariantAggregate.safeParse(raw));
-  const providerEvidence2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH, (raw) => PrototypeVariantProviderEvidence.safeParse(raw));
-  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_VERIFICATION_PATH, (raw) => PrototypeVariantVerification.safeParse(raw));
-  const review = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_REVIEW_PATH, (raw) => PrototypeVariantReview.safeParse(raw));
-  const choices = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_CHOICES_PATH, (raw) => PrototypeVariantChoiceOptions.safeParse(raw));
-  if (aggregate2 === void 0 || providerEvidence2 === void 0 || verification === void 0 || review === void 0 || choices === void 0) {
-    return void 0;
+function discoverRuntimeConfigLayers(options = {}) {
+  const selectionConfigLayers = [];
+  const policyLayers = [];
+  for (const [layer, path] of [
+    ["user-global", userGlobalConfigPath(options.homeDir)],
+    ["project", projectConfigPath(options.cwd)]
+  ]) {
+    const loaded = loadRuntimeConfigLayerFromPath(layer, path);
+    if (loaded?.selection !== void 0)
+      selectionConfigLayers.push(loaded.selection);
+    if (loaded?.policy !== void 0)
+      policyLayers.push(loaded.policy);
   }
-  const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
-  const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
-  if (visibleChoices.length === 0)
-    return void 0;
-  const recommended = visibleChoices.find((choice) => choice.id === choices.recommended_variant_id) ?? visibleChoices.find((choice) => choice.recommended) ?? visibleChoices[0];
-  if (recommended === void 0)
-    return void 0;
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<variant-id>'`;
-  return renderMultiVariantComparisonPage({
-    title: "Prototype model comparison checkpoint",
-    metaLine: `Prototype model comparison - ${ctx.runId}`,
-    headline: "Choose a prototype variant",
-    subtitle: "Compare local prototype artifacts using captured relay selection evidence, then keep one variant.",
-    recommendation: {
-      label: recommended.label,
-      rationale: review.comparison_summary,
-      badgeText: review.verdict === "recommend" ? "Recommended variant" : "Operator choice",
-      intent: review.verdict === "recommend" ? "positive" : "attention",
-      aside: `${providerEvidence2.captured_count} relay selections captured`
-    },
-    variants: variantComparisonItems({
-      aggregate: aggregate2,
-      providerEvidence: providerEvidence2,
-      choices: visibleChoices,
-      recommendedChoiceId: recommended.id,
-      runFolder: ctx.runFolder,
-      projectRoot: ctx.projectRoot
-    }),
-    detailsHtml: renderVariantDetails({
-      review,
-      verification,
-      providerEvidence: providerEvidence2,
-      checkpointRequestPath: ctx.checkpoint?.request_path,
-      resumeCommand
-    }),
-    footerLeft: `circuit - prototype - ${ctx.runId}`,
-    footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH
-  });
+  if (options.invocationConfig !== void 0) {
+    selectionConfigLayers.push(LayeredConfig.parse({
+      layer: "invocation",
+      config: options.invocationConfig
+    }));
+  }
+  if (options.invocationPolicy !== void 0) {
+    policyLayers.push(PolicyLayer.parse({
+      source: "invocation",
+      envelope: options.invocationPolicy
+    }));
+  }
+  return { selectionConfigLayers, policyLayers };
 }
-var prototypeCheckpointProjector = (ctx) => {
-  if (ctx.flowId !== "prototype" || ctx.runOutcome !== "checkpoint_waiting")
-    return void 0;
-  if (ctx.checkpoint?.step_id === "prototype-variant-checkpoint-step") {
-    return renderVariantCheckpoint(ctx);
-  }
-  if (ctx.checkpoint?.step_id !== "prototype-checkpoint-step")
-    return void 0;
-  const brief = load(ctx.readJsonRunRelative, PROTOTYPE_BRIEF_PATH, (raw) => PrototypeBrief.safeParse(raw));
-  const plan = load(ctx.readJsonRunRelative, PROTOTYPE_PLAN_PATH, (raw) => PrototypePlan.safeParse(raw));
-  const artifact = load(ctx.readJsonRunRelative, PROTOTYPE_ARTIFACT_PATH, (raw) => PrototypeArtifact.safeParse(raw));
-  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VERIFICATION_PATH, (raw) => PrototypeVerification.safeParse(raw));
-  if (brief === void 0 || plan === void 0 || artifact === void 0 || verification === void 0) {
-    return void 0;
-  }
-  const choices = filteredChoices2(ctx.checkpoint.allowed_choices);
-  if (choices.length === 0)
-    return void 0;
-  const recommendedChoice = choices.find((choice) => choice.id === "keep-prototype") ?? choices[0];
-  if (recommendedChoice === void 0)
-    return void 0;
-  const banner = verdictBanner({
-    intent: "positive",
-    badgeText: "Verified local artifact",
-    mainHtml: `<strong>${escapeHtml(recommendedChoice.label)}</strong> &mdash; ${escapeHtml("Safe default: keep the prototype evidence and decide on Build separately.")}`,
-    aside: "waiting for choice"
-  });
-  const choiceCards = choices.map((choice) => renderChoice(choice, ctx.runFolder, recommendedChoice.id)).join("\n\n");
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<choice>'`;
-  const bodyHtml = `${banner}
 
-  <div class="grid">
-${renderArtifactCard2(artifact)}
-
-${renderVerificationCard(verification)}
-
-${renderRiskCard2(artifact, brief)}
-
-${renderPlanCard(plan)}
-  </div>
-
-  <div class="grid" style="margin-top:16px">
-${choiceCards}
-  </div>
-
-  <details>
-    <summary>Raw evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${[
-    PROTOTYPE_BRIEF_PATH,
-    PROTOTYPE_PLAN_PATH,
-    PROTOTYPE_ARTIFACT_PATH,
-    PROTOTYPE_VERIFICATION_PATH,
-    ctx.checkpoint.request_path
-  ].map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${brief.objective} - Circuit Prototype checkpoint`,
-    metaLine: `Prototype checkpoint - ${ctx.runId}`,
-    headline: brief.objective,
-    subtitle: "Choose whether to keep this local prototype, save it as Build input, or mark it discarded.",
-    bodyHtml,
-    footerLeft: `circuit - prototype - ${ctx.runId}`,
-    footerRight: PROTOTYPE_ARTIFACT_PATH
-  });
-};
-
-// dist/shared/html/index.js
-var HTML_PROJECTORS = {
-  build: buildCheckpointProjector,
-  explore: exploreTournamentProjector,
-  prototype: prototypeCheckpointProjector
-};
+// dist/shared/operator-summary-writer.js
+import { existsSync as existsSync19, mkdirSync as mkdirSync4, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { dirname as dirname7, isAbsolute as isAbsolute11, join as join16, relative as relative11, resolve as resolve11 } from "node:path";
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync17, readFileSync as readFileSync31 } from "node:fs";
+import { existsSync as existsSync18, readFileSync as readFileSync29 } from "node:fs";
 function isObject4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync17(path))
+  if (!existsSync18(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync31(path, "utf8"));
+  const parsed = JSON.parse(readFileSync29(path, "utf8"));
   return isObject4(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -57397,11 +57241,11 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join17(runFolder, "reports", "operator-summary.json");
-  if (!existsSync18(path))
+  const path = join16(runFolder, "reports", "operator-summary.json");
+  if (!existsSync19(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync32(path, "utf8"));
+    const raw = JSON.parse(readFileSync30(path, "utf8"));
     if (!isObject4(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -57416,31 +57260,31 @@ function readPriorRoute(runFolder) {
 }
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.json");
+  return join16(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.md");
+  return join16(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.html");
+  return join16(runFolder, "reports", "operator-summary.html");
 }
 function isInsideOrSame4(root, target) {
-  const fromRoot = relative12(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute12(fromRoot);
+  const fromRoot = relative11(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute11(fromRoot);
 }
 function readCheckpointRequest(runFolder, checkpoint) {
   let requestPath;
   try {
-    requestPath = isAbsolute12(checkpoint.request_path) ? resolve10(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
+    requestPath = isAbsolute11(checkpoint.request_path) ? resolve11(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
   } catch {
     return void 0;
   }
-  if (!isInsideOrSame4(resolve10(runFolder), requestPath))
+  if (!isInsideOrSame4(resolve11(runFolder), requestPath))
     return void 0;
-  if (!existsSync18(requestPath))
+  if (!existsSync19(requestPath))
     return void 0;
   try {
-    const parsed = JSON.parse(readFileSync32(requestPath, "utf8"));
+    const parsed = JSON.parse(readFileSync30(requestPath, "utf8"));
     return isObject4(parsed) ? parsed : void 0;
   } catch {
     return void 0;
@@ -57452,7 +57296,7 @@ function checkpointProjectRoot(runFolder, checkpoint) {
   if (!isObject4(executionContext))
     return void 0;
   const projectRoot = stringField2(executionContext, "project_root");
-  return projectRoot !== void 0 && isAbsolute12(projectRoot) ? projectRoot : void 0;
+  return projectRoot !== void 0 && isAbsolute11(projectRoot) ? projectRoot : void 0;
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -57489,11 +57333,11 @@ function evidenceLinks2(runFolder, report) {
   });
 }
 function readAutoResolutions(runFolder) {
-  const tracePath = join17(runFolder, "trace.ndjson");
-  if (!existsSync18(tracePath))
+  const tracePath = join16(runFolder, "trace.ndjson");
+  if (!existsSync19(tracePath))
     return [];
   const records = [];
-  for (const line of readFileSync32(tracePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync30(tracePath, "utf8").split(/\r?\n/)) {
     if (line.trim().length === 0)
       continue;
     let entry;
@@ -57592,8 +57436,8 @@ function writeOperatorSummary(input) {
   const autoResolutions = readAutoResolutions(input.runFolder);
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
-  mkdirSync5(dirname8(outJsonPath), { recursive: true });
-  const projector = HTML_PROJECTORS[flowId];
+  mkdirSync4(dirname7(outJsonPath), { recursive: true });
+  const projector = getHtmlProjector(flowId);
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath;
   let htmlEmitWarning;
@@ -57623,14 +57467,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync18(candidateHtmlPath))
+    if (existsSync19(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
-      writeFileSync5(candidateHtmlPath, renderedHtml);
+      writeFileSync4(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync18(candidateHtmlPath))
+      if (existsSync19(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -57700,9 +57544,9 @@ function writeOperatorSummary(input) {
     ...autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions },
     ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {}
   });
-  writeFileSync5(outJsonPath, `${JSON.stringify(candidate, null, 2)}
+  writeFileSync4(outJsonPath, `${JSON.stringify(candidate, null, 2)}
 `);
-  writeFileSync5(outMarkdownPath, renderMarkdown(candidate));
+  writeFileSync4(outMarkdownPath, renderMarkdown(candidate));
   return outHtmlPath === void 0 ? { summary: candidate, jsonPath: outJsonPath, markdownPath: outMarkdownPath } : {
     summary: candidate,
     jsonPath: outJsonPath,
@@ -57711,16 +57555,49 @@ function writeOperatorSummary(input) {
   };
 }
 
+// dist/cli/command-vocabulary.js
+var CLI_COMMAND_NAMES = [
+  "run",
+  "resume",
+  "handoff",
+  "history",
+  "create",
+  "runs",
+  "version"
+];
+
+// dist/cli/commander-support.js
+function configureCommanderProgram(program2) {
+  return program2.exitOverride().configureOutput({ writeErr: () => {
+  } });
+}
+function commanderErrorMessage(err) {
+  if (err instanceof CommanderError)
+    return err.message.replace(/^error: /, "");
+  return err instanceof Error ? err.message : String(err);
+}
+function parseCommanderOrThrow(program2, argv) {
+  try {
+    configureCommanderProgram(program2).parse(argv, { from: "user" });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
+      process.exit(0);
+    if (err instanceof CommanderError)
+      throw new Error(err.message.replace(/^error: /, ""));
+    throw err;
+  }
+}
+
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync19, mkdirSync as mkdirSync6, readFileSync as readFileSync34, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync20, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname10, join as join18, resolve as resolve12 } from "node:path";
+import { dirname as dirname9, join as join17, resolve as resolve13 } from "node:path";
 var import_yaml3 = __toESM(require_dist(), 1);
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync33 } from "node:fs";
-import { dirname as dirname9, relative as relative13, resolve as resolve11 } from "node:path";
+import { readFileSync as readFileSync31 } from "node:fs";
+import { dirname as dirname8, relative as relative12, resolve as resolve12 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -57731,14 +57608,14 @@ var RUNTIME_POLICY_REASONS = {
 var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit create` publish a normal runnable flow command.";
 var CLI_RUNTIME_ROUTING_POLICY = "Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.";
 function pathIsInside(parent, child) {
-  const rel = relative13(parent, child);
+  const rel = relative12(parent, child);
   return rel.length === 0 || !rel.startsWith("..") && !rel.startsWith("/");
 }
 function fixtureEligibleForRuntime(input) {
   if (input.args.fixturePath === void 0 && input.args.flowRoot === void 0)
     return true;
-  const fixturePath = resolve11(input.fixturePath);
-  if (pathIsInside(resolve11(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
+  const fixturePath = resolve12(input.fixturePath);
+  if (pathIsInside(resolve12(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
     return true;
   }
   if (input.args.flowRoot !== void 0 && publishedCustomFlowMatches(input.args.flowRoot, fixturePath)) {
@@ -57748,12 +57625,12 @@ function fixtureEligibleForRuntime(input) {
   if (mirrorRoot === void 0 || mirrorRoot.length === 0 || input.args.flowRoot === void 0) {
     return false;
   }
-  const trustedMirrorRoot = resolve11(mirrorRoot);
-  return resolve11(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
+  const trustedMirrorRoot = resolve12(mirrorRoot);
+  return resolve12(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync33(resolve11(dirname9(resolve11(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync31(resolve12(dirname8(resolve12(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -57764,7 +57641,7 @@ function publishedCustomFlowMatches(flowRoot2, fixturePath) {
         return false;
       }
       const flowPath = candidate.flow_path;
-      return typeof flowPath === "string" && resolve11(flowPath) === fixturePath;
+      return typeof flowPath === "string" && resolve12(flowPath) === fixturePath;
     });
   } catch {
     return false;
@@ -57826,22 +57703,10 @@ function utilityProgress(input) {
 }
 
 // dist/cli/create.js
-var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set(["build", "explore", "fix", "handoff", "review", "run"]);
-function parseCommander(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
+var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set([...catalogFlowIds, ...CLI_COMMAND_NAMES]);
 function parseArgs(argv) {
   const program2 = new Command("circuit create").option("--name <slug>").option("--description <flow idea>").option("--home <path>").option("--template-flow-root <path>").option("--created-at <iso>").option("--publish").option("--yes").option("--progress <format>");
-  parseCommander(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   if (program2.args.length > 0)
     throw new Error(`unexpected argument: ${program2.args[0]}`);
   const opts = program2.opts();
@@ -57872,38 +57737,38 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve12(args.home ?? join18(homedir3(), ".config", "circuit", "custom"));
+  return resolve13(args.home ?? join17(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
-  return join18(home, "drafts", slug);
+  return join17(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join18(home, "skills", slug);
+  return join17(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join18(home, "flows");
+  return join17(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join18(home, "commands");
+  return join17(home, "commands");
 }
 function reportsRoot(home) {
-  return join18(home, "reports");
+  return join17(home, "reports");
 }
 function manifestPath(home) {
-  return join18(home, "manifest.json");
+  return join17(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join18(reportsRoot(home), `${slug}-create-result.json`);
+  return join17(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join18(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join17(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
-  mkdirSync6(dirname10(path), { recursive: true });
-  writeFileSync6(path, text.endsWith("\n") ? text : `${text}
+  mkdirSync5(dirname9(path), { recursive: true });
+  writeFileSync5(path, text.endsWith("\n") ? text : `${text}
 `);
 }
 function writeJson(path, value) {
@@ -57920,13 +57785,13 @@ function validateCustomFlow(slug, flow, source) {
 }
 function candidateTemplatePaths(args) {
   const roots = [args.templateFlowRoot, "generated/flows", "plugins/codex/flows"].filter((root) => root !== void 0);
-  return roots.map((root) => resolve12(root, "build", "circuit.json"));
+  return roots.map((root) => resolve13(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync19(candidate))
+    if (!existsSync20(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync34(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync32(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -58022,8 +57887,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync19(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync34(manifestPath(input.home), "utf8"));
+  if (existsSync20(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync32(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -58034,16 +57899,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join18(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join18(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join18(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join17(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join17(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join17(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join18(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join17(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -58053,13 +57918,13 @@ function writeValidationResult(input) {
 function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
-  mkdirSync6(root, { recursive: true });
+  mkdirSync5(root, { recursive: true });
   const descriptor = circuitYaml(input.slug, input.description);
-  validateCircuitYamlDescriptor(descriptor, join18(root, "circuit.yaml"), input.slug);
-  writeText(join18(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join18(root, "circuit.yaml"), descriptor);
-  writeJson(join18(root, "circuit.json"), input.flow);
-  writeText(join18(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  validateCircuitYamlDescriptor(descriptor, join17(root, "circuit.yaml"), input.slug);
+  writeText(join17(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join17(root, "circuit.yaml"), descriptor);
+  writeJson(join17(root, "circuit.json"), input.flow);
+  writeText(join17(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -58068,26 +57933,26 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join18(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync34(path, "utf8")));
+  const path = join17(draftRoot(home, slug), "circuit.json");
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync32(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync19(join18(draft, "SKILL.md"))) {
+  if (!existsSync20(join17(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
-  const descriptor = readFileSync34(join18(draft, "circuit.yaml"), "utf8");
-  validateCircuitYamlDescriptor(descriptor, join18(draft, "circuit.yaml"), input.slug);
+  const descriptor = readFileSync32(join17(draft, "circuit.yaml"), "utf8");
+  validateCircuitYamlDescriptor(descriptor, join17(draft, "circuit.yaml"), input.slug);
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join18(flowRoot(input.home), input.slug);
-  mkdirSync6(skillRoot, { recursive: true });
-  mkdirSync6(customFlowRoot, { recursive: true });
-  writeText(join18(skillRoot, "SKILL.md"), readFileSync34(join18(draft, "SKILL.md"), "utf8"));
-  writeText(join18(skillRoot, "circuit.yaml"), descriptor);
-  writeText(join18(customFlowRoot, "circuit.json"), readFileSync34(join18(draft, "circuit.json"), "utf8"));
-  writeText(join18(commandRoot(input.home), `${input.slug}.md`), readFileSync34(join18(draft, "command.md"), "utf8"));
+  const customFlowRoot = join17(flowRoot(input.home), input.slug);
+  mkdirSync5(skillRoot, { recursive: true });
+  mkdirSync5(customFlowRoot, { recursive: true });
+  writeText(join17(skillRoot, "SKILL.md"), readFileSync32(join17(draft, "SKILL.md"), "utf8"));
+  writeText(join17(skillRoot, "circuit.yaml"), descriptor);
+  writeText(join17(customFlowRoot, "circuit.json"), readFileSync32(join17(draft, "circuit.json"), "utf8"));
+  writeText(join17(commandRoot(input.home), `${input.slug}.md`), readFileSync32(join17(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -58151,11 +58016,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync19(join18(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync20(join17(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync19(join18(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync20(join17(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -58179,11 +58044,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join18(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join17(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join18(flowRoot(home), slug, "circuit.json"),
-        command_path: join18(commandRoot(home), `${slug}.md`),
+        flow_path: join17(flowRoot(home), slug, "circuit.json"),
+        command_path: join17(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -58221,23 +58086,23 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync21, mkdirSync as mkdirSync7, readFileSync as readFileSync37, writeFileSync as writeFileSync8 } from "node:fs";
+import { copyFileSync, existsSync as existsSync22, mkdirSync as mkdirSync6, readFileSync as readFileSync35, writeFileSync as writeFileSync7 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname11, join as join22, resolve as resolve14 } from "node:path";
+import { dirname as dirname10, join as join21, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
-// dist/run-status/run-folder-projector.js
+// dist/app/run-status/run-folder-projector.js
 import { constants, accessSync, statSync as statSync3 } from "node:fs";
-import { resolve as resolve13 } from "node:path";
+import { resolve as resolve14 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync35, writeFileSync as writeFileSync7 } from "node:fs";
-import { join as join19 } from "node:path";
+import { readFileSync as readFileSync33, writeFileSync as writeFileSync6 } from "node:fs";
+import { join as join18 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join19(runFolder, "manifest.snapshot.json");
+  return join18(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync35(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync33(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -58245,9 +58110,9 @@ function verifyManifestSnapshotBytes(runFolder) {
   return readManifestSnapshot(runFolder);
 }
 
-// dist/run-status/projection-common.js
-import { existsSync as existsSync20 } from "node:fs";
-import { join as join20 } from "node:path";
+// dist/app/run-status/projection-common.js
+import { existsSync as existsSync21 } from "node:fs";
+import { join as join19 } from "node:path";
 function errorMessage3(err) {
   return err instanceof Error ? err.message : String(err);
 }
@@ -58282,12 +58147,12 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join20(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join20(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join19(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join19(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync20(result) ? { result_path: result } : {},
-    ...existsSync20(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync20(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync21(result) ? { result_path: result } : {},
+    ...existsSync21(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync21(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -58301,15 +58166,15 @@ function stepMetadata(flow, stepId) {
   };
 }
 
-// dist/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync36 } from "node:fs";
-import { join as join21 } from "node:path";
+// dist/app/run-status/runtime-run-folder.js
+import { readFileSync as readFileSync34 } from "node:fs";
+import { join as join20 } from "node:path";
 function isRecord6(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join21(runFolder, "trace.ndjson");
-  const text = readFileSync36(tracePath, "utf8");
+  const tracePath = join20(runFolder, "trace.ndjson");
+  const text = readFileSync34(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -58345,7 +58210,7 @@ function traceStringArray(entry, key) {
   const entries = value.filter((item) => typeof item === "string");
   return entries.length === value.length && entries.length > 0 ? entries : void 0;
 }
-function stringArray3(value) {
+function stringArray(value) {
   if (!Array.isArray(value))
     return void 0;
   const entries = value.filter((item) => typeof item === "string");
@@ -58376,11 +58241,7 @@ function runtimeLastEvent(log) {
   };
 }
 function runtimeRunOutcome(entry) {
-  const outcome = traceString2(entry, "outcome");
-  if (outcome === "complete" || outcome === "aborted" || outcome === "handoff" || outcome === "stopped" || outcome === "escalated") {
-    return outcome;
-  }
-  return void 0;
+  return optionalRunClosedOutcome(entry.outcome);
 }
 function runtimeCurrentStepProjection(log, flow) {
   const completed = /* @__PURE__ */ new Set();
@@ -58494,7 +58355,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync36(requestAbs, "utf8");
+    requestText = readFileSync34(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -58504,7 +58365,7 @@ function runtimeWaitingCheckpointProjection(input) {
       manifestIdentity: input.manifestIdentity
     });
   }
-  if (sha256Hex(requestText) !== expectedHash) {
+  if (sha256OfString(requestText) !== expectedHash) {
     return invalidProjection({
       runFolder: input.runFolder,
       reason: "checkpoint_invalid",
@@ -58537,7 +58398,7 @@ function runtimeWaitingCheckpointProjection(input) {
       manifestIdentity: input.manifestIdentity
     });
   }
-  const requestChoices = stringArray3(requestRecord.allowed_choices);
+  const requestChoices = stringArray(requestRecord.allowed_choices);
   if (requestChoices === void 0 || !sameStringArray2(requestChoices, savedChoices)) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -58555,7 +58416,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync36(join21(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync34(join20(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -58727,7 +58588,7 @@ function projectRuntimeRunStatusFromRunFolder(runFolder, manifest) {
   });
 }
 
-// dist/run-status/run-folder-projector.js
+// dist/app/run-status/run-folder-projector.js
 var RunStatusFolderError = class extends Error {
   code;
   runFolder;
@@ -58759,7 +58620,7 @@ function assertReadableRunFolder(runFolder) {
   }
 }
 function projectRunStatusFromRunFolder(runFolder) {
-  const resolvedRunFolder = resolve13(runFolder);
+  const resolvedRunFolder = resolve14(runFolder);
   assertReadableRunFolder(resolvedRunFolder);
   let manifest;
   try {
@@ -58795,18 +58656,6 @@ var HANDOFF_BRIEF_MAX_CHARS = 3e3;
 var HANDOFF_HOOKS_API_VERSION = "handoff-hooks-v1";
 var HANDOFF_HOOKS_SCHEMA_VERSION = 1;
 var CIRCUIT_HOOK_MARKER = "CIRCUIT_HANDOFF_HOOK=1";
-function parseCommander2(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
 function addHandoffOptions(program2) {
   return program2.option("--host <host>").option("--goal <goal>").option("--next <next>").option("--state-markdown <md>").option("--debt-markdown <md>").option("--run-folder <path>").option("--control-plane <path>").option("--project-root <path>").option("--hooks-file <path>").option("--launcher <path>").option("--record-id <stem>").option("--created-at <iso>").option("--progress <format>").option("--json");
 }
@@ -58840,7 +58689,7 @@ function parseArgs2(argv) {
   addHooksAction("install");
   addHooksAction("uninstall");
   addHooksAction("doctor");
-  parseCommander2(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   if (parsed === void 0)
     throw new Error("handoff requires a subcommand");
   const { action, hooksAction, opts } = parsed;
@@ -58867,45 +58716,45 @@ function parseArgs2(argv) {
   };
 }
 function resolveProjectRootArg(args) {
-  return resolve14(args.projectRoot ?? process.cwd());
+  return resolve15(args.projectRoot ?? process.cwd());
 }
 function resolveControlPlaneArg(args) {
   if (args.controlPlane !== void 0)
-    return resolve14(args.controlPlane);
-  return resolve14(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
+    return resolve15(args.controlPlane);
+  return resolve15(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
 }
 function continuityRoot(controlPlane) {
-  return resolve14(controlPlane, "continuity");
+  return resolve15(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join22(continuityRoot(controlPlane), "records");
+  return join21(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join22(continuityRoot(controlPlane), "index.json");
+  return join21(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join22(recordsRoot(controlPlane), `${recordId}.json`);
+  return join21(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join22(continuityRoot(controlPlane), "reports");
+  return join21(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join22(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join21(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join22(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join21(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join22(controlPlane, "active-run.md");
+  return join21(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
-  mkdirSync7(dirname11(path), { recursive: true });
-  writeFileSync8(path, `${JSON.stringify(value, null, 2)}
+  mkdirSync6(dirname10(path), { recursive: true });
+  writeFileSync7(path, `${JSON.stringify(value, null, 2)}
 `);
 }
 function writeMarkdown(path, value) {
-  mkdirSync7(dirname11(path), { recursive: true });
-  writeFileSync8(path, value.endsWith("\n") ? value : `${value}
+  mkdirSync6(dirname10(path), { recursive: true });
+  writeFileSync7(path, value.endsWith("\n") ? value : `${value}
 `);
 }
 function composeHandoffBrief(record2, state, debt) {
@@ -59014,23 +58863,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync21(indexAbs))
+  if (!existsSync22(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync37(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync35(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync21(recordAbs)) {
+  if (!existsSync22(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
   try {
-    record2 = ContinuityRecord.parse(JSON.parse(readFileSync37(recordAbs, "utf8")));
+    record2 = ContinuityRecord.parse(JSON.parse(readFileSync35(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -59063,7 +58912,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync37(0, "utf8");
+  const raw = readFileSync35(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -59127,14 +58976,14 @@ function runHandoffHook(args) {
   return 0;
 }
 function defaultCodexHooksFile() {
-  const codexHome = process.env.CODEX_HOME ?? resolve14(homedir4(), ".codex");
-  return resolve14(codexHome, "hooks.json");
+  const codexHome = process.env.CODEX_HOME ?? resolve15(homedir4(), ".codex");
+  return resolve15(codexHome, "hooks.json");
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve14(pluginRoot, "scripts/circuit.ts");
+    return resolve15(pluginRoot, "scripts/circuit.ts");
   }
-  return resolve14(moduleDir, "../..", "bin/circuit");
+  return resolve15(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
@@ -59144,7 +58993,7 @@ function missingDefaultLauncherMessage(launcher) {
   ].join(" ");
 }
 function defaultLauncherPath() {
-  return resolveDefaultLauncher(process.env.CIRCUIT_PLUGIN_ROOT, dirname11(fileURLToPath2(import.meta.url)));
+  return resolveDefaultLauncher(process.env.CIRCUIT_PLUGIN_ROOT, dirname10(fileURLToPath2(import.meta.url)));
 }
 function parseCodexHooksHost(args) {
   if (args.host === "codex")
@@ -59152,11 +59001,11 @@ function parseCodexHooksHost(args) {
   throw new Error("handoff hooks requires --host codex");
 }
 function resolveHooksFileArg(args) {
-  return resolve14(args.hooksFile ?? defaultCodexHooksFile());
+  return resolve15(args.hooksFile ?? defaultCodexHooksFile());
 }
 function resolveLauncherArg(args) {
-  const launcher = resolve14(args.launcher ?? defaultLauncherPath());
-  if (!existsSync21(launcher)) {
+  const launcher = resolve15(args.launcher ?? defaultLauncherPath());
+  if (!existsSync22(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -59182,9 +59031,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync21(path))
+  if (!existsSync22(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync37(path, "utf8"));
+  const parsed = JSON.parse(readFileSync35(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -59292,16 +59141,16 @@ function launcherPathFromCircuitHookCommand(command) {
   return launcher;
 }
 function writeHooksConfig(path, config2) {
-  mkdirSync7(dirname11(path), { recursive: true });
+  mkdirSync6(dirname10(path), { recursive: true });
   let backupPath;
-  if (existsSync21(path)) {
+  if (existsSync22(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync21(candidate)) {
+    if (!existsSync22(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
   }
-  writeFileSync8(path, `${JSON.stringify(config2, null, 2)}
+  writeFileSync7(path, `${JSON.stringify(config2, null, 2)}
 `);
   return backupPath === void 0 ? {} : { backupPath };
 }
@@ -59347,7 +59196,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync21(hooksPath)) {
+  if (!existsSync22(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59386,7 +59235,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync21(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync22(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -59417,7 +59266,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync21(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync22(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -59441,7 +59290,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync21(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync22(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59537,7 +59386,7 @@ function buildRecord(args, now) {
       }
     });
   }
-  const runFolder = resolve14(args.runFolder);
+  const runFolder = resolve15(args.runFolder);
   const { snapshot, currentStage } = loadRunBackedSnapshot(runFolder);
   if (snapshot.current_step === void 0) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
@@ -59639,7 +59488,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync37(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync35(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -59665,7 +59514,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync21(indexAbs)) {
+  if (!existsSync22(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -59703,7 +59552,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync21(recordAbs)) {
+  if (!existsSync22(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -59879,11 +59728,6 @@ function operationalError(error51) {
   writeJson3(errorEnvelope(new HistoryCommandError("internal_error", error51 instanceof Error ? error51.message : String(error51))));
   return 1;
 }
-function commanderErrorMessage(err) {
-  if (err instanceof CommanderError)
-    return err.message.replace(/^error: /, "");
-  return err instanceof Error ? err.message : String(err);
-}
 function parsePositiveInteger(value, optionName) {
   if (value === void 0)
     return void 0;
@@ -59894,8 +59738,7 @@ function parsePositiveInteger(value, optionName) {
 }
 function parseHistoryArgs(argv) {
   let parsed;
-  const program2 = new Command("circuit history").exitOverride().configureOutput({ writeErr: () => {
-  } });
+  const program2 = configureCommanderProgram(new Command("circuit history"));
   program2.command("rebuild").option("--json").option("--runs-base <path>").option("--index-dir <path>").action((options) => {
     parsed = {
       command: "rebuild",
@@ -60001,6 +59844,153 @@ async function runHistoryCommand(argv) {
   }
 }
 
+// dist/app/run-envelope/shadow-record.js
+import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync8 } from "node:fs";
+import { dirname as dirname11, join as join22 } from "node:path";
+var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
+function reportRef2(input) {
+  return {
+    kind: "report",
+    ref: runRelativePath(input.runFolder, input.path),
+    sha256: sha256OfFile(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId)
+  };
+}
+function requestRef2(input) {
+  return {
+    kind: "request",
+    ref: runRelativePath(input.runFolder, input.path),
+    sha256: sha256OfFile(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId),
+    step_id: StepId.parse(input.stepId)
+  };
+}
+function childResultEvidence(input) {
+  return {
+    source: "child_result",
+    ref: reportRef2(input)
+  };
+}
+function writeRunEnvelopeShadowRecord(input) {
+  const selectedProcess = {
+    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
+    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
+    router_reason: input.selectedProcess.router_reason,
+    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
+  };
+  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
+    const resultRef = childResultEvidence({
+      runFolder: input.runFolder,
+      path: input.child.resultPath,
+      runId: input.child.runResult.run_id,
+      flowId: input.child.runResult.flow_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.runResult.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
+        outcome: input.child.runResult.outcome,
+        trace_entries_observed: input.child.runResult.trace_entries_observed,
+        manifest_hash: input.child.runResult.manifest_hash,
+        result_ref: resultRef
+      },
+      artifactLinks: [resultRef.ref]
+    };
+  })() : (() => {
+    const checkpointRequestRef = requestRef2({
+      runFolder: input.runFolder,
+      path: input.child.checkpoint.request_path,
+      runId: input.child.run_id,
+      flowId: input.child.flow_id,
+      stepId: input.child.checkpoint.step_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.flow_id),
+        outcome: "checkpoint_waiting",
+        trace_entries_observed: input.child.trace_entries_observed,
+        manifest_hash: input.child.manifest_hash,
+        checkpoint: {
+          step_id: StepId.parse(input.child.checkpoint.step_id),
+          request_ref: checkpointRequestRef,
+          allowed_choices: [...input.child.checkpoint.allowed_choices]
+        }
+      },
+      artifactLinks: [checkpointRequestRef]
+    };
+  })();
+  const record2 = RunEnvelopeShadowRecord.parse({
+    schema: "run.envelope-shadow@v0",
+    mode: "shadow",
+    shadow_reason: "source-owned-run-not-active",
+    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
+    operator_intent: input.operatorIntent,
+    recorded_at: input.recordedAt,
+    selected_process: selectedProcess,
+    child_run: childRun,
+    artifact_links: artifactLinks
+  });
+  const outPath = join22(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
+  mkdirSync7(dirname11(outPath), { recursive: true });
+  writeFileSync8(outPath, `${JSON.stringify(record2, null, 2)}
+`);
+  return { path: outPath, record: record2 };
+}
+
+// dist/cli/post-run-artifacts.js
+function tryPostRunArtifact(label, context, write) {
+  try {
+    return write();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    context.warnings.push({ label, message });
+    if (!context.progressJsonl) {
+      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}
+`);
+    }
+    return void 0;
+  }
+}
+function postRunArtifactWarningOutputFields(warnings) {
+  if (warnings.length === 0)
+    return {};
+  return {
+    post_run_artifact_warnings: warnings.map((warning) => ({
+      label: warning.label,
+      message: warning.message
+    }))
+  };
+}
+function emitPostRunArtifacts(input) {
+  const { context, runFolder, operatorIntent, recordedAt, selectedProcess, child } = input;
+  const operatorSummary = tryPostRunArtifact("operator-summary", context, input.writeOperatorSummary);
+  tryPostRunArtifact("run-envelope-shadow", context, () => writeRunEnvelopeShadowRecord({
+    runFolder,
+    operatorIntent,
+    selectedProcess,
+    child,
+    recordedAt
+  }));
+  const processEvidence = tryPostRunArtifact("process-evidence", context, () => writeProcessEvidenceProjection({
+    runFolder,
+    projection: input.buildProcessEvidenceProjection()
+  }));
+  const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", context, () => writeRunEnvelopeRecord({
+    runFolder,
+    operatorIntent,
+    selectedProcess,
+    processEvidence,
+    recordedAt,
+    ...input.memoryContext === void 0 ? {} : { memoryContext: input.memoryContext }
+  }));
+  return { operatorSummary, processEvidence, runEnvelope };
+}
+
 // dist/cli/run-output.js
 function routeOutputFields(input) {
   return {
@@ -60010,6 +60000,14 @@ function routeOutputFields(input) {
     ...input.routerSignal === void 0 ? {} : { router_signal: input.routerSignal },
     ...input.entryMode === void 0 ? {} : { entry_mode: input.entryMode },
     ...input.entryModeSource === void 0 ? {} : { entry_mode_source: input.entryModeSource }
+  };
+}
+function selectedProcessFields(input) {
+  return {
+    process_id: input.processId,
+    ...input.routedBy === void 0 ? {} : { routed_by: input.routedBy },
+    router_reason: input.routerReason,
+    ...input.entryMode === void 0 ? {} : { entry_mode: input.entryMode }
   };
 }
 function operatorSummaryOutputFields(input) {
@@ -60055,22 +60053,16 @@ function invalidInvocation2(message, runFolder) {
   }));
   return 2;
 }
-function commanderErrorMessage2(err) {
-  if (err instanceof CommanderError)
-    return err.message.replace(/^error: /, "");
-  return err instanceof Error ? err.message : String(err);
-}
 function parseShowArgs(argv) {
   let showOptions;
-  const program2 = new Command("circuit runs").exitOverride().configureOutput({ writeErr: () => {
-  } });
+  const program2 = configureCommanderProgram(new Command("circuit runs"));
   const show = program2.command("show").option("--json").option("--run-folder <path>").action(() => {
     showOptions = show.opts();
   });
   try {
     program2.parse(argv, { from: "user" });
   } catch (err) {
-    return commanderErrorMessage2(err);
+    return commanderErrorMessage(err);
   }
   if (showOptions === void 0)
     return "runs requires a subcommand";
@@ -60109,29 +60101,6 @@ async function runRunsCommand(argv) {
 var DEFAULT_RUNS_BASE2 = ".circuit/runs";
 var AUTONOMOUS_LOOP_RELATIVE_PATH = "reports/autonomous-loop.json";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
-function tryPostRunArtifact(label, context, write) {
-  try {
-    return write();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    context.warnings.push({ label, message });
-    if (!context.progressJsonl) {
-      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}
-`);
-    }
-    return void 0;
-  }
-}
-function postRunArtifactWarningOutputFields(warnings) {
-  if (warnings.length === 0)
-    return {};
-  return {
-    post_run_artifact_warnings: warnings.map((warning) => ({
-      label: warning.label,
-      message: warning.message
-    }))
-  };
-}
 function usage() {
   return [
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
@@ -60159,12 +60128,12 @@ function readSourceVersion() {
   if (true)
     return "0.1.0-alpha.6";
   const candidates = [
-    resolve15(dirname12(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
-    resolve15(process.cwd(), "plugins/version.json")
+    resolve16(dirname12(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
+    resolve16(process.cwd(), "plugins/version.json")
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync38(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync36(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -60211,18 +60180,6 @@ function runVersionCommand(argv) {
 `);
   return 0;
 }
-function parseCommander3(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
 function parseTopLevelInvocation(argv) {
   let invocation;
   const program2 = new Command("circuit").exitOverride().configureOutput({ writeErr: () => {
@@ -60232,22 +60189,9 @@ function parseTopLevelInvocation(argv) {
       invocation = { command: name, argv: args };
     });
   };
-  addForwardingCommand("run");
-  addForwardingCommand("resume");
-  addForwardingCommand("handoff");
-  addForwardingCommand("history");
-  addForwardingCommand("create");
-  addForwardingCommand("runs");
-  addForwardingCommand("version");
-  try {
-    program2.parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
+  for (const name of CLI_COMMAND_NAMES)
+    addForwardingCommand(name);
+  parseCommanderOrThrow(program2, argv);
   if (invocation === void 0) {
     throw new Error("missing command: use run, resume, handoff, history, create, runs, or version");
   }
@@ -60258,7 +60202,7 @@ function addExecutionOptions(program2) {
 }
 function parseExecutionArgs(command, argv) {
   const program2 = addExecutionOptions(new Command(`circuit ${command}`).argument("[flow-name]"));
-  parseCommander3(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   const opts = program2.opts();
   const flowName = program2.args[0];
   if (opts.dryRun === true) {
@@ -60360,14 +60304,14 @@ function parseExecutionArgs(command, argv) {
 }
 function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   if (override !== void 0)
-    return resolve15(override);
-  const root = resolve15(flowRoot2 ?? "generated/flows");
+    return resolve16(override);
+  const root = resolve16(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
-    const perMode = resolve15(root, flowName, `${modeName}.json`);
-    if (existsSync22(perMode))
+    const perMode = resolve16(root, flowName, `${modeName}.json`);
+    if (existsSync23(perMode))
       return perMode;
   }
-  return resolve15(root, flowName, "circuit.json");
+  return resolve16(root, flowName, "circuit.json");
 }
 function progressReporter(enabled) {
   if (!enabled)
@@ -60492,10 +60436,10 @@ function validateFlowAxes(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync22(fixturePath)) {
+  if (!existsSync23(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync38(fixturePath);
+  const bytes = readFileSync36(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -60557,12 +60501,10 @@ function historyRecallOutputFields(input) {
 }
 function runEnvelopeMemoryContext(report) {
   if (report === void 0)
-    return {};
+    return void 0;
   return {
-    memoryContext: {
-      used: report.status === "used",
-      memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id)
-    }
+    used: report.status === "used",
+    memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id)
   };
 }
 function shouldPrepareHistoryRecall(options) {
@@ -60608,68 +60550,67 @@ async function main(argv, options = {}) {
 `);
     return 2;
   }
+  if (args.command === "resume") {
+    return runResumeCommand(args, options);
+  }
+  return runExecutionCommand(args, options);
+}
+async function runResumeCommand(args, options) {
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder2 = resolve15(args.runFolder);
-    const progress2 = progressReporter(args.progress === "jsonl");
-    if (await isRuntimeRunFolder(runFolder2)) {
+    const runFolder = resolve16(args.runFolder);
+    const progress = progressReporter(args.progress === "jsonl");
+    if (await isRuntimeRunFolder(runFolder)) {
       const runtimeResult = await resumeCompiledFlow({
-        runDir: runFolder2,
+        runDir: runFolder,
         selection: args.checkpointChoice,
         now: options.now ?? (() => /* @__PURE__ */ new Date()),
         childCompiledFlowResolver: defaultChildCompiledFlowResolver(void 0),
         ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
-        ...progress2 === void 0 ? {} : { progress: progress2 },
+        ...progress === void 0 ? {} : { progress },
         progressSurfaceForFlowId
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync38(runtimeResult.resultPath, "utf8")));
-      const priorRoute = readPriorRoute(runFolder2);
+      const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
+      const priorRoute = readPriorRoute(runFolder);
       const postRunArtifactWarnings = [];
       const postRunArtifactContext = {
         progressJsonl: args.progress === "jsonl",
         warnings: postRunArtifactWarnings
       };
-      const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
-        runFolder: runFolder2,
-        runResult,
-        route: {
-          selectedFlow: runResult.flow_id,
-          ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
-          ...priorRoute.routerReason === void 0 ? {} : { routerReason: priorRoute.routerReason }
-        }
-      }));
       const recordedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-      const selectedProcess = {
-        process_id: runResult.flow_id,
-        ...priorRoute.routedBy === void 0 ? {} : { routed_by: priorRoute.routedBy },
-        router_reason: priorRoute.routerReason ?? "checkpoint resume"
-      };
-      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
-        runFolder: runFolder2,
+      const selectedProcess = selectedProcessFields({
+        processId: runResult.flow_id,
+        ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
+        routerReason: priorRoute.routerReason ?? "checkpoint resume"
+      });
+      const { operatorSummary, runEnvelope } = emitPostRunArtifacts({
+        context: postRunArtifactContext,
+        runFolder,
         operatorIntent: runResult.goal,
+        recordedAt,
         selectedProcess,
         child: {
           kind: "closed",
           runResult,
           resultPath: runtimeResult.resultPath
         },
-        recordedAt
-      }));
-      const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
-        runFolder: runFolder2,
-        projection: projectClosedProcessEvidence({
-          runFolder: runFolder2,
+        writeOperatorSummary: () => writeOperatorSummary({
+          runFolder,
+          runResult,
+          route: {
+            selectedFlow: runResult.flow_id,
+            ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
+            ...priorRoute.routerReason === void 0 ? {} : { routerReason: priorRoute.routerReason }
+          }
+        }),
+        buildProcessEvidenceProjection: () => projectClosedProcessEvidence({
+          runFolder,
           runResult,
           resultPath: runtimeResult.resultPath
-        })
-      }));
-      const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
-        runFolder: runFolder2,
-        operatorIntent: runResult.goal,
-        selectedProcess,
-        processEvidence,
-        recordedAt
-      }));
+        }),
+        // Resume reuses the saved run; it records no fresh memory context.
+        memoryContext: void 0
+      });
       const resumeRuntimeFields = showRuntimeDecision() ? {
         runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume
       } : {};
@@ -60677,7 +60618,7 @@ async function main(argv, options = {}) {
         schema_version: 1,
         run_id: runResult.run_id,
         flow_id: runResult.flow_id,
-        run_folder: runFolder2,
+        run_folder: runFolder,
         outcome: runResult.outcome,
         trace_entries_observed: runResult.trace_entries_observed,
         result_path: runtimeResult.resultPath,
@@ -60692,6 +60633,9 @@ async function main(argv, options = {}) {
     process.stderr.write("error: run folder is not a resumable Circuit run folder\n");
     return 2;
   }
+  return runExecutionCommand(args, options);
+}
+async function runExecutionCommand(args, options) {
   if (args.goal === void 0) {
     throw new Error("internal error: --goal missing outside checkpoint resume mode");
   }
@@ -60722,6 +60666,12 @@ async function main(argv, options = {}) {
     label: `Selected ${route.flowName}`,
     display: progressDisplay(`Circuit: ${selectedStatusText}`, "major", "info"),
     presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
+    // These route facets mirror routeOutputFields, but the route.selected event
+    // is a typed discriminated-union member (ProgressEvent), not the loosely
+    // typed stdout JSON. Spreading a Record<string, unknown> builder here erases
+    // the literal property types and breaks the union parse, so the fields stay
+    // inline. The shared shape is the selectedProcessFields builder used by the
+    // three selected_process literals below.
     selected_flow: flow.id,
     routed_by: route.source,
     router_reason: route.reason,
@@ -60729,13 +60679,13 @@ async function main(argv, options = {}) {
     ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName },
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
-  const runFolder = resolve15(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
+  const runFolder = resolve16(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
   const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
-  const projectRoot = resolve15(options.configCwd ?? process.cwd());
+  const projectRoot = resolve16(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
     args,
@@ -60794,30 +60744,23 @@ async function main(argv, options = {}) {
           allowed_choices: runtimeResult.checkpoint.allowedChoices
         }
       };
-      const selectedProcess2 = {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-      };
+      const selectedProcess2 = selectedProcessFields({
+        processId: flow.id,
+        routedBy: route.source,
+        routerReason: route.reason,
+        ...entryModeSelection.entryModeName === void 0 ? {} : { entryMode: entryModeSelection.entryModeName }
+      });
       const postRunArtifactWarnings2 = [];
       const postRunArtifactContext2 = {
         progressJsonl: args.progress === "jsonl",
         warnings: postRunArtifactWarnings2
       };
-      const operatorSummary2 = tryPostRunArtifact("operator-summary", postRunArtifactContext2, () => writeOperatorSummary({
-        runFolder,
-        runResult: waitingResult,
-        route: {
-          selectedFlow: route.flowName,
-          routedBy: route.source,
-          routerReason: route.reason
-        }
-      }));
       const recordedAt2 = now().toISOString();
-      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext2, () => writeRunEnvelopeShadowRecord({
+      const { operatorSummary: operatorSummary2, runEnvelope: runEnvelope2 } = emitPostRunArtifacts({
+        context: postRunArtifactContext2,
         runFolder,
         operatorIntent: operatorGoal,
+        recordedAt: recordedAt2,
         selectedProcess: selectedProcess2,
         child: {
           kind: "checkpoint_waiting",
@@ -60831,11 +60774,16 @@ async function main(argv, options = {}) {
             allowed_choices: waitingResult.checkpoint.allowed_choices
           }
         },
-        recordedAt: recordedAt2
-      }));
-      const processEvidence2 = tryPostRunArtifact("process-evidence", postRunArtifactContext2, () => writeProcessEvidenceProjection({
-        runFolder,
-        projection: projectCheckpointWaitingProcessEvidence({
+        writeOperatorSummary: () => writeOperatorSummary({
+          runFolder,
+          runResult: waitingResult,
+          route: {
+            selectedFlow: route.flowName,
+            routedBy: route.source,
+            routerReason: route.reason
+          }
+        }),
+        buildProcessEvidenceProjection: () => projectCheckpointWaitingProcessEvidence({
           runFolder,
           runId: waitingResult.run_id,
           flowId: waitingResult.flow_id,
@@ -60846,16 +60794,9 @@ async function main(argv, options = {}) {
             requestPath: runtimeResult.checkpoint.requestPath,
             allowedChoices: waitingResult.checkpoint.allowed_choices
           }
-        })
-      }));
-      const runEnvelope2 = processEvidence2 === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext2, () => writeRunEnvelopeRecord({
-        runFolder,
-        operatorIntent: operatorGoal,
-        selectedProcess: selectedProcess2,
-        processEvidence: processEvidence2,
-        recordedAt: recordedAt2,
-        ...runEnvelopeMemoryContext(historyRecall)
-      }));
+        }),
+        memoryContext: runEnvelopeMemoryContext(historyRecall)
+      });
       process.stdout.write(`${JSON.stringify({
         schema_version: 1,
         run_id: waitingResult.run_id,
@@ -60884,55 +60825,46 @@ async function main(argv, options = {}) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync38(runtimeResult.resultPath, "utf8")));
-    const selectedProcess = {
-      process_id: flow.id,
-      routed_by: route.source,
-      router_reason: route.reason,
-      ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-    };
+    const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
+    const selectedProcess = selectedProcessFields({
+      processId: flow.id,
+      routedBy: route.source,
+      routerReason: route.reason,
+      ...entryModeSelection.entryModeName === void 0 ? {} : { entryMode: entryModeSelection.entryModeName }
+    });
     const postRunArtifactWarnings = [];
     const postRunArtifactContext = {
       progressJsonl: args.progress === "jsonl",
       warnings: postRunArtifactWarnings
     };
-    const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
-      runFolder,
-      runResult,
-      route: {
-        selectedFlow: route.flowName,
-        routedBy: route.source,
-        routerReason: route.reason
-      }
-    }));
     const recordedAt = now().toISOString();
-    tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
+    const { operatorSummary, processEvidence, runEnvelope } = emitPostRunArtifacts({
+      context: postRunArtifactContext,
       runFolder,
       operatorIntent: operatorGoal,
+      recordedAt,
       selectedProcess,
       child: {
         kind: "closed",
         runResult,
         resultPath: runtimeResult.resultPath
       },
-      recordedAt
-    }));
-    const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
-      runFolder,
-      projection: projectClosedProcessEvidence({
+      writeOperatorSummary: () => writeOperatorSummary({
+        runFolder,
+        runResult,
+        route: {
+          selectedFlow: route.flowName,
+          routedBy: route.source,
+          routerReason: route.reason
+        }
+      }),
+      buildProcessEvidenceProjection: () => projectClosedProcessEvidence({
         runFolder,
         runResult,
         resultPath: runtimeResult.resultPath
-      })
-    }));
-    const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
-      runFolder,
-      operatorIntent: operatorGoal,
-      selectedProcess,
-      processEvidence,
-      recordedAt,
-      ...runEnvelopeMemoryContext(historyRecall)
-    }));
+      }),
+      memoryContext: runEnvelopeMemoryContext(historyRecall)
+    });
     let autonomousLoop;
     if (selectedAxes(args, route).autonomous === true && processEvidence !== void 0 && runEnvelope !== void 0) {
       const primaryProjection = processEvidence.projection;
@@ -61000,7 +60932,7 @@ async function main(argv, options = {}) {
                 })
               };
             }
-            const recoveryRunResult = RunResult.parse(JSON.parse(readFileSync38(recoveryResult.resultPath, "utf8")));
+            const recoveryRunResult = RunResult.parse(JSON.parse(readFileSync36(recoveryResult.resultPath, "utf8")));
             return {
               projection: projectClosedProcessEvidence({
                 runFolder: attemptFolder,

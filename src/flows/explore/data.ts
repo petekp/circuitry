@@ -1,4 +1,4 @@
-import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../policy/rubric.js';
 import { expandBlockStepUse } from '../block-step-expansion.js';
 import type { FlowData } from '../flow-definition.js';
 import {
@@ -40,6 +40,15 @@ export const exploreFlowData = {
     },
     isDefault: true,
     defaultReason: 'no routed flow signal matched; routed to explore as the conservative default',
+    inferEntryMode(taskText) {
+      if (/^\s*decide\s*:/i.test(taskText)) {
+        return {
+          name: 'tournament',
+          reason: 'matched decide intent; selected Explore tournament mode',
+        };
+      }
+      return undefined;
+    },
   },
   schematic: {
     schema_version: '1',

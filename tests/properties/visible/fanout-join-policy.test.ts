@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type FanoutJoinOutcome,
   evaluateFanoutJoinPolicy,
-} from '../../../src/shared/fanout-join-policy.js';
+} from '../../../src/policy/fanout-join-policy.js';
 
 type ChildOutcome = FanoutJoinOutcome['child_outcome'];
 

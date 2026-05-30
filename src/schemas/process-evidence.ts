@@ -52,14 +52,14 @@ export const ProcessEvidenceProjection = z
   .superRefine((projection, ctx) => {
     if (projection.child_run_ref.kind !== 'trace') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['child_run_ref', 'kind'],
         message: 'child_run_ref must point to the child run trace',
       });
     }
     if (projection.result_ref !== undefined && projection.result_ref.kind !== 'report') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['result_ref', 'kind'],
         message: 'result_ref must point to a report',
       });
@@ -68,7 +68,7 @@ export const ProcessEvidenceProjection = z
     for (const [index, ref] of projection.evidence_refs.entries()) {
       if (ref.ref.startsWith('/')) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_refs', index, 'ref'],
           message: 'process evidence refs must be run-relative',
         });
@@ -81,7 +81,7 @@ export const ProcessEvidenceProjection = z
         );
         if (!allowed.has(ref.ref)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['evidence_refs', index, 'ref'],
             message: 'process report refs must use declared process evidence paths',
           });
@@ -89,14 +89,14 @@ export const ProcessEvidenceProjection = z
       }
       if (ref.kind === 'request' && ref.ref !== projection.checkpoint?.request_ref.ref) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_refs', index, 'ref'],
           message: 'request refs are only allowed for the active checkpoint request',
         });
       }
       if (!['report', 'request', 'operator_input', 'evidence'].includes(ref.kind)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_refs', index, 'kind'],
           message: `process evidence cannot use ${ref.kind} refs`,
         });
@@ -106,14 +106,14 @@ export const ProcessEvidenceProjection = z
     if (projection.outcome === 'checkpoint_waiting') {
       if (projection.result_ref !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['result_ref'],
           message: 'checkpoint_waiting projections must not have a result ref',
         });
       }
       if (projection.checkpoint === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['checkpoint'],
           message: 'checkpoint_waiting projections require checkpoint metadata',
         });
@@ -123,21 +123,21 @@ export const ProcessEvidenceProjection = z
 
     if (projection.result_ref === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['result_ref'],
         message: 'closed process projections require a result ref',
       });
     }
     if (projection.checkpoint !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['checkpoint'],
         message: 'closed process projections must not carry checkpoint metadata',
       });
     }
     if (projection.outcome === 'complete' && projection.missing_evidence.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['missing_evidence'],
         message: 'complete process projections cannot have missing evidence',
       });
@@ -148,7 +148,7 @@ export const ProcessEvidenceProjection = z
       projection.next_action === undefined
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['blocked_reason'],
         message: 'blocked or failed process projections require a reason or next action',
       });

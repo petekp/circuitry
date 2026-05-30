@@ -1,7 +1,13 @@
+import {
+  assertConnectorCanRunRole,
+  assertConnectorSelectionCompatible,
+  resolveConnectorForGuidanceInput,
+} from '../../connectors/resolver.js';
 import type {
   RuntimeIndexedFlow,
   RuntimeIndexedRelayStep,
 } from '../../flows/registries/runtime-index.js';
+import { composePolicyHardConstraints } from '../../policy/policy-envelope.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import type { RelayResolutionSource } from '../../schemas/connector.js';
 import type { Depth } from '../../schemas/depth.js';
@@ -13,14 +19,8 @@ import type {
 import type { ResolvedSelection as ResolvedSelectionValue } from '../../schemas/selection-policy.js';
 import type { SkillSlot } from '../../schemas/skill.js';
 import { RelayRole } from '../../schemas/step.js';
-import { composePolicyHardConstraints } from '../../shared/policy-envelope.js';
 import { deriveResolvedSelection } from '../../shared/relay-selection.js';
 import { type LoadedRelaySkill, resolveLoadedRelaySkills } from '../../shared/skill-loading.js';
-import {
-  assertConnectorCanRunRole,
-  assertConnectorSelectionCompatible,
-  resolveConnectorForGuidanceInput,
-} from '../connectors/resolver.js';
 import type { RelayConnector } from '../executors/relay.js';
 import type { RelayStep } from '../manifest/executable-flow.js';
 import type { RunContext } from './run-context.js';

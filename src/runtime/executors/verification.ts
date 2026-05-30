@@ -26,36 +26,11 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
+import { proofAssessmentReportRef, proofIdPart, stepCanCloseRun, uniqueValues } from './shared.js';
 
 function verificationFailureReason(stepId: string, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `verification step '${stepId}': report writer failed (${message})`;
-}
-
-function proofIdPart(value: string): string {
-  return value.replace(/[^a-z0-9._-]/g, '-').toLowerCase();
-}
-
-function uniqueValues(values: readonly string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-
-function proofAssessmentReportRef(input: {
-  readonly context: RunContext;
-  readonly stepId: string;
-  readonly attempt: number;
-  readonly path: string;
-  readonly body: unknown;
-}): Ref {
-  return {
-    kind: 'report',
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}\n`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt,
-  };
 }
 
 function commandEvidenceRef(input: {
@@ -122,12 +97,6 @@ function verificationProofMissing(input: {
   if (input.status === 'contradicted') return [];
   if (input.observations.length === 0) return ['no runtime verification commands ran'];
   return ['verification report did not prove required commands passed'];
-}
-
-function stepCanCloseRun(step: VerificationStep): boolean {
-  return Object.values(step.routes).some(
-    (target) => target.kind === 'terminal' && target.target === '@complete',
-  );
 }
 
 async function writeVerificationProofAssessment(input: {

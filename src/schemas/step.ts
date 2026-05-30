@@ -56,6 +56,11 @@ const StepBase = z.object({
     .optional(),
 });
 
+// Type-only projection of the step budgets shape. Derived from StepBase so the
+// schema stays the single source of truth; declaring this as a type (not a new
+// runtime schema var) keeps the compiled bundle byte-identical.
+export type StepBudgets = NonNullable<z.infer<typeof StepBase>['budgets']>;
+
 // `.strict()` rejects surplus keys (no `role` on compose/checkpoint, no
 // stray fields on writes); this backs STEP-I6.
 export const ComposeStep = StepBase.extend({
@@ -121,7 +126,7 @@ export const CheckpointPolicy = z
     const hasDynamicChoices = policy.choices_from !== undefined;
     if (hasStaticChoices === hasDynamicChoices) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['choices'],
         message: 'checkpoint policy must declare exactly one of choices or choices_from',
       });
@@ -131,7 +136,7 @@ export const CheckpointPolicy = z
       for (const [index, choice] of policy.choices.entries()) {
         if (choiceIds.has(choice.id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['choices', index, 'id'],
             message: `duplicate checkpoint choice '${choice.id}'`,
           });
@@ -142,7 +147,7 @@ export const CheckpointPolicy = z
     for (const [field, value] of [['safe_default_choice', policy.safe_default_choice]] as const) {
       if (value !== undefined && policy.choices !== undefined && !choiceIds.has(value)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [field],
           message: `${field} must reference a declared checkpoint choice`,
         });
@@ -434,7 +439,7 @@ export const FanoutRubric = z
     for (const [index, dimId] of rubric.ordered_dims.entries()) {
       if (orderedDims.has(dimId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['ordered_dims', index],
           message: `duplicate rubric dim '${dimId}'`,
         });
@@ -445,7 +450,7 @@ export const FanoutRubric = z
     for (const [dimId] of Object.entries(rubric.runtime_signals)) {
       if (!orderedDims.has(dimId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['runtime_signals', dimId],
           message: `runtime signal dim '${dimId}' must appear in ordered_dims`,
         });
@@ -454,7 +459,7 @@ export const FanoutRubric = z
     for (const [index, dimId] of rubric.ordered_dims.entries()) {
       if (rubric.runtime_signals[dimId] === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['ordered_dims', index],
           message: `ordered dim '${dimId}' must declare a runtime signal source`,
         });
@@ -512,7 +517,7 @@ export const Step = z
     const writes = step.writes as Record<string, unknown>;
     if (!Object.hasOwn(writes, slot) || writes[slot] === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['check', 'source', 'ref'],
         message: `check.source.ref "${slot}" does not resolve to a usable slot in step.writes (available: ${Object.keys(writes).join(', ')})`,
       });
@@ -522,21 +527,21 @@ export const Step = z
       const hasDynamicAllow = step.check.allow_from !== undefined;
       if (hasStaticAllow === hasDynamicAllow) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['check', 'allow'],
           message: 'checkpoint check must declare exactly one of allow or allow_from',
         });
       }
       if (hasStaticAllow && step.policy.choices === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['check', 'allow'],
           message: 'checkpoint check.allow requires static policy.choices',
         });
       }
       if (hasDynamicAllow && step.check.allow_from?.kind !== 'policy_choices') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['check', 'allow_from'],
           message: 'checkpoint check.allow_from must reference policy_choices',
         });
@@ -546,7 +551,7 @@ export const Step = z
         const checkChoiceIds = [...step.check.allow].sort();
         if (policyChoiceIds.join('\0') !== checkChoiceIds.join('\0')) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['check', 'allow'],
             message: 'checkpoint check.allow must exactly match policy.choices ids',
           });
@@ -558,7 +563,7 @@ export const Step = z
         step.policy.choices_from === undefined
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['policy', 'choices_from'],
           message: 'checkpoint check.allow_from requires policy.choices or policy.choices_from',
         });
@@ -566,7 +571,7 @@ export const Step = z
       if (step.writes.report !== undefined) {
         if (step.policy.report_template === undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['policy', 'report_template'],
             message: 'checkpoint report writing requires policy.report_template',
           });
@@ -584,7 +589,7 @@ export const Step = z
           if (branch === undefined) continue;
           if (seen.has(branch.branch_id)) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: 'custom',
               path: ['branches', 'branches', i, 'branch_id'],
               message: `duplicate branch_id '${branch.branch_id}'`,
             });
@@ -599,7 +604,7 @@ export const Step = z
       if (step.branches.kind === 'dynamic') {
         if (!step.branches.template.branch_id.includes('$item')) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['branches', 'template', 'branch_id'],
             message:
               'dynamic fanout template.branch_id must contain `$item` placeholder so per-item expansion produces unique branch ids',

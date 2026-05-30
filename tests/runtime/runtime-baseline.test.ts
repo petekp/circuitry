@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TERMINAL_TARGETS } from '../../src/runtime/domain/route.js';
@@ -17,17 +16,33 @@ import {
   writeRuntimeManifestSnapshot,
 } from '../../src/runtime/run/manifest-snapshot.js';
 import { TraceStore } from '../../src/runtime/trace/trace-store.js';
+import type { ResultVerdictCheck, SchemaSectionsCheck } from '../../src/schemas/check.js';
 import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
 import { ProofAssessment } from '../../src/schemas/proof-assessment.js';
 import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
+import { withTempRun } from '../helpers/runtime-fixtures.js';
 
 const change_kind = {
   change_kind: 'ratchet-advance' as const,
   failure_mode: 'runtime baseline fixture failed',
   acceptance_evidence: 'runtime baseline assertions pass',
   alternate_framing: 'use a narrower executable flow fixture',
+};
+
+// Default per-kind checks for hand-built executable-step fixtures. The
+// ExecutableStep type now carries the same strict check shapes the compiled
+// flow does, so fixtures must declare a valid check per kind.
+const SCHEMA_SECTIONS_CHECK: SchemaSectionsCheck = {
+  kind: 'schema_sections',
+  source: { kind: 'report', ref: 'report' },
+  required: ['summary'],
+};
+const RESULT_VERDICT_CHECK: ResultVerdictCheck = {
+  kind: 'result_verdict',
+  source: { kind: 'relay_result', ref: 'result' },
+  pass: ['accept'],
 };
 
 function bootstrapTraceInput(runId: string) {
@@ -42,15 +57,6 @@ function bootstrapTraceInput(runId: string) {
   };
 }
 
-async function withTempRun<T>(fn: (runDir: string) => Promise<T>): Promise<T> {
-  const runDir = await mkdtemp(join(tmpdir(), 'circuit-runtime-'));
-  try {
-    return await fn(runDir);
-  } finally {
-    await rm(runDir, { recursive: true, force: true });
-  }
-}
-
 function validFlow(): ExecutableFlow {
   return {
     id: 'baseline',
@@ -62,6 +68,7 @@ function validFlow(): ExecutableFlow {
         id: 'compose',
         kind: 'compose',
         writer: 'baseline-writer',
+        check: SCHEMA_SECTIONS_CHECK,
         body: { ok: true },
         writes: { result: { path: 'reports/compose.json' } },
         routes: { pass: { kind: 'step', stepId: 'relay' } },
@@ -71,6 +78,7 @@ function validFlow(): ExecutableFlow {
         kind: 'relay',
         role: 'reviewer',
         prompt: 'inspect the composed file',
+        check: RESULT_VERDICT_CHECK,
         writes: { report: { path: 'reports/relay.json' } },
         routes: { pass: { kind: 'terminal', target: '@complete' } },
       },
@@ -207,6 +215,7 @@ describe('runtime baseline', () => {
             id: 'compose',
             kind: 'compose',
             writer: 'guard-writer',
+            check: SCHEMA_SECTIONS_CHECK,
             routes: { pass: { kind: 'terminal', target: '@complete' } },
           },
         ],
@@ -281,6 +290,7 @@ describe('runtime baseline', () => {
           id: 'compose',
           kind: 'compose',
           writer: 'baseline-writer',
+          check: SCHEMA_SECTIONS_CHECK,
           routes: { pass: { kind: 'step', stepId: 'missing' } },
         },
       ],
@@ -359,7 +369,13 @@ describe('runtime baseline', () => {
 
       expect(trace.getAll().map((entry) => entry.sequence)).toEqual([0, 1, 2]);
       await expect(
-        trace.append({ run_id: 'run-trace', kind: 'step.completed', step_id: 'compose' }),
+        trace.append({
+          run_id: 'run-trace',
+          kind: 'step.completed',
+          step_id: 'compose',
+          attempt: 1,
+          route_taken: 'pass',
+        }),
       ).rejects.toThrow('cannot append trace entry after run close');
 
       const reloaded = new TraceStore(runDir);
@@ -425,6 +441,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'will-fail',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'terminal', target: '@complete' } },
             },
           ],
@@ -475,6 +492,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'wrong-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'terminal', target: '@complete' } },
             },
           ],
@@ -514,6 +532,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'step', stepId: 'compose' } },
             },
           ],
@@ -572,12 +591,14 @@ describe('runtime baseline', () => {
               id: 'first',
               kind: 'compose',
               writer: 'first',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: { pass: { kind: 'step', stepId: 'second' } },
             },
             {
               id: 'second',
               kind: 'compose',
               writer: 'second',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 continue: { kind: 'step', stepId: 'first' },
@@ -634,6 +655,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 continue: { kind: 'step', stepId: 'compose' },
@@ -694,6 +716,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'step', stepId: 'compose' },
@@ -743,6 +766,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'self-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'step', stepId: 'compose' },
@@ -808,6 +832,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'failure-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -875,6 +900,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'bare-recovery-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -932,6 +958,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'report-reason-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -997,6 +1024,7 @@ describe('runtime baseline', () => {
               id: 'compose',
               kind: 'compose',
               writer: 'failure-route',
+              check: SCHEMA_SECTIONS_CHECK,
               routes: {
                 pass: { kind: 'terminal', target: '@complete' },
                 revise: { kind: 'terminal', target: '@stop' },
@@ -1289,7 +1317,12 @@ describe('runtime baseline', () => {
   });
 
   it('derives status from trace entries', () => {
-    const entries: TraceEntry[] = [
+    // projectStatusFromTrace reads only `kind` and `outcome`; these fixtures
+    // are deliberately minimal (and the final case carries an intentionally
+    // invalid outcome) so they are fabricated as loose TraceEntry values.
+    const statusEntries = (entries: readonly Record<string, unknown>[]): TraceEntry[] =>
+      entries as unknown as TraceEntry[];
+    const entries = statusEntries([
       { sequence: 0, run_id: 'run-status', kind: 'run.bootstrapped' },
       {
         sequence: 1,
@@ -1297,34 +1330,38 @@ describe('runtime baseline', () => {
         kind: 'run.closed',
         outcome: 'complete',
       },
-    ];
+    ]);
 
     expect(projectStatusFromTrace([])).toBe('not_started');
     expect(projectStatusFromTrace(entries.slice(0, 1))).toBe('running');
     expect(projectStatusFromTrace(entries)).toBe('complete');
     for (const outcome of ['aborted', 'handoff', 'stopped', 'escalated'] as const) {
       expect(
-        projectStatusFromTrace([
-          { sequence: 0, run_id: `run-${outcome}`, kind: 'run.bootstrapped' },
-          {
-            sequence: 1,
-            run_id: `run-${outcome}`,
-            kind: 'run.closed',
-            outcome,
-          },
-        ]),
+        projectStatusFromTrace(
+          statusEntries([
+            { sequence: 0, run_id: `run-${outcome}`, kind: 'run.bootstrapped' },
+            {
+              sequence: 1,
+              run_id: `run-${outcome}`,
+              kind: 'run.closed',
+              outcome,
+            },
+          ]),
+        ),
       ).toBe(outcome);
     }
     expect(
-      projectStatusFromTrace([
-        { sequence: 0, run_id: 'run-unknown', kind: 'run.bootstrapped' },
-        {
-          sequence: 1,
-          run_id: 'run-unknown',
-          kind: 'run.closed',
-          outcome: 'checkpoint_waiting',
-        },
-      ]),
+      projectStatusFromTrace(
+        statusEntries([
+          { sequence: 0, run_id: 'run-unknown', kind: 'run.bootstrapped' },
+          {
+            sequence: 1,
+            run_id: 'run-unknown',
+            kind: 'run.closed',
+            outcome: 'checkpoint_waiting',
+          },
+        ]),
+      ),
     ).toBe('aborted');
   });
 });

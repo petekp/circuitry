@@ -24,12 +24,19 @@ function generatedFlow(flowId: string) {
   return fromCompiledFlow(CompiledFlow.parse(body));
 }
 
-function trace(entry: Omit<TraceEntry, 'run_id' | 'recorded_at'>): TraceEntry {
+// The progress projector reads each entry defensively (kind-narrowed field
+// reads with fallbacks), so these fixtures are intentionally minimal per
+// variant. They are fabricated as loose trace bodies and completed with the
+// auto-filled run_id/recorded_at here, then handed to the projector as
+// TraceEntry values.
+function trace(
+  entry: { readonly sequence: number; readonly kind: TraceEntry['kind'] } & Record<string, unknown>,
+): TraceEntry {
   return {
     run_id: RUN_ID,
     recorded_at: RECORDED_AT,
     ...entry,
-  };
+  } as unknown as TraceEntry;
 }
 
 function projectProgress(flowId: string, entries: readonly TraceEntry[]): ProgressEvent[] {
@@ -129,6 +136,133 @@ describe('runtime progress projection', () => {
       slot_id: 'synthesize-step:relay',
       status_text: 'Finished drafting the recommendation.',
     });
+  });
+
+  it('emits the relay.started progress line for the cursor-agent connector', () => {
+    // Regression: connectorFromTrace previously recognized only claude-code
+    // and codex as built-in connectors, so a cursor-agent relay silently
+    // dropped its relay.started progress line that the other connectors emit.
+    const progress = projectProgress('explore', [
+      trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'explore' }),
+      trace({ sequence: 1, kind: 'step.entered', step_id: 'synthesize-step', attempt: 1 }),
+      trace({
+        sequence: 2,
+        kind: 'relay.started',
+        step_id: 'synthesize-step',
+        role: 'implementer',
+        connector: { kind: 'builtin', name: 'cursor-agent' },
+      }),
+    ]);
+
+    const relayStarted = progress.find((event) => event.type === 'relay.started');
+    expect(relayStarted).toBeDefined();
+    expect(relayStarted).toMatchObject({
+      type: 'relay.started',
+      role: 'implementer',
+      connector_name: 'cursor-agent',
+      connector_kind: 'builtin',
+      filesystem_capability: 'trusted-write',
+    });
+    expect(relayStarted?.display.text).toBe(
+      'Circuit: Asking the specialist to draft the recommendation...',
+    );
+  });
+
+  it('locks fanout started/branch/joined progress derivations', () => {
+    // Characterization: the fanout progress derivations (child_outcome,
+    // policy, branch_kind, branch_ids) are only exercised through the
+    // projector and were otherwise uncovered. This pins their current output
+    // before centralizing the inline helpers behind shared accessors.
+    const progress = projectProgress('explore', [
+      trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'explore' }),
+      trace({
+        sequence: 1,
+        kind: 'fanout.started',
+        step_id: 'synthesize-step',
+        branch_ids: ['option-1', 'option-2'],
+      }),
+      trace({
+        sequence: 2,
+        kind: 'fanout.branch_started',
+        step_id: 'synthesize-step',
+        branch_id: 'option-1',
+        branch_kind: 'sub-run',
+        child_run_id: '22222222-2222-4222-8222-222222222222',
+        worktree_path: 'worktrees/option-1',
+      }),
+      trace({
+        sequence: 3,
+        kind: 'fanout.branch_completed',
+        step_id: 'synthesize-step',
+        branch_id: 'option-1',
+        branch_kind: 'sub-run',
+        child_run_id: '22222222-2222-4222-8222-222222222222',
+        child_outcome: 'complete',
+        verdict: 'accept',
+        duration_ms: 42,
+      }),
+      trace({
+        sequence: 4,
+        kind: 'fanout.joined',
+        step_id: 'synthesize-step',
+        policy: 'pick-winner',
+        selected_branch_id: 'option-1',
+        aggregate_path: 'fanout/aggregate.json',
+        branches_completed: 1,
+        branches_failed: 1,
+      }),
+    ]);
+
+    expect(progress.find((event) => event.type === 'fanout.started')).toMatchObject({
+      type: 'fanout.started',
+      branch_count: 2,
+      branch_ids: ['option-1', 'option-2'],
+    });
+    expect(progress.find((event) => event.type === 'fanout.branch_started')).toMatchObject({
+      type: 'fanout.branch_started',
+      branch_id: 'option-1',
+      branch_kind: 'sub-run',
+      child_run_id: '22222222-2222-4222-8222-222222222222',
+      worktree_path: 'worktrees/option-1',
+    });
+    expect(progress.find((event) => event.type === 'fanout.branch_completed')).toMatchObject({
+      type: 'fanout.branch_completed',
+      branch_id: 'option-1',
+      branch_kind: 'sub-run',
+      child_outcome: 'complete',
+      verdict: 'accept',
+      duration_ms: 42,
+    });
+    expect(progress.find((event) => event.type === 'fanout.joined')).toMatchObject({
+      type: 'fanout.joined',
+      policy: 'pick-winner',
+      selected_branch_id: 'option-1',
+      aggregate_path: 'fanout/aggregate.json',
+      branches_completed: 1,
+      branches_failed: 1,
+    });
+  });
+
+  it('locks run.closed outcome derivations (completed and aborted)', () => {
+    // Characterization: runOutcome/runReason fall back to 'aborted' and emit
+    // distinct run.aborted vs run.completed progress events. Pin both branches
+    // before centralizing the inline derivations.
+    const completed = projectProgress('explore', [
+      trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'explore' }),
+      trace({ sequence: 1, kind: 'run.closed', outcome: 'complete' }),
+    ]);
+    expect(completed.find((event) => event.type === 'run.completed')).toMatchObject({
+      type: 'run.completed',
+      outcome: 'complete',
+    });
+
+    const aborted = projectProgress('explore', [
+      trace({ sequence: 0, kind: 'run.bootstrapped', flow_id: 'explore' }),
+      trace({ sequence: 1, kind: 'run.closed', outcome: 'aborted', reason: 'boom' }),
+    ]);
+    const abortedEvent = aborted.find((event) => event.type === 'run.aborted');
+    expect(abortedEvent).toMatchObject({ type: 'run.aborted', outcome: 'aborted', reason: 'boom' });
+    expect(abortedEvent?.display.text).toBe('Circuit: Run aborted: boom');
   });
 
   it('keeps non-Explore relay started and completed copy stable', () => {

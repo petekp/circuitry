@@ -1,7 +1,7 @@
+import { validateRunFilePath } from '../../shared/run-file-paths.js';
 import { type RouteTarget, TERMINAL_TARGETS } from '../domain/route.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepId } from '../domain/step.js';
-import { validateRunFilePath } from '../run-files/paths.js';
 import type { ExecutableFlow } from './executable-flow.js';
 
 export interface ExecutableFlowValidation {
@@ -109,14 +109,14 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
     if (step.kind === 'relay' && step.report !== undefined) {
       addRunFilePathIssues(issues, `relay step '${step.id}' report`, step.report);
     }
-    if (step.kind === 'fanout' && typeof step.join === 'object' && step.join !== null) {
-      const aggregate = (step.join as { readonly aggregate?: unknown }).aggregate;
+    if (step.kind === 'fanout') {
+      const aggregate = step.writes?.aggregate;
       if (
         typeof aggregate === 'object' &&
         aggregate !== null &&
-        typeof (aggregate as { readonly path?: unknown }).path === 'string'
+        typeof aggregate.path === 'string'
       ) {
-        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate as RunFileRef);
+        addRunFilePathIssues(issues, `fanout step '${step.id}' aggregate`, aggregate);
       }
     }
 
@@ -124,7 +124,7 @@ export function validateExecutableFlow(flow: ExecutableFlow): ExecutableFlowVali
       const hasDynamicChoices =
         typeof step.policy === 'object' &&
         step.policy !== null &&
-        (step.policy as { readonly choices_from?: unknown }).choices_from !== undefined;
+        step.policy.choices_from !== undefined;
       if (step.choices.length === 0 && !hasDynamicChoices) {
         issues.push(`checkpoint step '${step.id}' must declare at least one choice`);
       }

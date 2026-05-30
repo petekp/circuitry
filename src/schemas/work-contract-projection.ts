@@ -218,7 +218,7 @@ export const WorkContractProjectionV0 = z
       const key = `${binding.step_id}:${binding.route_id}`;
       if (seenRecovery.has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['work_contract', 'recovery', index, 'route_id'],
           message: `duplicate recovery binding for ${key}`,
         });
@@ -228,7 +228,7 @@ export const WorkContractProjectionV0 = z
       const declaredTarget = routeTargets.get(key);
       if (declaredTarget === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['work_contract', 'recovery', index, 'route_id'],
           message: 'recovery route binding must name a declared route',
         });
@@ -236,7 +236,7 @@ export const WorkContractProjectionV0 = z
       }
       if (declaredTarget !== binding.route_target) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['work_contract', 'recovery', index, 'route_target'],
           message: 'recovery route target must match the declared route target',
         });

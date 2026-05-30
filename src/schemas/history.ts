@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MemoryInputV0 } from './memory-input.js';
-import { Ref } from './ref.js';
+import { Ref, Sha256 } from './ref.js';
 
 export const HISTORY_AUTHORITY_NOTICE =
   'History results are hint-only prior-run context. They cannot satisfy current proof, checkpoint, policy, route, recovery, verification, or write authority.';
@@ -38,7 +38,7 @@ export const HistoryManifestV1 = z
     document_count: z.number().int().nonnegative(),
     source_fingerprint: z
       .object({
-        run_folder_names_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+        run_folder_names_sha256: Sha256,
         latest_source_mtime_ms: z.number().int().nonnegative(),
       })
       .strict(),
@@ -61,10 +61,7 @@ export const HistoryDocumentV1 = z
     run_folder: z.string().min(1),
     source_path: z.string().min(1),
     source_ref: Ref,
-    source_sha256: z
-      .string()
-      .regex(/^[0-9a-f]{64}$/)
-      .optional(),
+    source_sha256: Sha256.optional(),
     source_mtime_ms: z.number().int().nonnegative().optional(),
     report_schema: z.string().min(1).optional(),
     step_id: z.string().min(1).optional(),
@@ -99,14 +96,14 @@ export const HistoryStalenessV1 = z
   .superRefine((staleness, ctx) => {
     if (staleness.status === 'unknown' && !staleness.reason_codes.includes('memory_unverified')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['reason_codes'],
         message: 'unknown history staleness requires memory_unverified reason code',
       });
     }
     if (staleness.status === 'stale' && !staleness.reason_codes.includes('memory_stale')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['reason_codes'],
         message: 'stale history staleness requires memory_stale reason code',
       });
@@ -191,28 +188,28 @@ export const HistoryRecallReportV1 = z
   .superRefine((report, ctx) => {
     if (report.memory_input_count !== report.memory_inputs.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['memory_input_count'],
         message: 'memory_input_count must equal memory_inputs.length',
       });
     }
     if (report.status === 'used' && report.memory_inputs.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status'],
         message: "status 'used' requires at least one memory input",
       });
     }
     if (report.status !== 'used' && report.memory_inputs.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['memory_inputs'],
         message: "only status 'used' may include memory inputs",
       });
     }
     if (report.status === 'unavailable' && report.index_state !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['index_state'],
         message: "status 'unavailable' must not claim an index_state",
       });

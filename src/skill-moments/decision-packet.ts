@@ -1,3 +1,11 @@
+// Skill-moment decision-packet builders — pre-wired alongside ./policy.ts.
+//
+// Part of the deliberately forward-staged skill-moment policy layer (Phase 3.5
+// of the run-centered migration). No live caller yet by design; the schema half
+// (Config.moments, Step.skill_moments, the 'skill-moment-ask' decision reason)
+// ships today. Oracle: tests/contracts/skill-moment-policy-schema.test.ts.
+// See ./policy.ts for the full lifecycle note. Intentionally staged, not dead.
+
 import { RunId } from '../schemas/ids.js';
 import type { Ref } from '../schemas/ref.js';
 import {

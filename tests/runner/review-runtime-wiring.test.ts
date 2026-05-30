@@ -11,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import {
   type ReviewFinding,
@@ -61,11 +62,6 @@ function loadFixtureWithRenamedAnalyzeResultPath(resultPath: string): {
   const bytes = Buffer.from(`${JSON.stringify(raw, null, 2)}\n`);
   CompiledFlow.parse(raw);
   return { bytes };
-}
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
 }
 
 // Stub reviewer prose attached to every NO_ISSUES_FOUND relay payload these

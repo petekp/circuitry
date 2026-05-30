@@ -1,8 +1,8 @@
 import { join as joinPath } from 'node:path';
+import { connectorCapabilities } from '../../connectors/resolver.js';
+import { evaluateFanoutJoinPolicy } from '../../policy/fanout-join-policy.js';
 import { FanoutFailurePolicy } from '../../schemas/step.js';
 import { buildFanoutAggregate } from '../../shared/fanout-aggregate-report.js';
-import { evaluateFanoutJoinPolicy } from '../../shared/fanout-join-policy.js';
-import { connectorCapabilities } from '../connectors/resolver.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepOutcome } from '../domain/step.js';
 import {
@@ -27,8 +27,6 @@ import {
 function aggregateRef(step: FanoutStep): RunFileRef {
   const aggregate = step.writes?.aggregate;
   if (aggregate !== undefined) return aggregate;
-  const joinAggregate = (step.join as { readonly aggregate?: RunFileRef }).aggregate;
-  if (joinAggregate !== undefined) return joinAggregate;
   throw new Error(`fanout step '${step.id}' is missing writes.aggregate`);
 }
 
@@ -39,7 +37,7 @@ function branchesDir(step: FanoutStep): string {
 }
 
 function joinPolicy(step: FanoutStep): FanoutJoinPolicy {
-  const policy = (step.check as { readonly join?: { readonly policy?: unknown } }).join?.policy;
+  const policy = step.check.join?.policy;
   if (
     policy === 'pick-winner' ||
     policy === 'disjoint-merge' ||
@@ -52,8 +50,7 @@ function joinPolicy(step: FanoutStep): FanoutJoinPolicy {
 }
 
 function admitOrder(step: FanoutStep): readonly string[] {
-  const admit = (step.check as { readonly verdicts?: { readonly admit?: unknown } }).verdicts
-    ?.admit;
+  const admit = step.check.verdicts?.admit;
   return Array.isArray(admit)
     ? admit.filter((entry): entry is string => typeof entry === 'string')
     : [];
@@ -65,7 +62,7 @@ const WRITABLE_RELAY_SERIALIZATION_REASON =
   'Writable relay fanout branches are serialized because relay branches share the parent checkout and no branch-local relay write root is provisioned.';
 
 function concurrencyLimit(step: FanoutStep): FanoutConcurrencyLimit {
-  const concurrency = step.concurrency as { readonly kind?: unknown; readonly max?: unknown };
+  const concurrency = step.concurrency;
   if (concurrency?.kind === 'unbounded') return 'unbounded';
   if (concurrency?.kind === 'bounded' && typeof concurrency.max === 'number') {
     return concurrency.max;

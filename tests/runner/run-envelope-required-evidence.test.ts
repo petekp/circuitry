@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   deriveRequiredEvidence,
   requiredEvidenceKindForProcess,
-} from '../../src/run-envelope/source-record.js';
+} from '../../src/app/run-envelope/source-record.js';
 
 describe('Run done_when required-evidence derivation (S2)', () => {
   it('maps each process to a task-appropriate primary evidence kind', () => {

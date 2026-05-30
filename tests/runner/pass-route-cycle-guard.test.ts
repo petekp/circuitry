@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { ExecutableFlow } from '../../src/runtime/manifest/executable-flow.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
@@ -9,11 +10,6 @@ import { TraceStore } from '../../src/runtime/trace/trace-store.js';
 import { CompiledFlowId, StepId } from '../../src/schemas/ids.js';
 import type { RecoveryRouteBindingV0 } from '../../src/schemas/recovery-route-kind.js';
 import { RunResult } from '../../src/schemas/result.js';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function flowWithPassCycle(): ExecutableFlow {
   return {
@@ -26,6 +22,11 @@ function flowWithPassCycle(): ExecutableFlow {
         id: 'compose-step',
         kind: 'compose',
         writer: 'cycle-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         writes: { report: { path: 'reports/compose.json' } },
         routes: { pass: { kind: 'step', stepId: 'compose-step' } },
       },
@@ -45,18 +46,33 @@ function flowWithRecoveryCorridor(): ExecutableFlow {
         id: 'act-step',
         kind: 'compose',
         writer: 'act-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: { pass: { kind: 'step', stepId: 'verify-step' } },
       },
       {
         id: 'verify-step',
         kind: 'compose',
         writer: 'verify-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: { pass: { kind: 'step', stepId: 'change-set-step' } },
       },
       {
         id: 'change-set-step',
         kind: 'compose',
         writer: 'change-set-writer',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: {
           pass: { kind: 'terminal', target: '@complete' },
           retry: { kind: 'step', stepId: 'act-step' },
@@ -128,7 +144,7 @@ describe('WF-I11 runtime-safety-floor pass-route cycle guard', () => {
     expect(outcome.reason).toContain(firstStep.id);
 
     const stepKinds = trace_entries
-      .filter((trace_entry) => trace_entry.step_id === firstStep.id)
+      .filter((trace_entry) => 'step_id' in trace_entry && trace_entry.step_id === firstStep.id)
       .map((trace_entry) => trace_entry.kind);
     expect(stepKinds).toEqual(['step.entered', 'step.aborted']);
     expect(

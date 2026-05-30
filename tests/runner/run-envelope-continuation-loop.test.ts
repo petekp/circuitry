@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   type AttemptResult,
   runContinuationLoop,
-} from '../../src/run-envelope/continuation-loop.js';
+} from '../../src/app/run-envelope/continuation-loop.js';
 import { goalContract as contract } from './run-envelope-fixtures.js';
 
 function scriptedRunner(results: readonly AttemptResult[]) {

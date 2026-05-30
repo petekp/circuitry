@@ -1,3 +1,4 @@
+import { CLAUDE_CODE_SUPPORTED_EFFORTS } from '../schemas/connector.js';
 import type { Effort } from '../schemas/selection-policy.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import {
@@ -8,8 +9,11 @@ import {
 import { extractJsonObject } from '../shared/json-extraction.js';
 import {
   type ConnectorSubprocessResult,
+  cappedSuffix,
   isConnectorSubprocessSpawnError,
+  parseNdjsonObjects,
   runConnectorSubprocess,
+  spawnErrorVerb,
 } from './subprocess.js';
 
 export { sha256Hex };
@@ -81,7 +85,10 @@ export const CLAUDE_CODE_DISPATCH_FLAGS = [
 ] as const;
 
 export const CLAUDE_CODE_EXECUTABLE = 'claude';
-export const CLAUDE_CODE_SUPPORTED_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+// Re-exported from the built-in connector registry (the single source of
+// truth); kept under this name for the connector's own effort guard and for
+// call sites bound to the claude-code connector.
+export { CLAUDE_CODE_SUPPORTED_EFFORTS };
 
 // Default wall-clock budget for a single relay. With the open tool
 // surface, workers do real file inspection / edits / verification before
@@ -191,22 +198,21 @@ export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<Rela
     });
   } catch (error) {
     if (isConnectorSubprocessSpawnError(error)) {
-      const verb = error.phase === 'spawn-failed' ? 'spawn failed' : 'spawn error';
-      throw new Error(`claude-code subprocess ${verb}: ${error.message}`);
+      throw new Error(`claude-code subprocess ${spawnErrorVerb(error)}: ${error.message}`);
     }
     throw error;
   }
 
   if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-    const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+    const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
     throw new Error(
       `claude-code subprocess timed out after ${timeoutMs}ms; group-kill ${result.killGroupSucceeded ? 'sent' : 'failed'}; final signal=${result.signal ?? 'none'}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`,
     );
   }
   if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-    const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+    const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
     const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
     const diagnosticText =
       stdoutDiagnostic === undefined ? '' : `; stdout_diagnostic=${stdoutDiagnostic}`;
@@ -222,7 +228,7 @@ export async function relayClaudeCode(input: ClaudeCodeRelayInput): Promise<Rela
   try {
     return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
   } catch (error) {
-    const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+    const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
     throw new Error(
       `claude-code subprocess: ${(error as Error).message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`,
     );
@@ -245,24 +251,9 @@ export function parseClaudeCodeStdout(
   prompt: string,
   duration_ms: number,
 ): RelayResult {
-  const lines = stdout.split('\n').filter((line) => line.length > 0);
-  if (lines.length === 0) {
+  const trace_entries = parseNdjsonObjects(stdout, 'stream-json');
+  if (trace_entries.length === 0) {
     throw new Error('stream-json stdout is empty');
-  }
-  const trace_entries: Array<Record<string, unknown>> = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(
-        `stream-json line ${idx + 1} is not valid JSON: ${(err as Error).message}; line[:200]=${line.slice(0, 200)}`,
-      );
-    }
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed as Record<string, unknown>);
   }
 
   // Filter strictly for `subtype === 'init'`.

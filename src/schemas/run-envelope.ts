@@ -43,7 +43,7 @@ export const RunEvidenceRef = z
     const allowed = EvidenceSourceRefKind[evidence.source];
     if (!allowed.includes(evidence.ref.kind)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['ref', 'kind'],
         message: `${evidence.source} evidence cannot use ${evidence.ref.kind} refs`,
       });
@@ -79,7 +79,7 @@ const RunDoneClaim = z
   .superRefine((claim, ctx) => {
     if (!claim.required_evidence.some((evidence) => evidence.required)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['required_evidence'],
         message: 'each done_when item must include at least one required evidence entry',
       });
@@ -209,14 +209,14 @@ export const RunProcessAttempt = z
     if (attempt.outcome === 'checkpoint_waiting') {
       if (attempt.checkpoint === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['checkpoint'],
           message: 'checkpoint_waiting attempts require checkpoint metadata',
         });
       }
       if (attempt.child_run.result_ref !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['child_run', 'result_ref'],
           message: 'checkpoint_waiting attempts must not have a child result ref',
         });
@@ -266,7 +266,7 @@ export const RunCompletionGate = z
     const lenses = new Set(gate.gate_passes.map((pass) => pass.attack_lens));
     if (lenses.size !== gate.gate_passes.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['gate_passes'],
         message: 'gate passes must use distinct attack lenses',
       });
@@ -276,7 +276,7 @@ export const RunCompletionGate = z
     if (gate.verdict === 'complete') {
       if (!allClaimsProved) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['claim_results'],
           message: 'complete gate verdict requires every claim result to be proved',
         });
@@ -287,14 +287,14 @@ export const RunCompletionGate = z
           gate.required_passes
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['gate_passes'],
           message: 'complete gate verdict requires two clean gate passes',
         });
       }
       if (gate.next_action !== 'close') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['next_action'],
           message: 'complete gate verdict requires close next_action',
         });
@@ -374,14 +374,14 @@ export const RunMemoryUpdateEvent = z
       event.operator_indicator === undefined
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['operator_indicator'],
         message: 'proposed and recorded memory updates require an operator indicator',
       });
     }
     if (event.scope === 'flow' && event.flow_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['flow_id'],
         message: 'flow-scoped memory updates require flow_id',
       });
@@ -444,14 +444,14 @@ export const RunEnvelopeShadowRecord = z
     if (record.child_run.outcome === 'checkpoint_waiting') {
       if (record.child_run.result_ref !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['child_run', 'result_ref'],
           message: 'checkpoint_waiting shadow records must not include a result ref',
         });
       }
       if (record.child_run.checkpoint === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['child_run', 'checkpoint'],
           message: 'checkpoint_waiting shadow records require checkpoint metadata',
         });
@@ -460,7 +460,7 @@ export const RunEnvelopeShadowRecord = z
     }
     if (record.child_run.result_ref === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['child_run', 'result_ref'],
         message: 'closed child runs require a result ref',
       });
@@ -495,7 +495,7 @@ export const RunEnvelopeRecord = z
   .superRefine((record, ctx) => {
     if (record.surface_output.outcome !== record.outcome) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['surface_output', 'outcome'],
         message: 'surface output outcome must match record outcome',
       });
@@ -511,14 +511,14 @@ export const RunEnvelopeRecord = z
 
     if (record.outcome === 'complete' && record.completion_gate.verdict !== 'complete') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['completion_gate', 'verdict'],
         message: 'complete record outcome requires complete gate verdict',
       });
     }
     if (record.outcome === 'complete' && !requiredClaimsProved) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['completion_gate', 'claim_results'],
         message: 'complete record outcome requires all required claims to be proved',
       });
@@ -538,7 +538,7 @@ export const RunEnvelopeRecord = z
       );
       if (!hasFollowupAttempt && record.decision_packets.length === 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['process_plan', 'planned_attempts'],
           message:
             'needs_followup requires a planned follow-up attempt with missing claim provenance or a decision packet',
@@ -546,7 +546,7 @@ export const RunEnvelopeRecord = z
       }
       if (record.outcome === 'complete') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['outcome'],
           message: 'needs_followup gate must not close the record complete',
         });
@@ -559,14 +559,14 @@ export const RunEnvelopeRecord = z
     if (record.outcome === 'blocked') {
       if (record.completion_gate.verdict !== 'blocked' && !hasBlockedOrFailedAttempt) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['completion_gate', 'verdict'],
           message: 'blocked record outcome requires a blocked gate or blocked process attempt',
         });
       }
       if (record.surface_output.next_action === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['surface_output', 'next_action'],
           message: 'blocked record outcome requires a next operator action',
         });
@@ -578,7 +578,7 @@ export const RunEnvelopeRecord = z
       /\b(?:done|complete|completed)\b/i.test(record.surface_output.status_text)
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['surface_output', 'status_text'],
         message: 'non-complete surface output must not claim completion',
       });
@@ -597,7 +597,7 @@ export const RunEnvelopeRecord = z
       );
       if (matchingAttempt === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['decision_packets'],
           message: 'process-checkpoint decision packets require a matching waiting attempt',
         });

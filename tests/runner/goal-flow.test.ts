@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { projectRunStatusFromRunFolder } from '../../src/app/run-status/run-folder-projector.js';
 import { flowDefinitions } from '../../src/flows/catalog.js';
 import { compileSchematicToCompiledFlow } from '../../src/flows/compile-schematic-to-flow.js';
 import { schematicForFlowDefinition } from '../../src/flows/flow-definition.js';
@@ -15,7 +16,6 @@ import {
   GoalRecovery,
   GoalResult,
 } from '../../src/flows/goal/reports.js';
-import { projectRunStatusFromRunFolder } from '../../src/run-status/run-folder-projector.js';
 import type { StepOutcome } from '../../src/runtime/domain/step.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import type { ExecutableStep } from '../../src/runtime/manifest/executable-flow.js';

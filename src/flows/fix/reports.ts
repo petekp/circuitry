@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { VerificationCommand } from '../../schemas/verification.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'fix.brief': 'fix.brief@v1',
@@ -110,7 +111,7 @@ export const FixRegressionContract = z
       contract.regression_test.status !== 'failing-before-fix'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regression_test', 'status'],
         message: "regression_test.status must be 'failing-before-fix' when repro evidence exists",
       });
@@ -223,7 +224,7 @@ export const FixNoReproDecision = z
     const expected = NO_REPRO_DECISION_ROUTE[decision.decision];
     if (decision.selected_route !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['selected_route'],
         message: `selected_route must be '${expected}' for decision '${decision.decision}'`,
       });
@@ -273,7 +274,7 @@ export const FixVerificationCommandResult = z
     });
     if (!commandParse.success) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['argv'],
         message: `verification command result must include a safe command spec: ${commandParse.error.issues
           .map((issue) => issue.message)
@@ -284,7 +285,7 @@ export const FixVerificationCommandResult = z
     const expected = result.exit_code === 0 ? 'passed' : 'failed';
     if (result.status !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status'],
         message: `status must be '${expected}' when exit_code is ${result.exit_code}`,
       });
@@ -304,7 +305,7 @@ export const FixVerification = z
       : 'passed';
     if (verification.overall_status !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expected}' for command results`,
       });
@@ -348,7 +349,7 @@ export const FixRegressionProofObservation = z
     const expected = observation.exit_code === 0 ? 'passed' : 'failed';
     if (observation.command_status !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['command_status'],
         message: `command_status must be '${expected}' when exit_code is ${observation.exit_code}`,
       });
@@ -371,7 +372,7 @@ export const FixRegressionProof = z
     const expectedOverall = proof.status === 'not-proved' ? 'failed' : 'passed';
     if (proof.overall_status !== expectedOverall) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`,
       });
@@ -379,14 +380,14 @@ export const FixRegressionProof = z
     if (proof.status === 'deferred') {
       if (proof.baseline !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['baseline'],
           message: "baseline must be omitted when status is 'deferred'",
         });
       }
       if (proof.reason === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['reason'],
           message: "reason is required when status is 'deferred'",
         });
@@ -394,21 +395,21 @@ export const FixRegressionProof = z
     } else {
       if (proof.baseline === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['baseline'],
           message: `baseline is required when status is '${proof.status}'`,
         });
       }
       if (proof.status === 'proved' && proof.baseline?.command_status !== 'failed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['status'],
           message: "status 'proved' requires baseline command_status 'failed'",
         });
       }
       if (proof.status === 'not-proved' && proof.baseline?.command_status !== 'passed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['status'],
           message: "status 'not-proved' requires baseline command_status 'passed'",
         });
@@ -531,7 +532,7 @@ export const FixChangeSet = z
     const expectedOverall = changeSet.status === 'pass' ? 'passed' : 'failed';
     if (changeSet.overall_status !== expectedOverall) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expectedOverall}' when status is '${changeSet.status}'`,
       });
@@ -544,7 +545,7 @@ export const FixChangeSet = z
       expectedExtras.some((p, i) => p !== changeSet.undeclared_extras[i])
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['undeclared_extras'],
         message: 'undeclared_extras must equal observed minus declared (in observed order)',
       });
@@ -555,7 +556,7 @@ export const FixChangeSet = z
       expectedMissing.some((p, i) => p !== changeSet.missing_declared[i])
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['missing_declared'],
         message: 'missing_declared must equal declared minus observed (in declared order)',
       });
@@ -565,7 +566,7 @@ export const FixChangeSet = z
     for (const [index, path] of changeSet.baseline_dirty_mutated.entries()) {
       if (!observedSet.has(path)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['baseline_dirty_mutated', index],
           message: `baseline_dirty_mutated path '${path}' must also appear in observed`,
         });
@@ -582,14 +583,14 @@ export const FixChangeSet = z
       if (headDiverged) violations.push('baseline_head_sha differs from head_sha');
       if (hiddenFlagged) violations.push('non-empty hidden_index_flags');
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status'],
         message: `status 'pass' requires no failure conditions, but: ${violations.join('; ')}`,
       });
     }
     if (changeSet.status === 'fail' && isClean) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status'],
         message:
           "status 'fail' requires at least one of: undeclared_extras, missing_declared, HEAD divergence, or hidden_index_flags",
@@ -597,7 +598,7 @@ export const FixChangeSet = z
     }
     if (changeSet.status === 'fail' && changeSet.reason === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['reason'],
         message: "reason is required when status is 'fail'",
       });
@@ -639,7 +640,7 @@ export const FixRegressionRerun = z
     const expectedOverall = proof.status === 'still-failing' ? 'failed' : 'passed';
     if (proof.overall_status !== expectedOverall) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`,
       });
@@ -647,14 +648,14 @@ export const FixRegressionRerun = z
     if (proof.status === 'deferred') {
       if (proof.rerun !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['rerun'],
           message: "rerun must be omitted when status is 'deferred'",
         });
       }
       if (proof.reason === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['reason'],
           message: "reason is required when status is 'deferred'",
         });
@@ -662,28 +663,28 @@ export const FixRegressionRerun = z
     } else {
       if (proof.rerun === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['rerun'],
           message: `rerun is required when status is '${proof.status}'`,
         });
       }
       if (proof.status === 'cleared' && proof.rerun?.command_status !== 'passed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['status'],
           message: "status 'cleared' requires rerun command_status 'passed'",
         });
       }
       if (proof.status === 'still-failing' && proof.rerun?.command_status !== 'failed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['status'],
           message: "status 'still-failing' requires rerun command_status 'failed'",
         });
       }
       if (proof.status === 'still-failing' && proof.reason === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['reason'],
           message: "reason is required when status is 'still-failing'",
         });
@@ -760,31 +761,11 @@ export const FixResultReportId = z.enum([
 ]);
 export type FixResultReportId = z.infer<typeof FixResultReportId>;
 
-export const FixResultReportPointer = z
-  .object({
-    report_id: FixResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = FIX_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-    const expectedPath = FIX_RESULT_PATH_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.path !== expectedPath) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['path'],
-        message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const FixResultReportPointer = resultReportPointer(
+  FixResultReportId,
+  FIX_RESULT_SCHEMA_BY_ARTIFACT_ID,
+  FIX_RESULT_PATH_BY_ARTIFACT_ID,
+);
 export type FixResultReportPointer = z.infer<typeof FixResultReportPointer>;
 
 export const FixReviewStatus = z.enum(['completed', 'skipped']);
@@ -813,7 +794,7 @@ export const FixResult = z
     for (const [index, pointer] of result.evidence_links.entries()) {
       if (seen.has(pointer.report_id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_links', index, 'report_id'],
           message: `duplicate report_id '${pointer.report_id}'`,
         });
@@ -824,7 +805,7 @@ export const FixResult = z
     for (const reportId of REQUIRED_FIX_RESULT_ARTIFACT_IDS) {
       if (!seen.has(reportId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_links'],
           message: `missing report_id '${reportId}'`,
         });
@@ -833,7 +814,7 @@ export const FixResult = z
 
     if (result.outcome === 'fixed' && result.verification_status !== 'passed') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verification_status'],
         message: "verification_status must be 'passed' when outcome is 'fixed'",
       });
@@ -841,7 +822,7 @@ export const FixResult = z
 
     if (result.outcome === 'fixed' && result.regression_status !== 'proved') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regression_status'],
         message: "regression_status must be 'proved' when outcome is 'fixed'",
       });
@@ -849,7 +830,7 @@ export const FixResult = z
 
     if (result.outcome === 'fixed' && result.regression_rerun_status !== 'cleared') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regression_rerun_status'],
         message: "regression_rerun_status must be 'cleared' when outcome is 'fixed'",
       });
@@ -857,7 +838,7 @@ export const FixResult = z
 
     if (result.regression_status === 'deferred' && result.regression_rerun_status !== 'deferred') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regression_rerun_status'],
         message: "regression_rerun_status must be 'deferred' when regression_status is 'deferred'",
       });
@@ -865,7 +846,7 @@ export const FixResult = z
 
     if (result.regression_status === 'proved' && result.regression_rerun_status === 'deferred') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regression_rerun_status'],
         message: "regression_rerun_status cannot be 'deferred' when regression_status is 'proved'",
       });
@@ -873,7 +854,7 @@ export const FixResult = z
 
     if (result.outcome === 'fixed' && result.change_set_status !== 'pass') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['change_set_status'],
         message: "change_set_status must be 'pass' when outcome is 'fixed'",
       });
@@ -881,7 +862,7 @@ export const FixResult = z
 
     if (result.outcome === 'fixed' && result.review_verdict === 'reject') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['review_verdict'],
         message: "review_verdict cannot be 'reject' when outcome is 'fixed'",
       });
@@ -893,7 +874,7 @@ export const FixResult = z
       result.review_verdict !== 'accept'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['review_verdict'],
         message: "review_verdict must be 'accept' when outcome is 'fixed' and review completed",
       });
@@ -902,14 +883,14 @@ export const FixResult = z
     if (result.review_status === 'completed') {
       if (result.review_verdict === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_verdict'],
           message: "review_verdict is required when review_status is 'completed'",
         });
       }
       if (!seen.has('fix.review')) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_links'],
           message: "review_status 'completed' must include the fix.review evidence link",
         });
@@ -919,14 +900,14 @@ export const FixResult = z
     if (result.review_status === 'skipped') {
       if (result.review_skip_reason === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_skip_reason'],
           message: "review_skip_reason is required when review_status is 'skipped'",
         });
       }
       if (result.review_verdict !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_verdict'],
           message: "review_verdict must be omitted when review_status is 'skipped'",
         });
@@ -935,7 +916,7 @@ export const FixResult = z
 
     if (result.outcome === 'not-reproduced' && !seen.has('fix.no-repro-decision')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['evidence_links'],
         message: "outcome 'not-reproduced' must include the fix.no-repro-decision evidence link",
       });

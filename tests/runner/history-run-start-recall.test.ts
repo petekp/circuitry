@@ -3,13 +3,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { HISTORY_RECALL_REPORT_PATH } from '../../src/app/history/run-start-recall.js';
+import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/app/run-envelope/source-record.js';
 import { main } from '../../src/cli/circuit.js';
-import { HISTORY_RECALL_REPORT_PATH } from '../../src/history/run-start-recall.js';
 import { HistoryRecallReportV1, MemoryInputV0 } from '../../src/index.js';
-import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord } from '../../src/schemas/run-envelope.js';
-import type { RelayResult } from '../../src/shared/connector-relay.js';
-import type { RelayFn, RelayInput } from '../../src/shared/relay-runtime-types.js';
+import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
+import { captureStreams, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
 const tempRoots: string[] = [];
 const PRIOR_RUN_ID = '22222222-2222-4222-8222-222222222222';
@@ -101,47 +101,23 @@ function writePriorHistoryFixture(projectRoot: string): void {
 }
 
 function captureRelayer(prompts: string[]): RelayFn {
-  return {
-    connectorName: 'claude-code',
-    relay: async (input: RelayInput): Promise<RelayResult> => {
-      prompts.push(input.prompt);
-      return {
-        request_payload: input.prompt,
-        receipt_id: `stub-history-recall-${prompts.length}`,
-        result_body: REVIEW_RELAY_BODY,
-        duration_ms: 1,
-        cli_version: 'stub',
-      };
-    },
-  };
+  return makeStubRelayer((input) => {
+    prompts.push(input.prompt);
+    return REVIEW_RELAY_BODY;
+  });
 }
 
 async function captureMain(
   argv: readonly string[],
   options: Parameters<typeof main>[1] = {},
 ): Promise<{ readonly code: number; readonly stdout: string; readonly stderr: string }> {
-  let stdout = '';
-  let stderr = '';
-  const originalStdout = process.stdout.write;
-  const originalStderr = process.stderr.write;
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    const code = await main(argv, {
+  const { result, stdout, stderr } = await captureStreams(() =>
+    main(argv, {
       now: () => new Date('2026-05-26T12:30:00.000Z'),
       ...options,
-    });
-    return { code, stdout, stderr };
-  } finally {
-    process.stdout.write = originalStdout;
-    process.stderr.write = originalStderr;
-  }
+    }),
+  );
+  return { code: result, stdout, stderr };
 }
 
 describe('run-start history recall', () => {

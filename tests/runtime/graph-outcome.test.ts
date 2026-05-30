@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { deterministicNow } from '../helpers/runtime-fixtures.js';
 
 import type { StepOutcome } from '../../src/runtime/domain/step.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
@@ -11,11 +12,6 @@ import {
   executeExecutableFlowWithWaiting,
   isGraphRejectedOutcome,
 } from '../../src/runtime/run/graph-runner.js';
-
-function deterministicNow(startMs: number): () => Date {
-  let n = 0;
-  return () => new Date(startMs + n++ * 1000);
-}
 
 function singleStepFlow(): ExecutableFlow {
   return {
@@ -28,6 +24,11 @@ function singleStepFlow(): ExecutableFlow {
         id: 'compose-step',
         kind: 'compose',
         writer: 'typed-outcome-fixture',
+        check: {
+          kind: 'schema_sections',
+          source: { kind: 'report', ref: 'report' },
+          required: ['summary'],
+        },
         routes: {
           pass: { kind: 'terminal', target: '@complete' },
         },

@@ -4,7 +4,7 @@ import {
   RECOVERY_ROUTE_FOR_UNMET_EVIDENCE_KIND,
   followupProcessId,
   recoveryRouteForUnmetKinds,
-} from '../../src/run-envelope/source-record.js';
+} from '../../src/app/run-envelope/source-record.js';
 
 describe('Run recovery router (S5)', () => {
   it('maps each unmet evidence kind to a recovery flow', () => {

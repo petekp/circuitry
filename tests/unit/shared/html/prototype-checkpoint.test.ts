@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { prototypeCheckpointProjector } from '../../../../src/flows/prototype/index.js';
 import type { HtmlProjectorContext, JsonObject } from '../../../../src/shared/html/projector.js';
-import { prototypeCheckpointProjector } from '../../../../src/shared/html/prototype-checkpoint.js';
 
 const ROOT = '.circuit/prototypes/html-test';
 const RUN_ARTIFACT_ROOT = '.circuit/runs/html-test/prototype-files';
