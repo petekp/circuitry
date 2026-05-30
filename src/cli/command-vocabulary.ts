@@ -11,6 +11,7 @@ export const CLI_COMMAND_NAMES = [
   'resume',
   'handoff',
   'history',
+  'memory',
   'create',
   'runs',
   'version',

@@ -43,11 +43,11 @@ function writePriorHistoryFixture(projectRoot: string): void {
   writeJson(join(runFolder, 'manifest.snapshot.json'), {
     schema_version: 1,
     run_id: PRIOR_RUN_ID,
-    flow_id: 'explore',
+    flow_id: 'review',
     captured_at: RECORDED_AT,
   });
   writeJson(join(runFolder, 'reports', 'result.json'), {
-    flow_id: 'explore',
+    flow_id: 'review',
     outcome: 'complete',
     goal: 'Explore local history memory injection',
     summary: 'Run closed with outcome complete.',
@@ -63,7 +63,7 @@ function writePriorHistoryFixture(projectRoot: string): void {
       recorded_at: RECORDED_AT,
       run_id: PRIOR_RUN_ID,
       kind: 'run.bootstrapped',
-      flow_id: 'explore',
+      flow_id: 'review',
       depth: 'standard',
       goal: 'Explore local history memory injection',
       change_kind: {

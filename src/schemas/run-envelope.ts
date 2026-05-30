@@ -354,6 +354,40 @@ export const RunDecisionPacket = z
   .strict();
 export type RunDecisionPacket = z.infer<typeof RunDecisionPacket>;
 
+// Slice 5 (D3): the produce-side freshness of the cited source at write time,
+// mirroring the memory-input layer's `MemoryStaleness` shape (status + a
+// non-empty reason-code set + a checked_at stamp) without importing it — the
+// run-envelope module stays decoupled from the memory-input module, and a
+// reason-code consistency refine pins the same `unknown -> memory_unverified` /
+// `stale -> memory_stale` invariants the memory layer enforces. Optional, so
+// every existing (empty `memory_update_events`) history is unaffected.
+const RunMemoryUpdateReasonCode = z.string().regex(/^[a-z][a-z0-9_]*$/);
+
+export const RunMemoryUpdateStaleness = z
+  .object({
+    status: z.enum(['fresh', 'stale', 'unknown']),
+    checked_at: z.string().datetime(),
+    reason_codes: z.array(RunMemoryUpdateReasonCode).min(1),
+  })
+  .strict()
+  .superRefine((staleness, ctx) => {
+    if (staleness.status === 'unknown' && !staleness.reason_codes.includes('memory_unverified')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reason_codes'],
+        message: 'unknown memory-update staleness requires memory_unverified reason code',
+      });
+    }
+    if (staleness.status === 'stale' && !staleness.reason_codes.includes('memory_stale')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reason_codes'],
+        message: 'stale memory-update staleness requires memory_stale reason code',
+      });
+    }
+  });
+export type RunMemoryUpdateStaleness = z.infer<typeof RunMemoryUpdateStaleness>;
+
 export const RunMemoryUpdateEvent = z
   .object({
     schema: z.literal('run.memory-update-event@v0'),
@@ -366,6 +400,7 @@ export const RunMemoryUpdateEvent = z
     source_refs: z.array(Ref).min(1),
     authority: z.literal('hint_only'),
     operator_indicator: z.string().min(1).optional(),
+    staleness: RunMemoryUpdateStaleness.optional(),
   })
   .strict()
   .superRefine((event, ctx) => {
@@ -487,7 +522,10 @@ export const RunEnvelopeRecord = z
     process_attempts: z.array(RunProcessAttempt),
     completion_gate: RunCompletionGate,
     decision_packets: z.array(RunDecisionPacket),
-    memory_update_events: z.array(RunMemoryUpdateEvent),
+    // Slice 5 (D3): at most one memory update per run, so "fire on signal, not
+    // on completion" is enforced by Zod rather than narrated. An empty array
+    // (every run today) still satisfies `.max(1)`, so this breaks nothing.
+    memory_update_events: z.array(RunMemoryUpdateEvent).max(1),
     surface_output: RunSurfaceOutput,
     outcome: RunEnvelopeOutcome,
   })

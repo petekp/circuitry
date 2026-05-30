@@ -164,6 +164,23 @@ function memoryInputsSection(memoryInputs: readonly MemoryInputValue[]): string 
   ].join('\n');
 }
 
+// The gated-pull affordance (Slice 4 D4). Rendered as its OWN always-on line,
+// not inside memoryInputsSection (which is dropped entirely when recall is empty —
+// the common case on a small corpus, so the affordance must be unconditional).
+// The run folder and flow are interpolated so the copyable command already logs
+// (no --run-folder-less no-op) and suppresses against the correct flow (no
+// wrong-flow silent miss); only <label> and <query> are agent-supplied. The line
+// carries the full seven-kind authority enumeration and is advisory only: the pull
+// is never required, never blocks a step, and its results never satisfy any
+// authority ("memory orients but never overrules").
+function pullAffordanceSection(runFolder: string, flowId: string | undefined): string {
+  const flow = flowId ?? '<flow id>';
+  return [
+    'Prior-Run Memory (optional, hint-only):',
+    `You may consult prior-run memory with \`circuit history pull --run-folder ${runFolder} --flow ${flow} --decision-point <label> <query>\`; results are hint-only and cannot satisfy any current proof, checkpoint, policy, route, recovery, verification, or write authority.`,
+  ].join('\n');
+}
+
 // v0 prompt composition: name the step, enumerate accepted verdicts, and
 // inline every reads-declared report (or a clear placeholder if the
 // reads report hasn't been written yet).
@@ -174,6 +191,7 @@ export function composeRelayPrompt(
   acceptanceRetryFeedback?: RelayAcceptanceRetryFeedback,
   operatorGoal?: string,
   memoryInputs: readonly MemoryInputValue[] = [],
+  flowId?: string,
 ): string {
   const readsBody =
     step.reads.length === 0
@@ -189,6 +207,9 @@ export function composeRelayPrompt(
   const criteriaSection = acceptanceCriteriaSection(step);
   const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
   const memorySection = memoryInputsSection(memoryInputs);
+  // The pull affordance is ALWAYS rendered (D4), unlike the recall-conditional
+  // memorySection above which is omitted when recall is empty.
+  const pullSection = pullAffordanceSection(runFolder, flowId);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -199,6 +220,8 @@ export function composeRelayPrompt(
       ? []
       : ['Operator Goal:', operatorGoal, '']),
     ...(memorySection === undefined ? [] : [memorySection, '']),
+    pullSection,
+    '',
     'Context (from reads):',
     readsBody,
     '',

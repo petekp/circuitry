@@ -10767,8 +10767,8 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync23, mkdirSync as mkdirSync8, readFileSync as readFileSync36, writeFileSync as writeFileSync9 } from "node:fs";
-import { dirname as dirname12, join as join23, resolve as resolve16 } from "node:path";
+import { existsSync as existsSync30, mkdirSync as mkdirSync13, readFileSync as readFileSync44, writeFileSync as writeFileSync14 } from "node:fs";
+import { dirname as dirname13, join as join30, resolve as resolve19 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/commander/esm.mjs
@@ -37368,8 +37368,14 @@ var CircuitOverride = external_exports.object({
   skill_bindings: SkillBindings.default({}),
   variant_models: CircuitVariantModels.optional()
 }).strict();
+var ProjectId = external_exports.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, {
+  message: "project_id must be a fanout-safe kebab-case slug"
+});
 var Config = external_exports.object({
   schema_version: external_exports.literal(1),
+  // Optional so a minimal `{schema_version: 1}` still parses; absent means
+  // "infer the project identity from the git remote, then the runs base".
+  project_id: ProjectId.optional(),
   host: HostConfig.default({ kind: "generic-shell" }),
   relay: RelayConfig.default({
     default: "auto",
@@ -46125,7 +46131,7 @@ function parseNdjsonObjects(stdout, label) {
 }
 async function runConnectorSubprocess(input) {
   const start = performance.now();
-  return await new Promise((resolve17, reject) => {
+  return await new Promise((resolve20, reject) => {
     let child;
     try {
       child = spawn(input.executable, [...input.args], {
@@ -46198,7 +46204,7 @@ async function runConnectorSubprocess(input) {
     });
     child.on("close", (code, signal) => {
       clearAllTimers();
-      resolve17({
+      resolve20({
         stdout,
         stderr,
         stdoutCapped,
@@ -48454,6 +48460,27 @@ var RunDecisionPacket = external_exports.object({
     projector: external_exports.string().min(1)
   }).strict().optional()
 }).strict();
+var RunMemoryUpdateReasonCode = external_exports.string().regex(/^[a-z][a-z0-9_]*$/);
+var RunMemoryUpdateStaleness = external_exports.object({
+  status: external_exports.enum(["fresh", "stale", "unknown"]),
+  checked_at: external_exports.string().datetime(),
+  reason_codes: external_exports.array(RunMemoryUpdateReasonCode).min(1)
+}).strict().superRefine((staleness, ctx) => {
+  if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "unknown memory-update staleness requires memory_unverified reason code"
+    });
+  }
+  if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["reason_codes"],
+      message: "stale memory-update staleness requires memory_stale reason code"
+    });
+  }
+});
 var RunMemoryUpdateEvent = external_exports.object({
   schema: external_exports.literal("run.memory-update-event@v0"),
   event_id: external_exports.string().min(1),
@@ -48464,7 +48491,8 @@ var RunMemoryUpdateEvent = external_exports.object({
   summary: external_exports.string().min(1),
   source_refs: external_exports.array(Ref).min(1),
   authority: external_exports.literal("hint_only"),
-  operator_indicator: external_exports.string().min(1).optional()
+  operator_indicator: external_exports.string().min(1).optional(),
+  staleness: RunMemoryUpdateStaleness.optional()
 }).strict().superRefine((event, ctx) => {
   if ((event.action === "proposed" || event.action === "recorded") && event.operator_indicator === void 0) {
     ctx.addIssue({
@@ -48560,7 +48588,10 @@ var RunEnvelopeRecord = external_exports.object({
   process_attempts: external_exports.array(RunProcessAttempt),
   completion_gate: RunCompletionGate,
   decision_packets: external_exports.array(RunDecisionPacket),
-  memory_update_events: external_exports.array(RunMemoryUpdateEvent),
+  // Slice 5 (D3): at most one memory update per run, so "fire on signal, not
+  // on completion" is enforced by Zod rather than narrated. An empty array
+  // (every run today) still satisfies `.max(1)`, so this breaks nothing.
+  memory_update_events: external_exports.array(RunMemoryUpdateEvent).max(1),
   surface_output: RunSurfaceOutput,
   outcome: RunEnvelopeOutcome
 }).strict().superRefine((record2, ctx) => {
@@ -48774,7 +48805,13 @@ var HistoryWarningCodeV1 = external_exports.enum([
   "trace_skipped",
   "source_unreadable",
   "source_invalid",
-  "source_pruned"
+  "source_pruned",
+  "envelope_missing",
+  "recall_report_missing",
+  "memory_input_unmatched",
+  "content_id_unhashed_source",
+  "effect_report_unavailable",
+  "pull_log_unavailable"
 ]);
 var HistoryWarningV1 = external_exports.object({
   code: HistoryWarningCodeV1,
@@ -48960,6 +48997,328 @@ var HistoryErrorV1 = external_exports.object({
   runs_base: external_exports.string().min(1).optional(),
   index_dir: external_exports.string().min(1).optional()
 }).strict();
+var MemoryMergeEffectStatusV1 = external_exports.enum([
+  "not_enough_data",
+  "correlated_positive",
+  "correlated_negative",
+  "unresolved"
+]);
+var MemoryMergeInputV1 = external_exports.object({
+  memory_input_id: external_exports.string().min(1),
+  content_id: external_exports.string().min(1).nullable(),
+  kind: MemoryInputKind.optional(),
+  source_ref: Ref.optional(),
+  staleness: MemoryStalenessStatus.optional(),
+  resolved_from_recall: external_exports.boolean()
+}).strict().superRefine((input, ctx) => {
+  if (!input.resolved_from_recall && input.content_id !== null) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["content_id"],
+      message: "content_id requires the input to be resolved from the recall report"
+    });
+  }
+});
+var MemoryMergeRunLinkageV1 = external_exports.object({
+  run_id: external_exports.string().min(1),
+  flow_id: external_exports.string().min(1).optional(),
+  operator_intent: external_exports.string().min(1),
+  outcome: RunEnvelopeOutcome,
+  abort_reason: external_exports.string().min(1).optional(),
+  memory_used: external_exports.boolean(),
+  memory_inputs: external_exports.array(MemoryMergeInputV1)
+}).strict().superRefine((linkage, ctx) => {
+  if (!linkage.memory_used && linkage.memory_inputs.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["memory_inputs"],
+      message: "a run that did not use memory must not list memory inputs"
+    });
+  }
+});
+var MemoryMergeOutcomeCountV1 = external_exports.object({
+  outcome: RunEnvelopeOutcome,
+  count: external_exports.number().int().positive()
+}).strict();
+var MemoryMergeItemV1 = external_exports.object({
+  group_key: external_exports.string().min(1),
+  content_id: external_exports.string().min(1).nullable(),
+  memory_input_ids: external_exports.array(external_exports.string().min(1)).min(1),
+  kind: MemoryInputKind.optional(),
+  source_ref: Ref.optional(),
+  used_by_run_ids: external_exports.array(external_exports.string().min(1)).min(1),
+  outcome_counts: external_exports.array(MemoryMergeOutcomeCountV1).min(1),
+  effect_status: MemoryMergeEffectStatusV1,
+  effect_note: external_exports.string().min(1)
+}).strict().superRefine((item, ctx) => {
+  const total = item.outcome_counts.reduce((sum, entry) => sum + entry.count, 0);
+  if (total !== item.used_by_run_ids.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outcome_counts"],
+      message: "outcome_counts must sum to the number of runs that used the item"
+    });
+  }
+});
+var HistoryMemoryMergeV1 = external_exports.object({
+  api_version: external_exports.literal("history-memory-merge-v1"),
+  schema_version: external_exports.literal(1),
+  generated_at: external_exports.string().datetime(),
+  runs_base: external_exports.string().min(1),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  run_count: external_exports.number().int().nonnegative(),
+  envelope_count: external_exports.number().int().nonnegative(),
+  memory_run_count: external_exports.number().int().nonnegative(),
+  linkages: external_exports.array(MemoryMergeRunLinkageV1),
+  memory_items: external_exports.array(MemoryMergeItemV1),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict().superRefine((report, ctx) => {
+  if (report.envelope_count !== report.linkages.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["envelope_count"],
+      message: "envelope_count must equal linkages.length"
+    });
+  }
+  const memoryRuns = report.linkages.filter((linkage) => linkage.memory_used).length;
+  if (report.memory_run_count !== memoryRuns) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["memory_run_count"],
+      message: "memory_run_count must equal the number of linkages that used memory"
+    });
+  }
+  if (report.run_count < report.envelope_count) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["run_count"],
+      message: "run_count must be at least envelope_count"
+    });
+  }
+});
+var MemoryEffectArmV1 = external_exports.object({
+  run_ids: external_exports.array(external_exports.string().min(1)),
+  size: external_exports.number().int().nonnegative(),
+  complete_count: external_exports.number().int().nonnegative(),
+  adverse_count: external_exports.number().int().nonnegative(),
+  neutral_count: external_exports.number().int().nonnegative(),
+  outcome_counts: external_exports.array(MemoryMergeOutcomeCountV1),
+  complete_rate: external_exports.number().min(0).max(1),
+  adverse_rate: external_exports.number().min(0).max(1)
+}).strict().superRefine((arm, ctx) => {
+  if (arm.complete_count + arm.adverse_count + arm.neutral_count !== arm.size) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: "complete + adverse + neutral counts must equal size"
+    });
+  }
+  const outcomeTotal = arm.outcome_counts.reduce((sum, entry) => sum + entry.count, 0);
+  if (outcomeTotal !== arm.size) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outcome_counts"],
+      message: "outcome_counts must sum to size"
+    });
+  }
+  if (arm.run_ids.length !== arm.size) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["run_ids"],
+      message: "run_ids length must equal size"
+    });
+  }
+});
+var MemoryEffectComparisonV1 = external_exports.object({
+  used_arm: MemoryEffectArmV1,
+  comparable_arm: MemoryEffectArmV1,
+  complete_rate_delta: external_exports.number(),
+  adverse_rate_delta: external_exports.number(),
+  effect_status: MemoryMergeEffectStatusV1,
+  effect_note: external_exports.string().min(1)
+}).strict();
+var MemoryEffectItemV1 = external_exports.object({
+  content_id: external_exports.string().min(1).nullable(),
+  group_key: external_exports.string().min(1),
+  flow_id: external_exports.string().min(1),
+  kind: MemoryInputKind.optional(),
+  source_ref: Ref.optional(),
+  comparison: MemoryEffectComparisonV1
+}).strict();
+var MemoryFlowContrastV1 = external_exports.object({
+  flow_id: external_exports.string().min(1),
+  comparison: MemoryEffectComparisonV1
+}).strict();
+var MemoryEffectSummaryV1 = external_exports.object({
+  items_total: external_exports.number().int().nonnegative(),
+  items_not_enough_data: external_exports.number().int().nonnegative(),
+  items_unresolved: external_exports.number().int().nonnegative(),
+  items_correlated_positive: external_exports.number().int().nonnegative(),
+  items_correlated_negative: external_exports.number().int().nonnegative(),
+  flow_contrasts_total: external_exports.number().int().nonnegative(),
+  flow_contrasts_not_enough_data: external_exports.number().int().nonnegative(),
+  flow_contrasts_unresolved: external_exports.number().int().nonnegative(),
+  flow_contrasts_correlated_positive: external_exports.number().int().nonnegative(),
+  flow_contrasts_correlated_negative: external_exports.number().int().nonnegative()
+}).strict();
+var HistoryMemoryEffectV1 = external_exports.object({
+  api_version: external_exports.literal("history-memory-effect-v1"),
+  schema_version: external_exports.literal(1),
+  generated_at: external_exports.string().datetime(),
+  runs_base: external_exports.string().min(1),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  // The Q2 sample gate in effect (default 2), echoed so the artifact states
+  // its own statistical floor rather than hiding it.
+  min_arm_size: external_exports.number().int().min(1),
+  // The D5 separation margin (default 0.5). 0 is rejected (a tied comparison
+  // would satisfy both the positive and negative condition); above 1 can never
+  // fire because complete_rate_delta ranges over [-1, 1].
+  margin: external_exports.number().gt(0).max(1),
+  source_run_count: external_exports.number().int().nonnegative(),
+  source_envelope_count: external_exports.number().int().nonnegative(),
+  source_memory_run_count: external_exports.number().int().nonnegative(),
+  item_effects: external_exports.array(MemoryEffectItemV1),
+  flow_contrasts: external_exports.array(MemoryFlowContrastV1),
+  summary: MemoryEffectSummaryV1,
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict().superRefine((report, ctx) => {
+  const items = report.item_effects;
+  const itemsWith = (status) => items.filter((item) => item.comparison.effect_status === status).length;
+  if (report.summary.items_total !== items.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["summary", "items_total"],
+      message: "items_total must equal item_effects.length"
+    });
+  }
+  for (const status of [
+    "not_enough_data",
+    "unresolved",
+    "correlated_positive",
+    "correlated_negative"
+  ]) {
+    const key = `items_${status}`;
+    if (report.summary[key] !== itemsWith(status)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["summary", key],
+        message: `${key} must equal the count of item_effects with that effect_status`
+      });
+    }
+  }
+  const contrasts = report.flow_contrasts;
+  const contrastsWith = (status) => contrasts.filter((contrast) => contrast.comparison.effect_status === status).length;
+  if (report.summary.flow_contrasts_total !== contrasts.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["summary", "flow_contrasts_total"],
+      message: "flow_contrasts_total must equal flow_contrasts.length"
+    });
+  }
+  for (const status of [
+    "not_enough_data",
+    "unresolved",
+    "correlated_positive",
+    "correlated_negative"
+  ]) {
+    const key = `flow_contrasts_${status}`;
+    if (report.summary[key] !== contrastsWith(status)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["summary", key],
+        message: `${key} must equal the count of flow_contrasts with that effect_status`
+      });
+    }
+  }
+});
+var RecallPrecisionTierV1 = external_exports.enum([
+  "suppressed",
+  // verdict correlated_negative — dropped from the push set entirely
+  "positive_fresh",
+  // fresh source + correlated_positive
+  "neutral_fresh",
+  // fresh source + not_enough_data | unresolved | no_verdict
+  "stale"
+  // stale/unknown source (any non-negative verdict) — sinks below fresh
+]);
+var RecallPrecisionConsultedStatusV1 = external_exports.union([
+  MemoryMergeEffectStatusV1,
+  external_exports.literal("no_verdict")
+]);
+var RecallPrecisionDecisionV1 = external_exports.object({
+  memory_input_id: external_exports.string().min(1),
+  content_id: external_exports.string().min(1).nullable(),
+  staleness: MemoryStalenessStatus,
+  consulted_effect_status: RecallPrecisionConsultedStatusV1,
+  tier: RecallPrecisionTierV1,
+  injected: external_exports.boolean()
+}).strict();
+var HistoryRecallPrecisionV1 = external_exports.object({
+  api_version: external_exports.literal("history-recall-precision-v1"),
+  schema_version: external_exports.literal(1),
+  generated_at: external_exports.string().datetime(),
+  flow_id: external_exports.string().min(1).optional(),
+  effect_report_available: external_exports.boolean(),
+  effect_report_generated_at: external_exports.string().datetime().optional(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  budget: external_exports.number().int().nonnegative(),
+  indicator: external_exports.string().min(1),
+  decisions: external_exports.array(RecallPrecisionDecisionV1),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict().superRefine((report, ctx) => {
+  const injected = report.decisions.filter((decision2) => decision2.injected).length;
+  if (injected > report.budget) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["decisions"],
+      message: "the number of injected decisions must not exceed the budget"
+    });
+  }
+  for (const [index, decision2] of report.decisions.entries()) {
+    if (decision2.tier === "suppressed" && decision2.injected) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["decisions", index, "injected"],
+        message: "a suppressed decision must never be injected"
+      });
+    }
+  }
+});
+var PullLogResultV1 = external_exports.object({
+  memory_input_id: external_exports.string().min(1),
+  content_id: external_exports.string().min(1).nullable(),
+  staleness: MemoryStalenessStatus,
+  source_ref: Ref
+}).strict();
+var PullLogEntryV1 = external_exports.object({
+  pull_id: external_exports.string().min(1),
+  recorded_at: external_exports.string().datetime(),
+  decision_point: external_exports.string().min(1),
+  query: external_exports.string(),
+  flow_id: external_exports.string().min(1),
+  result_count: external_exports.number().int().nonnegative(),
+  suppressed_count: external_exports.number().int().nonnegative(),
+  effect_report_available: external_exports.boolean(),
+  effect_report_generated_at: external_exports.string().datetime().optional(),
+  results: external_exports.array(PullLogResultV1),
+  authority: external_exports.literal("hint_only")
+}).strict().superRefine((entry, ctx) => {
+  if (entry.result_count !== entry.results.length) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["result_count"],
+      message: "result_count must equal results.length"
+    });
+  }
+});
+var HistoryPullLogV1 = external_exports.object({
+  api_version: external_exports.literal("history-pull-log-v1"),
+  schema_version: external_exports.literal(1),
+  run_id: external_exports.string().min(1).optional(),
+  authority_notice: external_exports.literal(HISTORY_AUTHORITY_NOTICE),
+  entries: external_exports.array(PullLogEntryV1),
+  warnings: external_exports.array(HistoryWarningV1)
+}).strict();
 
 // dist/shared/relay-support.js
 var NO_VERDICT_SENTINEL = "<no-verdict>";
@@ -49080,7 +49439,14 @@ function memoryInputsSection(memoryInputs) {
     ...items
   ].join("\n");
 }
-function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal, memoryInputs = []) {
+function pullAffordanceSection(runFolder, flowId) {
+  const flow = flowId ?? "<flow id>";
+  return [
+    "Prior-Run Memory (optional, hint-only):",
+    `You may consult prior-run memory with \`circuit history pull --run-folder ${runFolder} --flow ${flow} --decision-point <label> <query>\`; results are hint-only and cannot satisfy any current proof, checkpoint, policy, route, recovery, verification, or write authority.`
+  ].join("\n");
+}
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal, memoryInputs = [], flowId) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
     if (!existsSync10(abs))
@@ -49092,6 +49458,7 @@ ${readFileSync21(abs, "utf8")}`;
   const criteriaSection = acceptanceCriteriaSection(step);
   const feedbackSection = acceptanceRetryFeedbackSection(acceptanceRetryFeedback);
   const memorySection = memoryInputsSection(memoryInputs);
+  const pullSection = pullAffordanceSection(runFolder, flowId);
   return [
     `Step: ${step.id}`,
     `Title: ${step.title}`,
@@ -49100,6 +49467,8 @@ ${readFileSync21(abs, "utf8")}`;
     "",
     ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
     ...memorySection === void 0 ? [] : [memorySection, ""],
+    pullSection,
+    "",
     "Context (from reads):",
     readsBody,
     "",
@@ -50069,7 +50438,17 @@ async function executeProductionRelayAttempt(input) {
     compiledStep,
     depth: Depth.parse(context.depth ?? "standard")
   });
-  const prompt = composeRelayPrompt(compiledStep, context.runDir, loadedSkills, context.acceptanceRetryFeedback, context.goal, context.memoryInputs ?? []);
+  const prompt = composeRelayPrompt(
+    compiledStep,
+    context.runDir,
+    loadedSkills,
+    context.acceptanceRetryFeedback,
+    context.goal,
+    context.memoryInputs ?? [],
+    // Slice 4 D4: thread the active flow into the always-on pull affordance so the
+    // agent's copyable command already targets the correct flow for suppression.
+    context.flow.id
+  );
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
   const result = step.writes?.result;
@@ -53230,6 +53609,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     ...options.progress === void 0 ? {} : { progress: options.progress },
     ...options.memoryInputs === void 0 ? {} : { memoryInputs: options.memoryInputs },
     ...options.historyRecallReport === void 0 ? {} : { historyRecallReport: options.historyRecallReport },
+    ...options.historyRecallPrecision === void 0 ? {} : { historyRecallPrecision: options.historyRecallPrecision },
     ...options.resumeCheckpoint === void 0 ? {} : { resumeCheckpoint: options.resumeCheckpoint }
   };
   const executors = {
@@ -53268,6 +53648,9 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     await appendFlowSelectionGuidance(context);
     if (options.historyRecallReport !== void 0) {
       await context.files.writeJson("reports/history/recall.json", options.historyRecallReport);
+    }
+    if (options.historyRecallPrecision !== void 0) {
+      await context.files.writeJson("reports/history/recall-precision.json", options.historyRecallPrecision);
     }
   }
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
@@ -53570,6 +53953,7 @@ async function runCompiledFlowWithWaiting(options) {
     ...options.progressSurface === void 0 ? {} : { progressSurface: options.progressSurface },
     ...options.memoryInputs === void 0 ? {} : { memoryInputs: options.memoryInputs },
     ...options.historyRecallReport === void 0 ? {} : { historyRecallReport: options.historyRecallReport },
+    ...options.historyRecallPrecision === void 0 ? {} : { historyRecallPrecision: options.historyRecallPrecision },
     ...options.maxSteps === void 0 ? {} : { maxSteps: options.maxSteps }
   });
 }
@@ -53997,9 +54381,156 @@ async function resumeCompiledFlow(options) {
   return result.result;
 }
 
+// dist/memory/project-injection.js
+import { existsSync as existsSync13, readFileSync as readFileSync26 } from "node:fs";
+import { join as join13, resolve as resolve8 } from "node:path";
+
+// dist/memory/project-store.js
+import { existsSync as existsSync12, mkdirSync, readFileSync as readFileSync25, renameSync, writeFileSync } from "node:fs";
+import { join as join12, resolve as resolve7 } from "node:path";
+var MEMORY_DIR_RELATIVE_PATH = ".circuit/memory";
+var PROJECT_FACTS_FILE = "project.v1.jsonl";
+var MEMORY_MANIFEST_FILE = "manifest.json";
+function resolveProjectStorePaths(options = {}) {
+  const repoRoot = resolve7(options.repoRoot ?? process.cwd());
+  const memoryDir = resolve7(repoRoot, options.memoryDir ?? MEMORY_DIR_RELATIVE_PATH);
+  return {
+    repoRoot,
+    memoryDir,
+    factsPath: join12(memoryDir, PROJECT_FACTS_FILE),
+    manifestPath: join12(memoryDir, MEMORY_MANIFEST_FILE)
+  };
+}
+function readProjectFacts(options = {}) {
+  const paths = resolveProjectStorePaths(options);
+  if (!existsSync12(paths.factsPath)) {
+    return { facts: [], warnings: [] };
+  }
+  let raw = "";
+  try {
+    raw = readFileSync25(paths.factsPath, "utf8");
+  } catch (error51) {
+    return {
+      facts: [],
+      warnings: [
+        {
+          code: "project_fact_invalid",
+          message: `project fact store unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`,
+          line: 0
+        }
+      ]
+    };
+  }
+  const facts = [];
+  const warnings = [];
+  for (const [index, line] of raw.split("\n").entries()) {
+    if (line.trim().length === 0)
+      continue;
+    let value;
+    try {
+      value = JSON.parse(line);
+    } catch (error51) {
+      warnings.push({
+        code: "project_fact_invalid",
+        message: `project fact line ${index + 1} is not valid JSON: ${error51 instanceof Error ? error51.message : String(error51)}`,
+        line: index + 1
+      });
+      continue;
+    }
+    const parsed = MemoryInputV0.safeParse(value);
+    if (!parsed.success) {
+      warnings.push({
+        code: "project_fact_invalid",
+        message: `project fact line ${index + 1} failed validation: ${parsed.error.message}`,
+        line: index + 1
+      });
+      continue;
+    }
+    if (options.flowId !== void 0 && parsed.data.source.ref.flow_id !== options.flowId) {
+      continue;
+    }
+    facts.push(parsed.data);
+  }
+  return { facts, warnings };
+}
+function rewriteProjectFacts(records, options = {}) {
+  const paths = resolveProjectStorePaths(options);
+  const validated = records.map((record2) => {
+    const parsed = MemoryInputV0.parse(record2);
+    if (parsed.kind !== "project") {
+      throw new Error(`project store only holds kind:"project" facts (got ${parsed.kind})`);
+    }
+    return parsed;
+  });
+  mkdirSync(paths.memoryDir, { recursive: true });
+  const body = validated.map((record2) => JSON.stringify(record2)).join("\n");
+  const out = body.length === 0 ? "" : `${body}
+`;
+  const tmpPath = `${paths.factsPath}.tmp-${process.pid}`;
+  writeFileSync(tmpPath, out, "utf8");
+  for (const line of readFileSync25(tmpPath, "utf8").split("\n")) {
+    if (line.trim().length === 0)
+      continue;
+    MemoryInputV0.parse(JSON.parse(line));
+  }
+  renameSync(tmpPath, paths.factsPath);
+  return paths.factsPath;
+}
+function appendProjectFact(record2, options = {}) {
+  const existing = readProjectFacts(options).facts;
+  return rewriteProjectFacts([...existing, record2], options);
+}
+function forgetProjectFact(memoryId, options = {}) {
+  const existing = readProjectFacts(options).facts;
+  const remaining = existing.filter((record2) => record2.memory_id !== memoryId);
+  const path = rewriteProjectFacts(remaining, options);
+  return { removed: remaining.length !== existing.length, path };
+}
+
+// dist/memory/project-injection.js
+function reverifyStaleness(fact, runsBase, checkedAt) {
+  const sourceSha = fact.source.sha256 ?? fact.source.ref.sha256;
+  const runId = fact.source.ref.run_id;
+  if (sourceSha === void 0 || runId === void 0) {
+    return { status: "unknown", checked_at: checkedAt, reason_codes: ["memory_unverified"] };
+  }
+  try {
+    const relPath = fact.source.ref.ref.split("#")[0] ?? fact.source.ref.ref;
+    const abs = join13(runsBase, runId, relPath);
+    if (!existsSync13(abs)) {
+      return { status: "stale", checked_at: checkedAt, reason_codes: ["memory_stale"] };
+    }
+    const currentHash = sha256OfString(readFileSync26(abs, "utf8"));
+    return currentHash === sourceSha ? { status: "fresh", checked_at: checkedAt, reason_codes: ["source_hash_verified"] } : { status: "stale", checked_at: checkedAt, reason_codes: ["memory_stale"] };
+  } catch {
+    return { status: "unknown", checked_at: checkedAt, reason_codes: ["memory_unverified"] };
+  }
+}
+function loadProjectFactCandidates(options) {
+  if (options.flowId === void 0) {
+    return { candidates: [] };
+  }
+  const runsBase = resolve8(options.runsBase ?? join13(resolve8(options.repoRoot), ".circuit/runs"));
+  const now = options.now ?? (() => /* @__PURE__ */ new Date());
+  const checkedAt = now().toISOString();
+  const { facts } = readProjectFacts({
+    ...options.memoryDir === void 0 ? { repoRoot: options.repoRoot } : { memoryDir: options.memoryDir },
+    ...options.flowId === void 0 ? {} : { flowId: options.flowId }
+  });
+  const candidates = facts.map((fact) => (
+    // Re-parse with the freshly-verified staleness so the candidate carries the
+    // injection-time freshness (the stored staleness was capture-time).
+    MemoryInputV0.parse({
+      ...fact,
+      staleness: reverifyStaleness(fact, runsBase, checkedAt)
+    })
+  ));
+  return { candidates };
+}
+
 // dist/app/history/indexer.js
-import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, readdirSync as readdirSync4, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
-import { basename as basename2, join as join12, resolve as resolve9 } from "node:path";
+import { existsSync as existsSync16, mkdirSync as mkdirSync2, readFileSync as readFileSync28, readdirSync as readdirSync4, renameSync as renameSync2, statSync as statSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { basename as basename2, join as join14, resolve as resolve11 } from "node:path";
 
 // dist/shared/run-artifact-io.js
 import { statSync } from "node:fs";
@@ -54012,23 +54543,23 @@ function mtimeMs(path) {
 }
 
 // dist/app/history/extract.js
-import { existsSync as existsSync13, lstatSync as lstatSync6, readFileSync as readFileSync25, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
-import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve8 } from "node:path";
+import { existsSync as existsSync15, lstatSync as lstatSync6, readFileSync as readFileSync27, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
+import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve10 } from "node:path";
 
 // dist/app/history/run-source-files.js
-import { existsSync as existsSync12, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
-import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve7 } from "node:path";
+import { existsSync as existsSync14, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
+import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve9 } from "node:path";
 function collectRunSourceFiles(runFolder) {
-  const runFolderAbs = resolve7(runFolder);
+  const runFolderAbs = resolve9(runFolder);
   const files = /* @__PURE__ */ new Set();
   for (const candidate of [
-    resolve7(runFolderAbs, "manifest.snapshot.json"),
-    resolve7(runFolderAbs, "trace.ndjson")
+    resolve9(runFolderAbs, "manifest.snapshot.json"),
+    resolve9(runFolderAbs, "trace.ndjson")
   ]) {
-    if (existsSync12(candidate) && !isSymlink(candidate))
+    if (existsSync14(candidate) && !isSymlink(candidate))
       files.add(candidate);
   }
-  const reportsRoot2 = resolve7(runFolderAbs, "reports");
+  const reportsRoot2 = resolve9(runFolderAbs, "reports");
   for (const absPath of walkReportJsonFiles(reportsRoot2)) {
     files.add(absPath);
   }
@@ -54046,7 +54577,7 @@ function isInside3(root, target) {
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
 }
 function walkReportJsonFiles(reportsRoot2) {
-  if (!existsSync12(reportsRoot2))
+  if (!existsSync14(reportsRoot2))
     return [];
   const rootReal = realpathSync4.native(reportsRoot2);
   const out = [];
@@ -54056,7 +54587,7 @@ function walkReportJsonFiles(reportsRoot2) {
     if (current === void 0)
       continue;
     for (const entry of readdirSync2(current, { withFileTypes: true })) {
-      const absPath = resolve7(current, entry.name);
+      const absPath = resolve9(current, entry.name);
       if (entry.isSymbolicLink() || lstatSync5(absPath).isSymbolicLink())
         continue;
       const real = realpathSync4.native(absPath);
@@ -54120,7 +54651,7 @@ function safeDateString(value) {
   return Number.isNaN(Date.parse(raw)) ? void 0 : new Date(raw).toISOString();
 }
 function readJson2(path) {
-  return JSON.parse(readFileSync25(path, "utf8"));
+  return JSON.parse(readFileSync27(path, "utf8"));
 }
 function readJsonRecord(path) {
   try {
@@ -54131,21 +54662,21 @@ function readJsonRecord(path) {
   }
 }
 function sha256File(path) {
-  return sha256OfString(readFileSync25(path, "utf8"));
+  return sha256OfString(readFileSync27(path, "utf8"));
 }
 function isInside4(root, target) {
   const fromRoot = relative10(root, target);
   return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute10(fromRoot);
 }
 function listFiles(root, prefix = "") {
-  const absRoot = resolve8(root);
-  if (!existsSync13(absRoot))
+  const absRoot = resolve10(root);
+  if (!existsSync15(absRoot))
     return [];
   const rootReal = realpathSync5.native(absRoot);
   const out = [];
   function walk(absDir, relDir) {
     for (const entry of readdirSync3(absDir, { withFileTypes: true })) {
-      const absPath = resolve8(absDir, entry.name);
+      const absPath = resolve10(absDir, entry.name);
       if (lstatSync6(absPath).isSymbolicLink())
         continue;
       const real = realpathSync5.native(absPath);
@@ -54183,13 +54714,13 @@ function validStepId(value) {
   return StepId.safeParse(value).success ? value : void 0;
 }
 function parseTrace(runFolder, runFolderName) {
-  const tracePath = resolve8(runFolder, "trace.ndjson");
-  if (!existsSync13(tracePath)) {
+  const tracePath = resolve10(runFolder, "trace.ndjson");
+  if (!existsSync15(tracePath)) {
     return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
   }
   let entries = [];
   try {
-    entries = readFileSync25(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject3);
+    entries = readFileSync27(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject3);
   } catch (error51) {
     return {
       entries: [],
@@ -54408,8 +54939,8 @@ function resolveRunIdentity(input) {
 }
 function makeRunDocument(input) {
   const sourcePath = input.resultPath ?? "trace.ndjson";
-  const sourceAbs = resolve8(input.runFolder, sourcePath);
-  if (!existsSync13(sourceAbs))
+  const sourceAbs = resolve10(input.runFolder, sourcePath);
+  if (!existsSync15(sourceAbs))
     return void 0;
   const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
   if (sourceSha === void 0)
@@ -54624,19 +55155,19 @@ function makeTraceDocument(input) {
   });
 }
 function extractRunHistoryDocuments(runFolder) {
-  const runFolderAbs = resolve8(runFolder);
+  const runFolderAbs = resolve10(runFolder);
   const runFolderName = basename(runFolderAbs);
   const warnings = [];
   const documents = [];
-  const manifestPath2 = resolve8(runFolderAbs, "manifest.snapshot.json");
-  const resultPath2 = resolve8(runFolderAbs, "reports/result.json");
-  const manifest = existsSync13(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
-  const result = existsSync13(resultPath2) ? readJsonRecord(resultPath2) : void 0;
+  const manifestPath2 = resolve10(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve10(runFolderAbs, "reports/result.json");
+  const manifest = existsSync15(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
+  const result = existsSync15(resultPath2) ? readJsonRecord(resultPath2) : void 0;
   const trace = parseTrace(runFolderAbs, runFolderName);
   if (trace.warning !== void 0)
     warnings.push(trace.warning);
-  const tracePath = resolve8(runFolderAbs, "trace.ndjson");
-  const traceExists = existsSync13(tracePath);
+  const tracePath = resolve10(runFolderAbs, "trace.ndjson");
+  const traceExists = existsSync15(tracePath);
   const traceSha = traceExists ? sha256File(tracePath) : void 0;
   const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
   const identity = resolveRunIdentity({
@@ -54648,7 +55179,7 @@ function extractRunHistoryDocuments(runFolder) {
   const runDocument = makeRunDocument({
     runFolder: runFolderAbs,
     identity,
-    ...existsSync13(resultPath2) ? { resultPath: "reports/result.json" } : {},
+    ...existsSync15(resultPath2) ? { resultPath: "reports/result.json" } : {},
     result,
     traceEntries: trace.entries,
     traceSha,
@@ -54656,9 +55187,9 @@ function extractRunHistoryDocuments(runFolder) {
   });
   if (runDocument !== void 0)
     documents.push(runDocument);
-  const reportRoot = resolve8(runFolderAbs, "reports");
+  const reportRoot = resolve10(runFolderAbs, "reports");
   for (const relPath of listFiles(reportRoot, "reports")) {
-    const absPath = resolve8(runFolderAbs, relPath);
+    const absPath = resolve10(runFolderAbs, relPath);
     if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
       continue;
     if (skipReport(relPath))
@@ -54727,6 +55258,8 @@ var DEFAULT_RUNS_BASE = ".circuit/runs";
 var DEFAULT_INDEX_DIR = ".circuit/history";
 var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
 var HISTORY_MANIFEST_FILE = "manifest.v1.json";
+var HISTORY_MEMORY_MERGE_FILE = "memory-merge.v1.json";
+var HISTORY_MEMORY_EFFECT_FILE = "memory-effect.v1.json";
 var HistoryCommandError = class extends Error {
   code;
   paths;
@@ -54737,22 +55270,22 @@ var HistoryCommandError = class extends Error {
   }
 };
 function resolveHistoryPaths(options = {}) {
-  const repoRoot = resolve9(options.repoRoot ?? process.cwd());
-  const runsBase = resolve9(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
-  const indexDir = resolve9(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  const repoRoot = resolve11(options.repoRoot ?? process.cwd());
+  const runsBase = resolve11(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve11(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
   return {
     repoRoot,
     runsBase,
     indexDir,
-    manifestPath: join12(indexDir, HISTORY_MANIFEST_FILE),
-    documentsPath: join12(indexDir, HISTORY_DOCUMENTS_FILE)
+    manifestPath: join14(indexDir, HISTORY_MANIFEST_FILE),
+    documentsPath: join14(indexDir, HISTORY_DOCUMENTS_FILE)
   };
 }
 function isCandidateRunFolder(runFolder) {
-  return existsSync14(join12(runFolder, "manifest.snapshot.json")) || existsSync14(join12(runFolder, "trace.ndjson")) || existsSync14(join12(runFolder, "reports/result.json"));
+  return existsSync16(join14(runFolder, "manifest.snapshot.json")) || existsSync16(join14(runFolder, "trace.ndjson")) || existsSync16(join14(runFolder, "reports/result.json"));
 }
 function listCandidateRunFolders(runsBase) {
-  if (!existsSync14(runsBase)) {
+  if (!existsSync16(runsBase)) {
     throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
       runsBase
     });
@@ -54769,7 +55302,7 @@ function listCandidateRunFolders(runsBase) {
     });
   }
   try {
-    return readdirSync4(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
+    return readdirSync4(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join14(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
   } catch (error51) {
     throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
   }
@@ -54849,30 +55382,30 @@ function rebuildHistoryIndex(options = {}) {
     },
     warnings
   });
-  mkdirSync(paths.indexDir, { recursive: true });
+  mkdirSync2(paths.indexDir, { recursive: true });
   const documentsJsonl = `${documents.map((doc) => JSON.stringify(HistoryDocumentV1.parse(doc))).join("\n")}
 `;
   const manifestJson = `${JSON.stringify(manifest, null, 2)}
 `;
   const documentsTmp = `${paths.documentsPath}.tmp-${process.pid}`;
   const manifestTmp = `${paths.manifestPath}.tmp-${process.pid}`;
-  writeFileSync(documentsTmp, documentsJsonl, "utf8");
-  writeFileSync(manifestTmp, manifestJson, "utf8");
-  HistoryManifestV1.parse(JSON.parse(readFileSync26(manifestTmp, "utf8")));
-  for (const line of readFileSync26(documentsTmp, "utf8").split("\n")) {
+  writeFileSync2(documentsTmp, documentsJsonl, "utf8");
+  writeFileSync2(manifestTmp, manifestJson, "utf8");
+  HistoryManifestV1.parse(JSON.parse(readFileSync28(manifestTmp, "utf8")));
+  for (const line of readFileSync28(documentsTmp, "utf8").split("\n")) {
     if (line.trim().length === 0)
       continue;
     HistoryDocumentV1.parse(JSON.parse(line));
   }
-  renameSync(documentsTmp, paths.documentsPath);
-  renameSync(manifestTmp, paths.manifestPath);
+  renameSync2(documentsTmp, paths.documentsPath);
+  renameSync2(manifestTmp, paths.manifestPath);
   return {
     manifest,
     documents
   };
 }
 function readHistoryManifest(paths) {
-  if (!existsSync14(paths.manifestPath) || !existsSync14(paths.documentsPath)) {
+  if (!existsSync16(paths.manifestPath) || !existsSync16(paths.documentsPath)) {
     throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
       runsBase: paths.runsBase,
       indexDir: paths.indexDir
@@ -54880,7 +55413,7 @@ function readHistoryManifest(paths) {
   }
   let raw;
   try {
-    raw = JSON.parse(readFileSync26(paths.manifestPath, "utf8"));
+    raw = JSON.parse(readFileSync28(paths.manifestPath, "utf8"));
   } catch (error51) {
     throw new HistoryCommandError("index_corrupt", `history manifest corrupt: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
   }
@@ -54904,7 +55437,7 @@ function readHistoryIndex(options = {}) {
   const manifest = readHistoryManifest(paths);
   let documentsRaw = "";
   try {
-    documentsRaw = readFileSync26(paths.documentsPath, "utf8");
+    documentsRaw = readFileSync28(paths.documentsPath, "utf8");
   } catch (error51) {
     throw new HistoryCommandError("index_corrupt", `history documents unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase: paths.runsBase, indexDir: paths.indexDir });
   }
@@ -54970,6 +55503,38 @@ function historyStatus(options = {}) {
       }
     }
     throw error51;
+  }
+}
+
+// dist/app/history/memory-effect-read.js
+import { existsSync as existsSync17, readFileSync as readFileSync29 } from "node:fs";
+import { join as join15 } from "node:path";
+function loadMemoryEffectReport(paths) {
+  const effectPath = join15(paths.indexDir, HISTORY_MEMORY_EFFECT_FILE);
+  if (!existsSync17(effectPath)) {
+    return {
+      warnings: [
+        {
+          code: "effect_report_unavailable",
+          message: "no memory-effect report found; earned-precision runs fail-open (no measured suppression)",
+          source_path: HISTORY_MEMORY_EFFECT_FILE
+        }
+      ]
+    };
+  }
+  try {
+    const report = HistoryMemoryEffectV1.parse(JSON.parse(readFileSync29(effectPath, "utf8")));
+    return { report, warnings: [] };
+  } catch (error51) {
+    return {
+      warnings: [
+        {
+          code: "effect_report_unavailable",
+          message: `memory-effect report unreadable: ${error51 instanceof Error ? error51.message : String(error51)}; earned-precision runs fail-open`,
+          source_path: HISTORY_MEMORY_EFFECT_FILE
+        }
+      ]
+    };
   }
 }
 
@@ -55055,7 +55620,7 @@ function historyMemoryInputPreview(input) {
 }
 
 // dist/app/history/query.js
-import { existsSync as existsSync15, readFileSync as readFileSync27 } from "node:fs";
+import { existsSync as existsSync18, readFileSync as readFileSync30 } from "node:fs";
 var STOPWORDS = /* @__PURE__ */ new Set([
   "the",
   "and",
@@ -55211,14 +55776,14 @@ function sourceStaleness(doc, checkedAt) {
   }
   try {
     const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
-    if (!existsSync15(sourcePath)) {
+    if (!existsSync18(sourcePath)) {
       return {
         status: "stale",
         reason_codes: ["memory_stale"],
         checked_at: checkedAt
       };
     }
-    const currentHash = sha256OfString(readFileSync27(sourcePath, "utf8"));
+    const currentHash = sha256OfString(readFileSync30(sourcePath, "utf8"));
     return currentHash === doc.source_sha256 ? {
       status: "fresh",
       reason_codes: ["source_hash_verified"],
@@ -55341,6 +55906,110 @@ function queryHistory(options) {
   });
 }
 
+// dist/app/history/memory-identity.js
+function contentIdentityOf(memory) {
+  const contentSha = memory.source.ref.sha256 ?? memory.source.sha256 ?? null;
+  if (contentSha === null) {
+    return { contentId: null, unhashedSource: true };
+  }
+  const basis = JSON.stringify([memory.source.ref.kind, memory.source.ref.ref, contentSha]);
+  return { contentId: `mem-c-${sha256OfString(basis).slice(0, 16)}`, unhashedSource: false };
+}
+function groupKeyForMemory(memory) {
+  const { contentId } = contentIdentityOf(memory);
+  return contentId ?? `unresolved:${memory.memory_id}`;
+}
+
+// dist/app/history/recall-precision.js
+var TIER_RANK = {
+  positive_fresh: 0,
+  neutral_fresh: 1,
+  stale: 2
+};
+function tierFor(consultedStatus, staleness) {
+  if (consultedStatus === "correlated_negative")
+    return "suppressed";
+  if (staleness === "stale" || staleness === "unknown")
+    return "stale";
+  if (consultedStatus === "correlated_positive")
+    return "positive_fresh";
+  return "neutral_fresh";
+}
+function composeIndicator(input) {
+  const flow = input.flowId ?? "this flow";
+  const hintWord = (n) => n === 1 ? "hint" : "hints";
+  if (input.suppressedCount > 0) {
+    return `Memory (hint-only): suppressed ${input.suppressedCount} ${hintWord(input.suppressedCount)} with measured negative effect; ${input.injectedCount} ${hintWord(input.injectedCount)} loaded for flow ${flow}. Sources cited; rerun current checks before relying on them.`;
+  }
+  if (input.injectedCount === 0) {
+    return `Memory (hint-only): no prior-run hints matched flow ${flow}.`;
+  }
+  if (!input.effectReportAvailable || !input.hasMeasuredEffect) {
+    return `Memory (hint-only): ${input.injectedCount} prior-run ${hintWord(input.injectedCount)} loaded for flow ${flow}; earned-precision active but no measured effects yet.`;
+  }
+  return `Memory (hint-only): ${input.injectedCount} prior-run ${hintWord(input.injectedCount)} loaded for flow ${flow}; earned-precision active.`;
+}
+function applyEarnedPrecision(input) {
+  const now = input.now ?? (() => /* @__PURE__ */ new Date());
+  const effectReportAvailable = input.effect !== void 0;
+  const verdicts = /* @__PURE__ */ new Map();
+  if (input.effect !== void 0) {
+    for (const item of input.effect.item_effects) {
+      verdicts.set(`${item.group_key} ${item.flow_id}`, item.comparison.effect_status);
+    }
+  }
+  const scored = input.candidates.map((candidate, origIndex) => {
+    const { contentId } = contentIdentityOf(candidate);
+    const groupKey = groupKeyForMemory(candidate);
+    const consultedStatus = input.effect !== void 0 && input.flowId !== void 0 ? verdicts.get(`${groupKey} ${input.flowId}`) ?? "no_verdict" : "no_verdict";
+    const staleness = candidate.staleness.status;
+    return {
+      candidate,
+      origIndex,
+      decision: {
+        memory_input_id: candidate.memory_id,
+        content_id: contentId,
+        staleness,
+        consulted_effect_status: consultedStatus,
+        tier: tierFor(consultedStatus, staleness)
+      }
+    };
+  });
+  const pushable = scored.filter((entry) => entry.decision.tier !== "suppressed").sort((left, right) => {
+    const byTier = TIER_RANK[left.decision.tier] - TIER_RANK[right.decision.tier];
+    return byTier !== 0 ? byTier : left.origIndex - right.origIndex;
+  });
+  const injected = pushable.slice(0, Math.max(0, input.budget));
+  const injectedIds = new Set(injected.map((entry) => entry.decision.memory_input_id));
+  const decisions = scored.map((entry) => ({
+    ...entry.decision,
+    injected: injectedIds.has(entry.decision.memory_input_id)
+  }));
+  const memoryInputs = injected.map((entry) => entry.candidate);
+  const suppressedCount = scored.filter((entry) => entry.decision.tier === "suppressed").length;
+  const hasMeasuredEffect = decisions.some((decision2) => decision2.consulted_effect_status === "correlated_positive" || decision2.consulted_effect_status === "correlated_negative");
+  const precision = HistoryRecallPrecisionV1.parse({
+    api_version: "history-recall-precision-v1",
+    schema_version: 1,
+    generated_at: now().toISOString(),
+    ...input.flowId === void 0 ? {} : { flow_id: input.flowId },
+    effect_report_available: effectReportAvailable,
+    ...input.effect === void 0 ? {} : { effect_report_generated_at: input.effect.generated_at },
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    budget: input.budget,
+    indicator: composeIndicator({
+      injectedCount: memoryInputs.length,
+      suppressedCount,
+      ...input.flowId === void 0 ? {} : { flowId: input.flowId },
+      hasMeasuredEffect,
+      effectReportAvailable
+    }),
+    decisions,
+    warnings: [...input.warnings ?? []]
+  });
+  return { memoryInputs, precision };
+}
+
 // dist/app/history/run-start-recall.js
 var HISTORY_RECALL_REPORT_PATH = "reports/history/recall.json";
 var DEFAULT_RECALL_LIMIT = 3;
@@ -55365,6 +56034,12 @@ function capReport(input) {
 }
 function prepareRunStartHistoryRecall(options) {
   const maxMemoryInputs = options.maxMemoryInputs ?? DEFAULT_RECALL_LIMIT;
+  const now = options.now ?? (() => /* @__PURE__ */ new Date());
+  const paths = resolveHistoryPaths({
+    repoRoot: options.repoRoot,
+    ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir }
+  });
+  const effect = loadMemoryEffectReport(paths);
   try {
     const result = queryHistory({
       repoRoot: options.repoRoot,
@@ -55372,6 +56047,8 @@ function prepareRunStartHistoryRecall(options) {
       limit: Math.max(maxMemoryInputs * 2, maxMemoryInputs),
       perRunLimit: 1,
       rebuildIfStale: true,
+      // Flow-scoped recall (D5): narrow candidates to the flow about to run.
+      ...options.flowId === void 0 ? {} : { flow: options.flowId },
       ...options.now === void 0 ? {} : { now: options.now }
     });
     const preview = historyMemoryInputPreview({
@@ -55380,26 +56057,47 @@ function prepareRunStartHistoryRecall(options) {
       rebuilt: result.rebuilt,
       warnings: result.warnings,
       hits: result.results,
-      capturedAt: (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString()
+      capturedAt: now().toISOString()
     });
-    return capReport({
+    const projectFacts = loadProjectFactCandidates({
+      repoRoot: options.repoRoot,
+      ...options.flowId === void 0 ? {} : { flowId: options.flowId },
+      now
+    }).candidates;
+    const { memoryInputs, precision } = applyEarnedPrecision({
+      candidates: [...preview.memory_inputs, ...projectFacts],
+      ...options.flowId === void 0 ? {} : { flowId: options.flowId },
+      ...effect.report === void 0 ? {} : { effect: effect.report },
+      budget: maxMemoryInputs,
+      warnings: effect.warnings,
+      now
+    });
+    const report = capReport({
       report: HistoryRecallReportV1.parse({
         api_version: "history-recall-report-v1",
         schema_version: 1,
-        status: preview.memory_inputs.length === 0 ? "empty" : "used",
+        status: memoryInputs.length === 0 ? "empty" : "used",
         query: preview.query,
         index_state: preview.index_state,
         rebuilt: preview.rebuilt,
         authority_notice: preview.authority_notice,
-        memory_input_count: preview.memory_inputs.length,
-        memory_inputs: preview.memory_inputs,
+        memory_input_count: memoryInputs.length,
+        memory_inputs: memoryInputs,
         matches: preview.matches,
         warnings: preview.warnings
       }),
       maxMemoryInputs
     });
+    return { report, precision };
   } catch (error51) {
-    return HistoryRecallReportV1.parse({
+    const { precision } = applyEarnedPrecision({
+      candidates: [],
+      ...options.flowId === void 0 ? {} : { flowId: options.flowId },
+      budget: maxMemoryInputs,
+      warnings: [...effect.warnings, unavailableWarning(error51)],
+      now
+    });
+    const report = HistoryRecallReportV1.parse({
       api_version: "history-recall-report-v1",
       schema_version: 1,
       status: "unavailable",
@@ -55411,12 +56109,13 @@ function prepareRunStartHistoryRecall(options) {
       matches: [],
       warnings: [unavailableWarning(error51)]
     });
+    return { report, precision };
   }
 }
 
 // dist/app/process-evidence/projection.js
-import { existsSync as existsSync16, mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
-import { dirname as dirname5, join as join13 } from "node:path";
+import { existsSync as existsSync19, mkdirSync as mkdirSync3, writeFileSync as writeFileSync3 } from "node:fs";
+import { dirname as dirname5, join as join16 } from "node:path";
 function traceRef2(runId) {
   return {
     kind: "trace",
@@ -55473,15 +56172,15 @@ function projectClosedProcessEvidence(input) {
     runId: input.runResult.run_id,
     flowId
   });
-  const declaredReportRefs = declaredPaths.filter((path) => existsSync16(join13(input.runFolder, path))).map((path) => reportRef({
+  const declaredReportRefs = declaredPaths.filter((path) => existsSync19(join16(input.runFolder, path))).map((path) => reportRef({
     runFolder: input.runFolder,
-    path: join13(input.runFolder, path),
+    path: join16(input.runFolder, path),
     runId: input.runResult.run_id,
     flowId
   }));
   const additionalRefs = (input.additionalEvidencePaths ?? []).map((path) => reportRef({
     runFolder: input.runFolder,
-    path: join13(input.runFolder, path),
+    path: join16(input.runFolder, path),
     runId: input.runResult.run_id,
     flowId
   }));
@@ -55537,9 +56236,9 @@ function projectCheckpointWaitingProcessEvidence(input) {
 }
 function writeProcessEvidenceProjection(input) {
   const projection = ProcessEvidenceProjection.parse(input.projection);
-  const outPath = join13(input.runFolder, PROCESS_EVIDENCE_RELATIVE_PATH);
-  mkdirSync2(dirname5(outPath), { recursive: true });
-  writeFileSync2(outPath, `${JSON.stringify(projection, null, 2)}
+  const outPath = join16(input.runFolder, PROCESS_EVIDENCE_RELATIVE_PATH);
+  mkdirSync3(dirname5(outPath), { recursive: true });
+  writeFileSync3(outPath, `${JSON.stringify(projection, null, 2)}
 `);
   return { path: outPath, projection };
 }
@@ -55617,8 +56316,8 @@ function detectNoProgress(attempts) {
 }
 
 // dist/app/run-envelope/source-record.js
-import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync3 } from "node:fs";
-import { dirname as dirname6, join as join14 } from "node:path";
+import { mkdirSync as mkdirSync4, writeFileSync as writeFileSync4 } from "node:fs";
+import { dirname as dirname6, join as join17 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
 var RUN_SURFACE_RELATIVE_PATH = "reports/run-surface.md";
 var RUN_DECISION_PACKET_RELATIVE_DIR = "reports/decision-packets";
@@ -55662,7 +56361,7 @@ function renderSurfaceMarkdown(input) {
     ...input.record.surface_output.artifact_links
   ];
   const uniqueArtifactRefs = artifactRefs.filter((ref, index, refs) => refs.findIndex((candidate) => candidate.ref === ref.ref) === index);
-  const artifactLine = uniqueArtifactRefs.map((ref) => markdownLink(artifactLabel(ref), join14(input.runFolder, ref.ref))).join(" \xB7 ");
+  const artifactLine = uniqueArtifactRefs.map((ref) => markdownLink(artifactLabel(ref), join17(input.runFolder, ref.ref))).join(" \xB7 ");
   return ["Circuit", `\u23BF ${input.record.surface_output.status_text}`, "", artifactLine, ""].join("\n");
 }
 function processAttemptOutcome(outcome) {
@@ -56058,7 +56757,8 @@ function writeRunEnvelopeRecord(input) {
     processEvidence,
     ...input.memoryUpdates === void 0 ? {} : { updates: input.memoryUpdates }
   });
-  const memoryIndicator = memoryEvents.find((event) => event.action === "proposed" || event.action === "recorded")?.operator_indicator;
+  const writeIndicator = memoryEvents.find((event) => event.action === "proposed" || event.action === "recorded")?.operator_indicator;
+  const memoryIndicator = writeIndicator ?? input.recallMemoryIndicator;
   const record2 = RunEnvelopeRecord.parse({
     schema: "run.envelope@v0",
     run_id: projection.child_run_ref.run_id,
@@ -56155,18 +56855,18 @@ function writeRunEnvelopeRecord(input) {
     }),
     outcome
   });
-  const outPath = join14(input.runFolder, RUN_ENVELOPE_RELATIVE_PATH);
-  mkdirSync3(dirname6(outPath), { recursive: true });
+  const outPath = join17(input.runFolder, RUN_ENVELOPE_RELATIVE_PATH);
+  mkdirSync4(dirname6(outPath), { recursive: true });
   const decisionPacketPaths = decisionArtifacts.map((artifact) => {
-    const path = join14(input.runFolder, artifact.ref.ref);
-    mkdirSync3(dirname6(path), { recursive: true });
-    writeFileSync3(path, artifact.body);
+    const path = join17(input.runFolder, artifact.ref.ref);
+    mkdirSync4(dirname6(path), { recursive: true });
+    writeFileSync4(path, artifact.body);
     return path;
   });
-  writeFileSync3(outPath, `${JSON.stringify(record2, null, 2)}
+  writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
 `);
-  const surfacePath = join14(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
-  writeFileSync3(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record: record2 }));
+  const surfacePath = join17(input.runFolder, RUN_SURFACE_RELATIVE_PATH);
+  writeFileSync4(surfacePath, renderSurfaceMarkdown({ runFolder: input.runFolder, record: record2 }));
   return {
     path: outPath,
     processEvidencePath,
@@ -56614,16 +57314,16 @@ ${issueSummary}${more}`
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
+import { existsSync as existsSync20, readFileSync as readFileSync31 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join15, resolve as resolve10 } from "node:path";
+import { join as join18, resolve as resolve12 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
-  return join15(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+  return join18(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
 function projectConfigPath(cwd = process.cwd()) {
-  return join15(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+  return join18(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
 function parseConfigYaml(text, sourcePath) {
   try {
@@ -56633,10 +57333,10 @@ function parseConfigYaml(text, sourcePath) {
   }
 }
 function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve10(sourcePath);
-  if (!existsSync17(abs))
+  const abs = resolve12(sourcePath);
+  if (!existsSync20(abs))
     return void 0;
-  const raw = parseConfigYaml(readFileSync28(abs, "utf8"), abs);
+  const raw = parseConfigYaml(readFileSync31(abs, "utf8"), abs);
   if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
     const schemaVersion = raw.schema_version;
     if (schemaVersion === 2) {
@@ -56694,19 +57394,19 @@ function discoverRuntimeConfigLayers(options = {}) {
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync19, mkdirSync as mkdirSync4, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname7, isAbsolute as isAbsolute11, join as join16, relative as relative11, resolve as resolve11 } from "node:path";
+import { existsSync as existsSync22, mkdirSync as mkdirSync5, readFileSync as readFileSync33, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { dirname as dirname7, isAbsolute as isAbsolute11, join as join19, relative as relative11, resolve as resolve13 } from "node:path";
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync18, readFileSync as readFileSync29 } from "node:fs";
+import { existsSync as existsSync21, readFileSync as readFileSync32 } from "node:fs";
 function isObject4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync18(path))
+  if (!existsSync21(path))
     return void 0;
-  const parsed = JSON.parse(readFileSync29(path, "utf8"));
+  const parsed = JSON.parse(readFileSync32(path, "utf8"));
   return isObject4(parsed) ? parsed : void 0;
 }
 function stringField2(report, key) {
@@ -57241,11 +57941,11 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join16(runFolder, "reports", "operator-summary.json");
-  if (!existsSync19(path))
+  const path = join19(runFolder, "reports", "operator-summary.json");
+  if (!existsSync22(path))
     return {};
   try {
-    const raw = JSON.parse(readFileSync30(path, "utf8"));
+    const raw = JSON.parse(readFileSync33(path, "utf8"));
     if (!isObject4(raw))
       return {};
     const routedBy = raw.routed_by;
@@ -57260,13 +57960,13 @@ function readPriorRoute(runFolder) {
 }
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join16(runFolder, "reports", "operator-summary.json");
+  return join19(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join16(runFolder, "reports", "operator-summary.md");
+  return join19(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join16(runFolder, "reports", "operator-summary.html");
+  return join19(runFolder, "reports", "operator-summary.html");
 }
 function isInsideOrSame4(root, target) {
   const fromRoot = relative11(root, target);
@@ -57275,16 +57975,16 @@ function isInsideOrSame4(root, target) {
 function readCheckpointRequest(runFolder, checkpoint) {
   let requestPath;
   try {
-    requestPath = isAbsolute11(checkpoint.request_path) ? resolve11(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
+    requestPath = isAbsolute11(checkpoint.request_path) ? resolve13(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
   } catch {
     return void 0;
   }
-  if (!isInsideOrSame4(resolve11(runFolder), requestPath))
+  if (!isInsideOrSame4(resolve13(runFolder), requestPath))
     return void 0;
-  if (!existsSync19(requestPath))
+  if (!existsSync22(requestPath))
     return void 0;
   try {
-    const parsed = JSON.parse(readFileSync30(requestPath, "utf8"));
+    const parsed = JSON.parse(readFileSync33(requestPath, "utf8"));
     return isObject4(parsed) ? parsed : void 0;
   } catch {
     return void 0;
@@ -57333,11 +58033,11 @@ function evidenceLinks2(runFolder, report) {
   });
 }
 function readAutoResolutions(runFolder) {
-  const tracePath = join16(runFolder, "trace.ndjson");
-  if (!existsSync19(tracePath))
+  const tracePath = join19(runFolder, "trace.ndjson");
+  if (!existsSync22(tracePath))
     return [];
   const records = [];
-  for (const line of readFileSync30(tracePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync33(tracePath, "utf8").split(/\r?\n/)) {
     if (line.trim().length === 0)
       continue;
     let entry;
@@ -57436,7 +58136,7 @@ function writeOperatorSummary(input) {
   const autoResolutions = readAutoResolutions(input.runFolder);
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
-  mkdirSync4(dirname7(outJsonPath), { recursive: true });
+  mkdirSync5(dirname7(outJsonPath), { recursive: true });
   const projector = getHtmlProjector(flowId);
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath;
@@ -57467,14 +58167,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync19(candidateHtmlPath))
+    if (existsSync22(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
-      writeFileSync4(candidateHtmlPath, renderedHtml);
+      writeFileSync5(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync19(candidateHtmlPath))
+      if (existsSync22(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -57544,9 +58244,9 @@ function writeOperatorSummary(input) {
     ...autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions },
     ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {}
   });
-  writeFileSync4(outJsonPath, `${JSON.stringify(candidate, null, 2)}
+  writeFileSync5(outJsonPath, `${JSON.stringify(candidate, null, 2)}
 `);
-  writeFileSync4(outMarkdownPath, renderMarkdown(candidate));
+  writeFileSync5(outMarkdownPath, renderMarkdown(candidate));
   return outHtmlPath === void 0 ? { summary: candidate, jsonPath: outJsonPath, markdownPath: outMarkdownPath } : {
     summary: candidate,
     jsonPath: outJsonPath,
@@ -57561,6 +58261,7 @@ var CLI_COMMAND_NAMES = [
   "resume",
   "handoff",
   "history",
+  "memory",
   "create",
   "runs",
   "version"
@@ -57590,14 +58291,14 @@ function parseCommanderOrThrow(program2, argv) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync20, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
+import { existsSync as existsSync23, mkdirSync as mkdirSync6, readFileSync as readFileSync35, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname9, join as join17, resolve as resolve13 } from "node:path";
+import { dirname as dirname9, join as join20, resolve as resolve15 } from "node:path";
 var import_yaml3 = __toESM(require_dist(), 1);
 
 // dist/cli/runtime-routing-policy.js
-import { readFileSync as readFileSync31 } from "node:fs";
-import { dirname as dirname8, relative as relative12, resolve as resolve12 } from "node:path";
+import { readFileSync as readFileSync34 } from "node:fs";
+import { dirname as dirname8, relative as relative12, resolve as resolve14 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -57614,8 +58315,8 @@ function pathIsInside(parent, child) {
 function fixtureEligibleForRuntime(input) {
   if (input.args.fixturePath === void 0 && input.args.flowRoot === void 0)
     return true;
-  const fixturePath = resolve12(input.fixturePath);
-  if (pathIsInside(resolve12(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
+  const fixturePath = resolve14(input.fixturePath);
+  if (pathIsInside(resolve14(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
     return true;
   }
   if (input.args.flowRoot !== void 0 && publishedCustomFlowMatches(input.args.flowRoot, fixturePath)) {
@@ -57625,12 +58326,12 @@ function fixtureEligibleForRuntime(input) {
   if (mirrorRoot === void 0 || mirrorRoot.length === 0 || input.args.flowRoot === void 0) {
     return false;
   }
-  const trustedMirrorRoot = resolve12(mirrorRoot);
-  return resolve12(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
+  const trustedMirrorRoot = resolve14(mirrorRoot);
+  return resolve14(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync31(resolve12(dirname8(resolve12(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync34(resolve14(dirname8(resolve14(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -57641,7 +58342,7 @@ function publishedCustomFlowMatches(flowRoot2, fixturePath) {
         return false;
       }
       const flowPath = candidate.flow_path;
-      return typeof flowPath === "string" && resolve12(flowPath) === fixturePath;
+      return typeof flowPath === "string" && resolve14(flowPath) === fixturePath;
     });
   } catch {
     return false;
@@ -57737,38 +58438,38 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve13(args.home ?? join17(homedir3(), ".config", "circuit", "custom"));
+  return resolve15(args.home ?? join20(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
-  return join17(home, "drafts", slug);
+  return join20(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join17(home, "skills", slug);
+  return join20(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join17(home, "flows");
+  return join20(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join17(home, "commands");
+  return join20(home, "commands");
 }
 function reportsRoot(home) {
-  return join17(home, "reports");
+  return join20(home, "reports");
 }
 function manifestPath(home) {
-  return join17(home, "manifest.json");
+  return join20(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join17(reportsRoot(home), `${slug}-create-result.json`);
+  return join20(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join17(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join20(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
-  mkdirSync5(dirname9(path), { recursive: true });
-  writeFileSync5(path, text.endsWith("\n") ? text : `${text}
+  mkdirSync6(dirname9(path), { recursive: true });
+  writeFileSync6(path, text.endsWith("\n") ? text : `${text}
 `);
 }
 function writeJson(path, value) {
@@ -57785,13 +58486,13 @@ function validateCustomFlow(slug, flow, source) {
 }
 function candidateTemplatePaths(args) {
   const roots = [args.templateFlowRoot, "generated/flows", "plugins/codex/flows"].filter((root) => root !== void 0);
-  return roots.map((root) => resolve13(root, "build", "circuit.json"));
+  return roots.map((root) => resolve15(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync20(candidate))
+    if (!existsSync23(candidate))
       continue;
-    return CompiledFlow.parse(JSON.parse(readFileSync32(candidate, "utf8")));
+    return CompiledFlow.parse(JSON.parse(readFileSync35(candidate, "utf8")));
   }
   throw new Error("could not find the Build template flow; pass --template-flow-root with a root containing build/circuit.json");
 }
@@ -57887,8 +58588,8 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync20(manifestPath(input.home))) {
-    existing = JSON.parse(readFileSync32(manifestPath(input.home), "utf8"));
+  if (existsSync23(manifestPath(input.home))) {
+    existing = JSON.parse(readFileSync35(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
   writeJson(manifestPath(input.home), {
@@ -57899,16 +58600,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join17(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join17(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join17(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join20(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join20(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join20(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join17(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join20(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -57918,13 +58619,13 @@ function writeValidationResult(input) {
 function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
-  mkdirSync5(root, { recursive: true });
+  mkdirSync6(root, { recursive: true });
   const descriptor = circuitYaml(input.slug, input.description);
-  validateCircuitYamlDescriptor(descriptor, join17(root, "circuit.yaml"), input.slug);
-  writeText(join17(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join17(root, "circuit.yaml"), descriptor);
-  writeJson(join17(root, "circuit.json"), input.flow);
-  writeText(join17(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  validateCircuitYamlDescriptor(descriptor, join20(root, "circuit.yaml"), input.slug);
+  writeText(join20(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join20(root, "circuit.yaml"), descriptor);
+  writeJson(join20(root, "circuit.json"), input.flow);
+  writeText(join20(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -57933,26 +58634,26 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join17(draftRoot(home, slug), "circuit.json");
-  const flow = CompiledFlow.parse(JSON.parse(readFileSync32(path, "utf8")));
+  const path = join20(draftRoot(home, slug), "circuit.json");
+  const flow = CompiledFlow.parse(JSON.parse(readFileSync35(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync20(join17(draft, "SKILL.md"))) {
+  if (!existsSync23(join20(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
-  const descriptor = readFileSync32(join17(draft, "circuit.yaml"), "utf8");
-  validateCircuitYamlDescriptor(descriptor, join17(draft, "circuit.yaml"), input.slug);
+  const descriptor = readFileSync35(join20(draft, "circuit.yaml"), "utf8");
+  validateCircuitYamlDescriptor(descriptor, join20(draft, "circuit.yaml"), input.slug);
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join17(flowRoot(input.home), input.slug);
-  mkdirSync5(skillRoot, { recursive: true });
-  mkdirSync5(customFlowRoot, { recursive: true });
-  writeText(join17(skillRoot, "SKILL.md"), readFileSync32(join17(draft, "SKILL.md"), "utf8"));
-  writeText(join17(skillRoot, "circuit.yaml"), descriptor);
-  writeText(join17(customFlowRoot, "circuit.json"), readFileSync32(join17(draft, "circuit.json"), "utf8"));
-  writeText(join17(commandRoot(input.home), `${input.slug}.md`), readFileSync32(join17(draft, "command.md"), "utf8"));
+  const customFlowRoot = join20(flowRoot(input.home), input.slug);
+  mkdirSync6(skillRoot, { recursive: true });
+  mkdirSync6(customFlowRoot, { recursive: true });
+  writeText(join20(skillRoot, "SKILL.md"), readFileSync35(join20(draft, "SKILL.md"), "utf8"));
+  writeText(join20(skillRoot, "circuit.yaml"), descriptor);
+  writeText(join20(customFlowRoot, "circuit.json"), readFileSync35(join20(draft, "circuit.json"), "utf8"));
+  writeText(join20(commandRoot(input.home), `${input.slug}.md`), readFileSync35(join20(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -58016,11 +58717,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync20(join17(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync23(join20(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync20(join17(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync23(join20(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -58044,11 +58745,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join17(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join20(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join17(flowRoot(home), slug, "circuit.json"),
-        command_path: join17(commandRoot(home), `${slug}.md`),
+        flow_path: join20(flowRoot(home), slug, "circuit.json"),
+        command_path: join20(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -58086,23 +58787,23 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync22, mkdirSync as mkdirSync6, readFileSync as readFileSync35, writeFileSync as writeFileSync7 } from "node:fs";
+import { copyFileSync, existsSync as existsSync25, mkdirSync as mkdirSync7, readFileSync as readFileSync38, writeFileSync as writeFileSync8 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname10, join as join21, resolve as resolve15 } from "node:path";
+import { dirname as dirname10, join as join24, resolve as resolve17 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/app/run-status/run-folder-projector.js
 import { constants, accessSync, statSync as statSync3 } from "node:fs";
-import { resolve as resolve14 } from "node:path";
+import { resolve as resolve16 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync33, writeFileSync as writeFileSync6 } from "node:fs";
-import { join as join18 } from "node:path";
+import { readFileSync as readFileSync36, writeFileSync as writeFileSync7 } from "node:fs";
+import { join as join21 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join18(runFolder, "manifest.snapshot.json");
+  return join21(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
-  const text = readFileSync33(manifestSnapshotPath(runFolder), "utf8");
+  const text = readFileSync36(manifestSnapshotPath(runFolder), "utf8");
   const raw = JSON.parse(text);
   return ManifestSnapshot.parse(raw);
 }
@@ -58111,8 +58812,8 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/app/run-status/projection-common.js
-import { existsSync as existsSync21 } from "node:fs";
-import { join as join19 } from "node:path";
+import { existsSync as existsSync24 } from "node:fs";
+import { join as join22 } from "node:path";
 function errorMessage3(err) {
   return err instanceof Error ? err.message : String(err);
 }
@@ -58147,12 +58848,12 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join19(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join19(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join22(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join22(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync21(result) ? { result_path: result } : {},
-    ...existsSync21(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync21(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync24(result) ? { result_path: result } : {},
+    ...existsSync24(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync24(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -58167,14 +58868,14 @@ function stepMetadata(flow, stepId) {
 }
 
 // dist/app/run-status/runtime-run-folder.js
-import { readFileSync as readFileSync34 } from "node:fs";
-import { join as join20 } from "node:path";
+import { readFileSync as readFileSync37 } from "node:fs";
+import { join as join23 } from "node:path";
 function isRecord6(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join20(runFolder, "trace.ndjson");
-  const text = readFileSync34(tracePath, "utf8");
+  const tracePath = join23(runFolder, "trace.ndjson");
+  const text = readFileSync37(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
     return [];
@@ -58355,7 +59056,7 @@ function runtimeWaitingCheckpointProjection(input) {
   let requestAbs;
   try {
     requestAbs = resolveRunFilePath(input.runFolder, requestPath);
-    requestText = readFileSync34(requestAbs, "utf8");
+    requestText = readFileSync37(requestAbs, "utf8");
   } catch (err) {
     return invalidProjection({
       runFolder: input.runFolder,
@@ -58416,7 +59117,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync34(join20(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync37(join23(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -58620,7 +59321,7 @@ function assertReadableRunFolder(runFolder) {
   }
 }
 function projectRunStatusFromRunFolder(runFolder) {
-  const resolvedRunFolder = resolve14(runFolder);
+  const resolvedRunFolder = resolve16(runFolder);
   assertReadableRunFolder(resolvedRunFolder);
   let manifest;
   try {
@@ -58716,45 +59417,45 @@ function parseArgs2(argv) {
   };
 }
 function resolveProjectRootArg(args) {
-  return resolve15(args.projectRoot ?? process.cwd());
+  return resolve17(args.projectRoot ?? process.cwd());
 }
 function resolveControlPlaneArg(args) {
   if (args.controlPlane !== void 0)
-    return resolve15(args.controlPlane);
-  return resolve15(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
+    return resolve17(args.controlPlane);
+  return resolve17(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
 }
 function continuityRoot(controlPlane) {
-  return resolve15(controlPlane, "continuity");
+  return resolve17(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join21(continuityRoot(controlPlane), "records");
+  return join24(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join21(continuityRoot(controlPlane), "index.json");
+  return join24(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join21(recordsRoot(controlPlane), `${recordId}.json`);
+  return join24(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join21(continuityRoot(controlPlane), "reports");
+  return join24(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join21(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join24(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join21(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join24(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join21(controlPlane, "active-run.md");
+  return join24(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
-  mkdirSync6(dirname10(path), { recursive: true });
-  writeFileSync7(path, `${JSON.stringify(value, null, 2)}
+  mkdirSync7(dirname10(path), { recursive: true });
+  writeFileSync8(path, `${JSON.stringify(value, null, 2)}
 `);
 }
 function writeMarkdown(path, value) {
-  mkdirSync6(dirname10(path), { recursive: true });
-  writeFileSync7(path, value.endsWith("\n") ? value : `${value}
+  mkdirSync7(dirname10(path), { recursive: true });
+  writeFileSync8(path, value.endsWith("\n") ? value : `${value}
 `);
 }
 function composeHandoffBrief(record2, state, debt) {
@@ -58791,15 +59492,15 @@ function renderHandoffBrief(record2) {
   if (full.length <= HANDOFF_BRIEF_MAX_CHARS) {
     return { ok: true, additionalContext: full };
   }
-  const fixed = composeHandoffBrief(record2, "", "");
-  if (fixed.length > HANDOFF_BRIEF_MAX_CHARS) {
+  const fixed2 = composeHandoffBrief(record2, "", "");
+  if (fixed2.length > HANDOFF_BRIEF_MAX_CHARS) {
     return {
       ok: false,
       code: "brief_too_large",
       message: "Handoff goal and next action are too large to inject without dropping required safety framing."
     };
   }
-  const remaining = Math.max(0, HANDOFF_BRIEF_MAX_CHARS - fixed.length);
+  const remaining = Math.max(0, HANDOFF_BRIEF_MAX_CHARS - fixed2.length);
   let stateBudget = Math.floor(remaining / 2);
   let debtBudget = remaining - stateBudget;
   if (state.length < stateBudget) {
@@ -58863,23 +59564,23 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync22(indexAbs))
+  if (!existsSync25(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
-    index = ContinuityIndex.parse(JSON.parse(readFileSync35(indexAbs, "utf8")));
+    index = ContinuityIndex.parse(JSON.parse(readFileSync38(indexAbs, "utf8")));
   } catch {
     return invalidBrief(args, "index_invalid", "Continuity index is malformed.");
   }
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync22(recordAbs)) {
+  if (!existsSync25(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
   try {
-    record2 = ContinuityRecord.parse(JSON.parse(readFileSync35(recordAbs, "utf8")));
+    record2 = ContinuityRecord.parse(JSON.parse(readFileSync38(recordAbs, "utf8")));
   } catch {
     return invalidBrief(args, "record_invalid", "Continuity record is malformed.", index.pending_record.record_id);
   }
@@ -58912,7 +59613,7 @@ function debugHook(message) {
 function readHookInput() {
   if (process.stdin.isTTY)
     return {};
-  const raw = readFileSync35(0, "utf8");
+  const raw = readFileSync38(0, "utf8");
   if (raw.trim().length === 0)
     return {};
   return JSON.parse(raw);
@@ -58976,14 +59677,14 @@ function runHandoffHook(args) {
   return 0;
 }
 function defaultCodexHooksFile() {
-  const codexHome = process.env.CODEX_HOME ?? resolve15(homedir4(), ".codex");
-  return resolve15(codexHome, "hooks.json");
+  const codexHome = process.env.CODEX_HOME ?? resolve17(homedir4(), ".codex");
+  return resolve17(codexHome, "hooks.json");
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve15(pluginRoot, "scripts/circuit.ts");
+    return resolve17(pluginRoot, "scripts/circuit.ts");
   }
-  return resolve15(moduleDir, "../..", "bin/circuit");
+  return resolve17(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
@@ -59001,11 +59702,11 @@ function parseCodexHooksHost(args) {
   throw new Error("handoff hooks requires --host codex");
 }
 function resolveHooksFileArg(args) {
-  return resolve15(args.hooksFile ?? defaultCodexHooksFile());
+  return resolve17(args.hooksFile ?? defaultCodexHooksFile());
 }
 function resolveLauncherArg(args) {
-  const launcher = resolve15(args.launcher ?? defaultLauncherPath());
-  if (!existsSync22(launcher)) {
+  const launcher = resolve17(args.launcher ?? defaultLauncherPath());
+  if (!existsSync25(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -59031,9 +59732,9 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync22(path))
+  if (!existsSync25(path))
     return defaultHooksConfig();
-  const parsed = JSON.parse(readFileSync35(path, "utf8"));
+  const parsed = JSON.parse(readFileSync38(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("hooks file must contain a JSON object");
   }
@@ -59141,16 +59842,16 @@ function launcherPathFromCircuitHookCommand(command) {
   return launcher;
 }
 function writeHooksConfig(path, config2) {
-  mkdirSync6(dirname10(path), { recursive: true });
+  mkdirSync7(dirname10(path), { recursive: true });
   let backupPath;
-  if (existsSync22(path)) {
+  if (existsSync25(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync22(candidate)) {
+    if (!existsSync25(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
   }
-  writeFileSync7(path, `${JSON.stringify(config2, null, 2)}
+  writeFileSync8(path, `${JSON.stringify(config2, null, 2)}
 `);
   return backupPath === void 0 ? {} : { backupPath };
 }
@@ -59196,7 +59897,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync22(hooksPath)) {
+  if (!existsSync25(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59235,7 +59936,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync22(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync25(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -59266,7 +59967,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync22(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync25(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -59290,7 +59991,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync22(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync25(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59386,7 +60087,7 @@ function buildRecord(args, now) {
       }
     });
   }
-  const runFolder = resolve15(args.runFolder);
+  const runFolder = resolve17(args.runFolder);
   const { snapshot, currentStage } = loadRunBackedSnapshot(runFolder);
   if (snapshot.current_step === void 0) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
@@ -59488,7 +60189,7 @@ function saveContinuity(args, now) {
 }
 function readJsonSafely(path) {
   try {
-    return { ok: true, value: JSON.parse(readFileSync35(path, "utf8")) };
+    return { ok: true, value: JSON.parse(readFileSync38(path, "utf8")) };
   } catch {
     return { ok: false };
   }
@@ -59514,7 +60215,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync22(indexAbs)) {
+  if (!existsSync25(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -59552,7 +60253,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync22(recordAbs)) {
+  if (!existsSync25(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -59709,6 +60410,489 @@ async function runHandoffCommand(argv, options = {}) {
 }
 
 // dist/cli/history.js
+import { basename as basename3 } from "node:path";
+
+// dist/app/history/memory-effect.js
+import { mkdirSync as mkdirSync9, readFileSync as readFileSync40, renameSync as renameSync4, writeFileSync as writeFileSync10 } from "node:fs";
+import { join as join26 } from "node:path";
+
+// dist/app/history/memory-merge.js
+import { existsSync as existsSync26, mkdirSync as mkdirSync8, readFileSync as readFileSync39, renameSync as renameSync3, writeFileSync as writeFileSync9 } from "node:fs";
+import { join as join25 } from "node:path";
+var RUN_ENVELOPE_RELATIVE_PATH2 = "reports/run-envelope.json";
+var RECALL_REPORT_RELATIVE_PATH = "reports/history/recall.json";
+var EFFECT_NOTE = "Report-only linkage (Slice 1). Effect requires cross-run aggregation over comparable runs (Slice 2).";
+function deriveAbortReason(envelope) {
+  const attempt = envelope.process_attempts.find((entry) => entry.outcome === "blocked" || entry.outcome === "failed");
+  if (attempt === void 0)
+    return void 0;
+  return attempt.blocked_reason ?? attempt.summary;
+}
+function readRecallInputs(runFolder, warnings) {
+  const recallPath = join25(runFolder, RECALL_REPORT_RELATIVE_PATH);
+  if (!existsSync26(recallPath)) {
+    warnings.push({
+      code: "recall_report_missing",
+      message: "memory was used but no recall report was found; content identity is unavailable",
+      run_folder: runFolder,
+      source_path: RECALL_REPORT_RELATIVE_PATH
+    });
+    return void 0;
+  }
+  try {
+    const recall = HistoryRecallReportV1.parse(JSON.parse(readFileSync39(recallPath, "utf8")));
+    return new Map(recall.memory_inputs.map((memory) => [memory.memory_id, memory]));
+  } catch (error51) {
+    warnings.push({
+      code: "source_invalid",
+      message: `recall report unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`,
+      run_folder: runFolder,
+      source_path: RECALL_REPORT_RELATIVE_PATH
+    });
+    return void 0;
+  }
+}
+function resolveInput(memoryInputId, recallInputs, runFolder, warnings) {
+  const memory = recallInputs?.get(memoryInputId);
+  if (memory === void 0) {
+    if (recallInputs !== void 0) {
+      warnings.push({
+        code: "memory_input_unmatched",
+        message: `memory ${memoryInputId} is absent from the recall report; content identity is unavailable`,
+        run_folder: runFolder,
+        source_path: RECALL_REPORT_RELATIVE_PATH
+      });
+    }
+    return { memory_input_id: memoryInputId, content_id: null, resolved_from_recall: false };
+  }
+  const { contentId, unhashedSource } = contentIdentityOf(memory);
+  if (unhashedSource) {
+    warnings.push({
+      code: "content_id_unhashed_source",
+      message: `memory ${memoryInputId} cites a source with no content hash; it cannot be content-addressed`,
+      run_folder: runFolder,
+      source_path: RECALL_REPORT_RELATIVE_PATH
+    });
+  }
+  return {
+    memory_input_id: memoryInputId,
+    content_id: contentId,
+    kind: memory.kind,
+    source_ref: memory.source.ref,
+    staleness: memory.staleness.status,
+    resolved_from_recall: true
+  };
+}
+function extractRunMemoryLinkage(runFolder) {
+  const warnings = [];
+  const envelopePath = join25(runFolder, RUN_ENVELOPE_RELATIVE_PATH2);
+  if (!existsSync26(envelopePath)) {
+    warnings.push({
+      code: "envelope_missing",
+      message: "no run.envelope@v0 record (resume or non-source run); skipped from linkage",
+      run_folder: runFolder,
+      source_path: RUN_ENVELOPE_RELATIVE_PATH2
+    });
+    return { warnings };
+  }
+  let envelope;
+  try {
+    envelope = RunEnvelopeRecord.parse(JSON.parse(readFileSync39(envelopePath, "utf8")));
+  } catch (error51) {
+    warnings.push({
+      code: "source_invalid",
+      message: `run envelope unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`,
+      run_folder: runFolder,
+      source_path: RUN_ENVELOPE_RELATIVE_PATH2
+    });
+    return { warnings };
+  }
+  const memoryUsed = envelope.memory_context.used;
+  const memoryInputIds = envelope.memory_context.memory_input_ids;
+  const recallInputs = memoryUsed && memoryInputIds.length > 0 ? readRecallInputs(runFolder, warnings) : void 0;
+  const memoryInputs = memoryUsed ? memoryInputIds.map((id) => resolveInput(id, recallInputs, runFolder, warnings)) : [];
+  const flowId = envelope.process_attempts[0]?.process_id ?? envelope.process_plan.planned_attempts[0]?.process_id;
+  const abortReason = deriveAbortReason(envelope);
+  const linkage = MemoryMergeRunLinkageV1.parse({
+    run_id: envelope.run_id,
+    ...flowId === void 0 ? {} : { flow_id: flowId },
+    operator_intent: envelope.operator_intent,
+    outcome: envelope.outcome,
+    ...abortReason === void 0 ? {} : { abort_reason: abortReason },
+    memory_used: memoryUsed,
+    memory_inputs: memoryInputs
+  });
+  return { linkage, warnings };
+}
+function groupMemoryItems(linkages) {
+  const accumulators = /* @__PURE__ */ new Map();
+  for (const linkage of linkages) {
+    if (!linkage.memory_used)
+      continue;
+    for (const input of linkage.memory_inputs) {
+      const groupKey = input.content_id ?? `unresolved:${input.memory_input_id}`;
+      let acc = accumulators.get(groupKey);
+      if (acc === void 0) {
+        acc = {
+          group_key: groupKey,
+          content_id: input.content_id,
+          ...input.kind === void 0 ? {} : { kind: input.kind },
+          ...input.source_ref === void 0 ? {} : { source_ref: input.source_ref },
+          memory_input_ids: /* @__PURE__ */ new Set(),
+          runOutcomes: /* @__PURE__ */ new Map()
+        };
+        accumulators.set(groupKey, acc);
+      }
+      acc.memory_input_ids.add(input.memory_input_id);
+      acc.runOutcomes.set(linkage.run_id, linkage.outcome);
+    }
+  }
+  const items = [];
+  for (const acc of accumulators.values()) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const outcome of acc.runOutcomes.values()) {
+      counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
+    }
+    items.push({
+      group_key: acc.group_key,
+      content_id: acc.content_id,
+      memory_input_ids: [...acc.memory_input_ids].sort(),
+      ...acc.kind === void 0 ? {} : { kind: acc.kind },
+      ...acc.source_ref === void 0 ? {} : { source_ref: acc.source_ref },
+      used_by_run_ids: [...acc.runOutcomes.keys()].sort(),
+      outcome_counts: [...counts.entries()].map(([outcome, count]) => ({ outcome, count })).sort((left, right) => left.outcome.localeCompare(right.outcome)),
+      effect_status: "not_enough_data",
+      effect_note: EFFECT_NOTE
+    });
+  }
+  return items.sort((left, right) => left.group_key.localeCompare(right.group_key));
+}
+function buildMemoryMergeReport(options = {}) {
+  const paths = resolveHistoryPaths(options);
+  const now = options.now ?? (() => /* @__PURE__ */ new Date());
+  const runFolders = listCandidateRunFolders(paths.runsBase);
+  const linkages = [];
+  const warnings = [];
+  for (const runFolder of runFolders) {
+    const result = extractRunMemoryLinkage(runFolder);
+    warnings.push(...result.warnings);
+    if (result.linkage !== void 0)
+      linkages.push(result.linkage);
+  }
+  linkages.sort((left, right) => left.run_id.localeCompare(right.run_id));
+  return HistoryMemoryMergeV1.parse({
+    api_version: "history-memory-merge-v1",
+    schema_version: 1,
+    generated_at: now().toISOString(),
+    runs_base: paths.runsBase,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    run_count: runFolders.length,
+    envelope_count: linkages.length,
+    memory_run_count: linkages.filter((linkage) => linkage.memory_used).length,
+    linkages,
+    memory_items: groupMemoryItems(linkages),
+    warnings
+  });
+}
+function writeMemoryMergeReport(report, paths) {
+  mkdirSync8(paths.indexDir, { recursive: true });
+  const outPath = join25(paths.indexDir, HISTORY_MEMORY_MERGE_FILE);
+  const tmpPath = `${outPath}.tmp-${process.pid}`;
+  writeFileSync9(tmpPath, `${JSON.stringify(report, null, 2)}
+`, "utf8");
+  HistoryMemoryMergeV1.parse(JSON.parse(readFileSync39(tmpPath, "utf8")));
+  renameSync3(tmpPath, outPath);
+  return outPath;
+}
+
+// dist/app/history/memory-effect.js
+var DEFAULT_MIN_ARM_SIZE = 2;
+var DEFAULT_MARGIN = 0.5;
+function groupKeyOf(input) {
+  return input.content_id ?? `unresolved:${input.memory_input_id}`;
+}
+function groupsUsedBy(linkage) {
+  return new Set(linkage.memory_inputs.map(groupKeyOf));
+}
+function buildArm(runs) {
+  const outcomeByRun = /* @__PURE__ */ new Map();
+  for (const run of runs)
+    outcomeByRun.set(run.run_id, run.outcome);
+  let complete = 0;
+  let adverse = 0;
+  let neutral = 0;
+  const counts = /* @__PURE__ */ new Map();
+  for (const outcome of outcomeByRun.values()) {
+    counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
+    if (outcome === "complete")
+      complete += 1;
+    else if (outcome === "blocked" || outcome === "failed")
+      adverse += 1;
+    else
+      neutral += 1;
+  }
+  const size = outcomeByRun.size;
+  const outcomeCounts = [...counts.entries()].map(([outcome, count]) => ({ outcome, count })).sort((left, right) => left.outcome.localeCompare(right.outcome));
+  return {
+    run_ids: [...outcomeByRun.keys()].sort(),
+    size,
+    complete_count: complete,
+    adverse_count: adverse,
+    neutral_count: neutral,
+    outcome_counts: outcomeCounts,
+    complete_rate: size === 0 ? 0 : complete / size,
+    adverse_rate: size === 0 ? 0 : adverse / size
+  };
+}
+function fixed(value) {
+  return value.toFixed(2);
+}
+function classifyEffect(comparison, margin, minArmSize) {
+  const { used_arm, comparable_arm, complete_rate_delta, adverse_rate_delta } = comparison;
+  if (used_arm.size < minArmSize || comparable_arm.size < minArmSize) {
+    return {
+      effect_status: "not_enough_data",
+      effect_note: `min_arm_size gate: used arm (n=${used_arm.size}) or comparable arm (n=${comparable_arm.size}) is below the minimum arm size of ${minArmSize}; a verdict requires both arms to reach the floor.`
+    };
+  }
+  if (complete_rate_delta >= margin && adverse_rate_delta <= 0) {
+    return {
+      effect_status: "correlated_positive",
+      effect_note: `correlated_positive: the used arm closed complete ${fixed(complete_rate_delta)} more often (>= margin ${fixed(margin)}) and was no worse on aborts (adverse delta ${fixed(adverse_rate_delta)} <= 0).`
+    };
+  }
+  if (complete_rate_delta <= -margin || adverse_rate_delta >= margin) {
+    return {
+      effect_status: "correlated_negative",
+      effect_note: `correlated_negative: the used arm closed complete ${fixed(complete_rate_delta)} (<= -margin ${fixed(margin)}) or aborted ${fixed(adverse_rate_delta)} more (>= margin ${fixed(margin)}).`
+    };
+  }
+  return {
+    effect_status: "unresolved",
+    effect_note: `unresolved: both arms reached the floor of ${minArmSize}, but the separation (complete delta ${fixed(complete_rate_delta)}, adverse delta ${fixed(adverse_rate_delta)}) is within the margin ${fixed(margin)}.`
+  };
+}
+function buildComparison(usedArm, comparableArm, margin, minArmSize) {
+  const completeRateDelta = usedArm.complete_rate - comparableArm.complete_rate;
+  const adverseRateDelta = usedArm.adverse_rate - comparableArm.adverse_rate;
+  const { effect_status, effect_note } = classifyEffect({
+    used_arm: usedArm,
+    comparable_arm: comparableArm,
+    complete_rate_delta: completeRateDelta,
+    adverse_rate_delta: adverseRateDelta
+  }, margin, minArmSize);
+  return {
+    used_arm: usedArm,
+    comparable_arm: comparableArm,
+    complete_rate_delta: completeRateDelta,
+    adverse_rate_delta: adverseRateDelta,
+    effect_status,
+    effect_note
+  };
+}
+function countStatus(statuses, status) {
+  return statuses.filter((value) => value === status).length;
+}
+function aggregateMemoryEffect(merge2, gates) {
+  if (!(gates.margin > 0 && gates.margin <= 1)) {
+    throw new Error(`margin must satisfy 0 < margin <= 1 (received ${gates.margin})`);
+  }
+  if (!(Number.isInteger(gates.minArmSize) && gates.minArmSize >= 1)) {
+    throw new Error(`minArmSize must be an integer >= 1 (received ${gates.minArmSize})`);
+  }
+  const runsByFlow = /* @__PURE__ */ new Map();
+  for (const linkage of merge2.linkages) {
+    const flowId = linkage.flow_id;
+    if (flowId === void 0)
+      continue;
+    const bucket = runsByFlow.get(flowId);
+    if (bucket === void 0)
+      runsByFlow.set(flowId, [linkage]);
+    else
+      bucket.push(linkage);
+  }
+  const enrichment = /* @__PURE__ */ new Map();
+  for (const item of merge2.memory_items) {
+    enrichment.set(item.group_key, {
+      content_id: item.content_id,
+      ...item.kind === void 0 ? {} : { kind: item.kind },
+      ...item.source_ref === void 0 ? {} : { source_ref: item.source_ref }
+    });
+  }
+  const cohorts = /* @__PURE__ */ new Map();
+  for (const linkage of merge2.linkages) {
+    const flowId = linkage.flow_id;
+    if (flowId === void 0 || !linkage.memory_used)
+      continue;
+    for (const input of linkage.memory_inputs) {
+      const groupKey = groupKeyOf(input);
+      cohorts.set(`${groupKey}\0${flowId}`, { groupKey, flowId });
+    }
+  }
+  const itemEffects = [];
+  for (const { groupKey, flowId } of cohorts.values()) {
+    const flowRuns = runsByFlow.get(flowId) ?? [];
+    const usedRuns = flowRuns.filter((run) => groupsUsedBy(run).has(groupKey));
+    const comparableRuns = flowRuns.filter((run) => !groupsUsedBy(run).has(groupKey));
+    const comparison = buildComparison(buildArm(usedRuns), buildArm(comparableRuns), gates.margin, gates.minArmSize);
+    const enr = enrichment.get(groupKey);
+    const contentId = enr ? enr.content_id : groupKey.startsWith("unresolved:") ? null : groupKey;
+    itemEffects.push({
+      content_id: contentId,
+      group_key: groupKey,
+      flow_id: flowId,
+      ...enr?.kind === void 0 ? {} : { kind: enr.kind },
+      ...enr?.source_ref === void 0 ? {} : { source_ref: enr.source_ref },
+      comparison
+    });
+  }
+  itemEffects.sort((left, right) => left.group_key.localeCompare(right.group_key) || left.flow_id.localeCompare(right.flow_id));
+  const flowContrasts = [];
+  for (const [flowId, flowRuns] of [...runsByFlow.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
+    const onRuns = flowRuns.filter((run) => run.memory_used);
+    if (onRuns.length === 0)
+      continue;
+    const offRuns = flowRuns.filter((run) => !run.memory_used);
+    const comparison = buildComparison(buildArm(onRuns), buildArm(offRuns), gates.margin, gates.minArmSize);
+    flowContrasts.push({ flow_id: flowId, comparison });
+  }
+  const itemStatuses = itemEffects.map((item) => item.comparison.effect_status);
+  const contrastStatuses = flowContrasts.map((contrast) => contrast.comparison.effect_status);
+  return HistoryMemoryEffectV1.parse({
+    api_version: "history-memory-effect-v1",
+    schema_version: 1,
+    generated_at: merge2.generated_at,
+    runs_base: merge2.runs_base,
+    authority_notice: HISTORY_AUTHORITY_NOTICE,
+    min_arm_size: gates.minArmSize,
+    margin: gates.margin,
+    source_run_count: merge2.run_count,
+    source_envelope_count: merge2.envelope_count,
+    source_memory_run_count: merge2.memory_run_count,
+    item_effects: itemEffects,
+    flow_contrasts: flowContrasts,
+    summary: {
+      items_total: itemEffects.length,
+      items_not_enough_data: countStatus(itemStatuses, "not_enough_data"),
+      items_unresolved: countStatus(itemStatuses, "unresolved"),
+      items_correlated_positive: countStatus(itemStatuses, "correlated_positive"),
+      items_correlated_negative: countStatus(itemStatuses, "correlated_negative"),
+      flow_contrasts_total: flowContrasts.length,
+      flow_contrasts_not_enough_data: countStatus(contrastStatuses, "not_enough_data"),
+      flow_contrasts_unresolved: countStatus(contrastStatuses, "unresolved"),
+      flow_contrasts_correlated_positive: countStatus(contrastStatuses, "correlated_positive"),
+      flow_contrasts_correlated_negative: countStatus(contrastStatuses, "correlated_negative")
+    },
+    warnings: merge2.warnings
+  });
+}
+function buildMemoryEffectReport(options = {}) {
+  const { minArmSize, margin, ...mergeOptions } = options;
+  const merge2 = buildMemoryMergeReport(mergeOptions);
+  return aggregateMemoryEffect(merge2, {
+    minArmSize: minArmSize ?? DEFAULT_MIN_ARM_SIZE,
+    margin: margin ?? DEFAULT_MARGIN
+  });
+}
+function writeMemoryEffectReport(report, paths) {
+  mkdirSync9(paths.indexDir, { recursive: true });
+  const outPath = join26(paths.indexDir, HISTORY_MEMORY_EFFECT_FILE);
+  const tmpPath = `${outPath}.tmp-${process.pid}`;
+  writeFileSync10(tmpPath, `${JSON.stringify(report, null, 2)}
+`, "utf8");
+  HistoryMemoryEffectV1.parse(JSON.parse(readFileSync40(tmpPath, "utf8")));
+  renameSync4(tmpPath, outPath);
+  return outPath;
+}
+
+// dist/app/history/pull-log.js
+import { existsSync as existsSync27, mkdirSync as mkdirSync10, readFileSync as readFileSync41, renameSync as renameSync5, writeFileSync as writeFileSync11 } from "node:fs";
+import { dirname as dirname11, join as join27 } from "node:path";
+var HISTORY_PULL_LOG_RELATIVE_PATH = "reports/history/pull-log.json";
+function pullLogUnavailable(runFolder, error51) {
+  return {
+    code: "pull_log_unavailable",
+    message: `pull-log unwritable: ${error51 instanceof Error ? error51.message : String(error51)}; the pull returned results but was not logged`,
+    run_folder: runFolder,
+    source_path: HISTORY_PULL_LOG_RELATIVE_PATH
+  };
+}
+function readPullLog(runFolder) {
+  const path = join27(runFolder, HISTORY_PULL_LOG_RELATIVE_PATH);
+  if (!existsSync27(path))
+    return void 0;
+  try {
+    return HistoryPullLogV1.parse(JSON.parse(readFileSync41(path, "utf8")));
+  } catch {
+    return void 0;
+  }
+}
+function appendPullLogEntry(runFolder, input) {
+  const outPath = join27(runFolder, HISTORY_PULL_LOG_RELATIVE_PATH);
+  const warnings = [];
+  let existing;
+  try {
+    if (existsSync27(outPath)) {
+      existing = HistoryPullLogV1.parse(JSON.parse(readFileSync41(outPath, "utf8")));
+    }
+  } catch (error51) {
+    warnings.push(pullLogUnavailable(runFolder, error51));
+  }
+  let log;
+  try {
+    log = existing === void 0 ? HistoryPullLogV1.parse({
+      api_version: "history-pull-log-v1",
+      schema_version: 1,
+      ...input.runId === void 0 ? {} : { run_id: input.runId },
+      authority_notice: HISTORY_AUTHORITY_NOTICE,
+      entries: [input.entry],
+      warnings
+    }) : HistoryPullLogV1.parse({
+      ...existing,
+      entries: [...existing.entries, input.entry],
+      // Carry forward any prior file-level warnings (the header is preserved).
+      warnings: existing.warnings
+    });
+  } catch (error51) {
+    return { warnings: [pullLogUnavailable(runFolder, error51)] };
+  }
+  try {
+    mkdirSync10(dirname11(outPath), { recursive: true });
+    const tmpPath = `${outPath}.tmp-${process.pid}`;
+    writeFileSync11(tmpPath, `${JSON.stringify(log, null, 2)}
+`, "utf8");
+    HistoryPullLogV1.parse(JSON.parse(readFileSync41(tmpPath, "utf8")));
+    renameSync5(tmpPath, outPath);
+    return { path: outPath, warnings };
+  } catch (error51) {
+    return { warnings: [...warnings, pullLogUnavailable(runFolder, error51)] };
+  }
+}
+
+// dist/app/history/pull-suppression.js
+function suppressMeasuredNegative(input) {
+  const verdicts = /* @__PURE__ */ new Map();
+  if (input.effect !== void 0) {
+    for (const item of input.effect.item_effects) {
+      verdicts.set(`${item.group_key} ${item.flow_id}`, item.comparison.effect_status);
+    }
+  }
+  const isMeasuredNegative = (memory) => verdicts.get(`${groupKeyForMemory(memory)} ${input.flowId}`) === "correlated_negative";
+  const suppressedIds = new Set(input.preview.memory_inputs.filter(isMeasuredNegative).map((memory) => memory.memory_id));
+  if (suppressedIds.size === 0) {
+    return { preview: input.preview, suppressedCount: 0 };
+  }
+  const memoryInputs = input.preview.memory_inputs.filter((memory) => !suppressedIds.has(memory.memory_id));
+  const matches = input.preview.matches.filter((match) => !suppressedIds.has(match.memory_id));
+  const preview = HistoryMemoryInputPreviewV1.parse({
+    ...input.preview,
+    memory_inputs: memoryInputs,
+    matches
+  });
+  return { preview, suppressedCount: suppressedIds.size };
+}
+
+// dist/cli/history.js
 function writeJson3(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}
 `);
@@ -59734,6 +60918,15 @@ function parsePositiveInteger(value, optionName) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0)
     return `${optionName} must be a positive integer`;
+  return parsed;
+}
+function parseMargin(value) {
+  if (value === void 0)
+    return void 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 1) {
+    return "--margin must be greater than 0 and at most 1";
+  }
   return parsed;
 }
 function parseHistoryArgs(argv) {
@@ -59777,12 +60970,59 @@ function parseHistoryArgs(argv) {
       rebuildIfStale: options.rebuildIfStale === true
     };
   });
+  program2.command("pull").argument("<query...>").option("--json").option("--flow <flow-id>").option("--decision-point <label>").option("--run-folder <path>").option("--limit <n>").option("--per-run-limit <n>").option("--runs-base <path>").option("--index-dir <path>").option("--rebuild-if-stale").action((queryParts, options) => {
+    const limit = parsePositiveInteger(options.limit, "--limit");
+    if (typeof limit === "string")
+      throw new Error(limit);
+    const perRunLimit = parsePositiveInteger(options.perRunLimit, "--per-run-limit");
+    if (typeof perRunLimit === "string")
+      throw new Error(perRunLimit);
+    parsed = {
+      command: "pull",
+      json: options.json === true,
+      query: queryParts.join(" "),
+      ...options.flow === void 0 ? {} : { flow: options.flow },
+      ...options.decisionPoint === void 0 ? {} : { decisionPoint: options.decisionPoint },
+      ...options.runFolder === void 0 ? {} : { runFolder: options.runFolder },
+      ...limit === void 0 ? {} : { limit },
+      ...perRunLimit === void 0 ? {} : { perRunLimit },
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir },
+      rebuildIfStale: options.rebuildIfStale === true
+    };
+  });
   program2.command("status").option("--json").option("--runs-base <path>").option("--index-dir <path>").action((options) => {
     parsed = {
       command: "status",
       json: options.json === true,
       ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
       ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir }
+    };
+  });
+  program2.command("memory-merge").option("--json").option("--runs-base <path>").option("--index-dir <path>").option("--write", "also persist the report under <index-dir>/memory-merge.v1.json").action((options) => {
+    parsed = {
+      command: "memory-merge",
+      json: options.json === true,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir },
+      write: options.write === true
+    };
+  });
+  program2.command("memory-effect").option("--json").option("--runs-base <path>").option("--index-dir <path>").option("--write", "also persist the report under <index-dir>/memory-effect.v1.json").option("--min-arm-size <n>", "minimum runs per arm before a verdict is eligible (default 2)").option("--margin <0..1>", "separation margin for a correlated verdict (default 0.5)").action((options) => {
+    const minArmSize = parsePositiveInteger(options.minArmSize, "--min-arm-size");
+    if (typeof minArmSize === "string")
+      throw new Error(minArmSize);
+    const margin = parseMargin(options.margin);
+    if (typeof margin === "string")
+      throw new Error(margin);
+    parsed = {
+      command: "memory-effect",
+      json: options.json === true,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.indexDir === void 0 ? {} : { indexDir: options.indexDir },
+      write: options.write === true,
+      ...minArmSize === void 0 ? {} : { minArmSize },
+      ...margin === void 0 ? {} : { margin }
     };
   });
   try {
@@ -59800,6 +61040,74 @@ function pathOptions(parsed) {
     ...parsed.indexDir === void 0 ? {} : { indexDir: parsed.indexDir }
   };
 }
+function pullLogResult(memory) {
+  return {
+    memory_input_id: memory.memory_id,
+    content_id: contentIdentityOf(memory).contentId,
+    staleness: memory.staleness.status,
+    source_ref: memory.source.ref
+  };
+}
+function runPull(parsed) {
+  const flow = parsed.flow;
+  const decisionPoint = parsed.decisionPoint;
+  const runFolder = parsed.runFolder;
+  const result = queryHistory({
+    ...pathOptions(parsed),
+    query: parsed.query,
+    ...parsed.limit === void 0 ? {} : { limit: parsed.limit },
+    ...parsed.perRunLimit === void 0 ? {} : { perRunLimit: parsed.perRunLimit },
+    // Flow-scoped recall: the pull narrows candidates to the flow it suppresses on.
+    flow,
+    rebuildIfStale: parsed.rebuildIfStale
+  });
+  const manifest = readHistoryManifest(resolveHistoryPaths(pathOptions(parsed)));
+  const projected = historyMemoryInputPreview({
+    query: result.query,
+    indexState: result.index_state,
+    rebuilt: result.rebuilt,
+    warnings: result.warnings,
+    hits: result.results,
+    capturedAt: manifest.created_at
+  });
+  const effect = loadMemoryEffectReport(resolveHistoryPaths(pathOptions(parsed)));
+  const { preview: suppressed, suppressedCount } = suppressMeasuredNegative({
+    preview: projected,
+    flowId: flow,
+    ...effect.report === void 0 ? {} : { effect: effect.report }
+  });
+  const priorCount = runFolder === void 0 ? 0 : readPullLog(runFolder)?.entries.length ?? 0;
+  const entry = {
+    pull_id: `pull-${priorCount + 1}`,
+    recorded_at: (/* @__PURE__ */ new Date()).toISOString(),
+    decision_point: decisionPoint,
+    query: parsed.query,
+    flow_id: flow,
+    result_count: suppressed.memory_inputs.length,
+    suppressed_count: suppressedCount,
+    effect_report_available: effect.report !== void 0,
+    ...effect.report === void 0 ? {} : { effect_report_generated_at: effect.report.generated_at },
+    results: suppressed.memory_inputs.map(pullLogResult),
+    authority: "hint_only"
+  };
+  const logWarnings = runFolder === void 0 ? [
+    {
+      code: "pull_log_unavailable",
+      message: "no --run-folder supplied; the pull returned results but was not logged"
+    }
+  ] : appendPullLogEntry(runFolder, {
+    entry,
+    // The pull-log header's run_id is the active run that pulled; derive it
+    // from the run folder name (the run-folder layout convention).
+    runId: basename3(runFolder)
+  }).warnings;
+  const printed = HistoryMemoryInputPreviewV1.parse({
+    ...suppressed,
+    warnings: [...suppressed.warnings, ...effect.warnings, ...logWarnings]
+  });
+  writeJson3(printed);
+  return 0;
+}
 async function runHistoryCommand(argv) {
   const parsed = parseHistoryArgs(argv);
   if (typeof parsed === "string")
@@ -59815,6 +61123,35 @@ async function runHistoryCommand(argv) {
     if (parsed.command === "status") {
       writeJson3(historyStatus(pathOptions(parsed)));
       return 0;
+    }
+    if (parsed.command === "memory-merge") {
+      const report = buildMemoryMergeReport(pathOptions(parsed));
+      if (parsed.write) {
+        writeMemoryMergeReport(report, resolveHistoryPaths(pathOptions(parsed)));
+      }
+      writeJson3(report);
+      return 0;
+    }
+    if (parsed.command === "memory-effect") {
+      const report = buildMemoryEffectReport({
+        ...pathOptions(parsed),
+        ...parsed.minArmSize === void 0 ? {} : { minArmSize: parsed.minArmSize },
+        ...parsed.margin === void 0 ? {} : { margin: parsed.margin }
+      });
+      if (parsed.write) {
+        writeMemoryEffectReport(report, resolveHistoryPaths(pathOptions(parsed)));
+      }
+      writeJson3(report);
+      return 0;
+    }
+    if (parsed.command === "pull") {
+      if (parsed.flow === void 0) {
+        return invalidInvocation("history pull requires --flow", pathOptions(parsed));
+      }
+      if (parsed.decisionPoint === void 0) {
+        return invalidInvocation("history pull requires --decision-point", pathOptions(parsed));
+      }
+      return runPull(parsed);
     }
     const result = queryHistory({
       ...pathOptions(parsed),
@@ -59844,9 +61181,359 @@ async function runHistoryCommand(argv) {
   }
 }
 
+// dist/cli/memory.js
+import { createHash as createHash4 } from "node:crypto";
+import { existsSync as existsSync29, readFileSync as readFileSync43 } from "node:fs";
+import { basename as basename4, join as join28 } from "node:path";
+
+// dist/memory/project-identity.js
+var import_yaml4 = __toESM(require_dist(), 1);
+import { execFileSync as execFileSync3 } from "node:child_process";
+import { existsSync as existsSync28, mkdirSync as mkdirSync11, readFileSync as readFileSync42, renameSync as renameSync6, writeFileSync as writeFileSync12 } from "node:fs";
+import { resolve as resolve18 } from "node:path";
+function hashedId(prefix, basis) {
+  return `proj-${prefix}-${sha256OfString(basis).slice(0, 16)}`;
+}
+function normalizeGitRemoteUrl(url2) {
+  let normalized = url2.trim().toLowerCase();
+  const scpMatch = normalized.match(/^[^@]+@([^:]+):(.+)$/);
+  if (scpMatch) {
+    normalized = `${scpMatch[1]}/${scpMatch[2]}`;
+  } else {
+    normalized = normalized.replace(/^[a-z][a-z0-9+.-]*:\/\//, "").replace(/^[^@/]+@/, "");
+  }
+  normalized = normalized.replace(/\.git$/, "").replace(/\/+$/, "");
+  return normalized;
+}
+function readConfigProjectId(repoRoot) {
+  const configPath = resolve18(repoRoot, ".circuit", "config.yaml");
+  if (!existsSync28(configPath))
+    return void 0;
+  let raw;
+  try {
+    raw = (0, import_yaml4.parse)(readFileSync42(configPath, "utf8"));
+  } catch {
+    return void 0;
+  }
+  const parsed = Config.safeParse(raw);
+  if (!parsed.success)
+    return void 0;
+  return parsed.data.project_id;
+}
+function readGitRemoteUrl(repoRoot) {
+  try {
+    const url2 = execFileSync3("git", ["remote", "get-url", "origin"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    return url2.length === 0 ? null : url2;
+  } catch {
+    return null;
+  }
+}
+function resolveProjectId(options = {}) {
+  const paths = resolveProjectStorePaths(options);
+  const repoRoot = paths.repoRoot;
+  const configProjectId = options.configProjectId ?? readConfigProjectId(repoRoot);
+  if (configProjectId !== void 0) {
+    return {
+      projectId: ProjectId.parse(configProjectId),
+      source: "config",
+      warnings: []
+    };
+  }
+  const gitRemoteUrl = options.gitRemoteUrl === void 0 ? readGitRemoteUrl(repoRoot) : options.gitRemoteUrl;
+  if (gitRemoteUrl !== null && gitRemoteUrl.trim().length > 0) {
+    return {
+      projectId: hashedId("r", normalizeGitRemoteUrl(gitRemoteUrl)),
+      source: "git_remote",
+      warnings: []
+    };
+  }
+  const runsBase = resolve18(repoRoot, ".circuit/runs");
+  return {
+    projectId: hashedId("p", runsBase),
+    source: "runs_base",
+    warnings: [
+      {
+        code: "project_id_unstable",
+        message: "project identity falls back to the local runs-base path (no git remote, no project_id in .circuit/config.yaml); project memory will not be shared across worktrees or clones. Set project_id in .circuit/config.yaml to stabilize it."
+      }
+    ]
+  };
+}
+function stampMemoryManifest(resolved, options = {}) {
+  const paths = resolveProjectStorePaths(options);
+  mkdirSync11(paths.memoryDir, { recursive: true });
+  const manifest = { project_id: resolved.projectId, source: resolved.source };
+  const tmpPath = `${paths.manifestPath}.tmp-${process.pid}`;
+  writeFileSync12(tmpPath, `${JSON.stringify(manifest, null, 2)}
+`, "utf8");
+  JSON.parse(readFileSync42(tmpPath, "utf8"));
+  renameSync6(tmpPath, paths.manifestPath);
+  return paths.manifestPath;
+}
+
+// dist/cli/memory.js
+function writeJson4(value) {
+  process.stdout.write(`${JSON.stringify(value, null, 2)}
+`);
+}
+function commanderErrorMessage2(err) {
+  if (err instanceof CommanderError)
+    return err.message.replace(/^error: /, "");
+  return err instanceof Error ? err.message : String(err);
+}
+function sha256Text(text) {
+  return createHash4("sha256").update(text, "utf8").digest("hex");
+}
+function parseMemoryArgs(argv) {
+  let parsed;
+  const program2 = new Command("circuit memory").exitOverride().configureOutput({ writeErr: () => {
+  } });
+  program2.command("note").argument("<text...>").requiredOption("--flow <flow-id>").option("--applies-to <kind>", "hint category", "operator_note").option("--json").option("--runs-base <path>").option("--memory-dir <path>").option("--run-folder <path>", "cite a specific run folder instead of the latest").action((textParts, options) => {
+    const appliesTo2 = options.appliesTo ?? "operator_note";
+    if (!MemoryHintAppliesTo.safeParse(appliesTo2).success) {
+      throw new Error(`--applies-to must be one of ${MemoryHintAppliesTo.options.join(", ")}`);
+    }
+    if (!CompiledFlowId.safeParse(options.flow).success) {
+      throw new Error("--flow must be a valid flow id");
+    }
+    const text = textParts.join(" ").trim();
+    if (text.length === 0)
+      throw new Error("note text must be non-empty");
+    parsed = {
+      command: "note",
+      json: options.json === true,
+      flow: options.flow,
+      appliesTo: appliesTo2,
+      text,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.memoryDir === void 0 ? {} : { memoryDir: options.memoryDir },
+      ...options.runFolder === void 0 ? {} : { runFolder: options.runFolder }
+    };
+  });
+  program2.command("list").option("--flow <flow-id>").option("--json").option("--runs-base <path>").option("--memory-dir <path>").action((options) => {
+    parsed = {
+      command: "list",
+      json: options.json === true,
+      ...options.flow === void 0 ? {} : { flow: options.flow },
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.memoryDir === void 0 ? {} : { memoryDir: options.memoryDir }
+    };
+  });
+  program2.command("forget").argument("<memory-id>").option("--json").option("--runs-base <path>").option("--memory-dir <path>").action((memoryId, options) => {
+    parsed = {
+      command: "forget",
+      json: options.json === true,
+      memoryId,
+      ...options.runsBase === void 0 ? {} : { runsBase: options.runsBase },
+      ...options.memoryDir === void 0 ? {} : { memoryDir: options.memoryDir }
+    };
+  });
+  try {
+    program2.parse(argv, { from: "user" });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
+      process.exit(0);
+    return commanderErrorMessage2(err);
+  }
+  if (parsed === void 0)
+    return "memory requires a subcommand: note, list, or forget";
+  return parsed;
+}
+function resolveNoteSource(input) {
+  const candidates = [
+    { rel: "reports/run-envelope.json", kind: "report" },
+    { rel: "reports/result.json", kind: "report" }
+  ];
+  for (const candidate of candidates) {
+    const abs = join28(input.runFolder, candidate.rel);
+    if (!existsSync29(abs))
+      continue;
+    const sha2564 = sha256Text(readFileSync43(abs, "utf8"));
+    const ref = Ref.parse({
+      kind: candidate.kind,
+      ref: candidate.rel,
+      sha256: sha2564,
+      flow_id: input.flowId
+    });
+    return { ref, sha256: sha2564 };
+  }
+  const tracePath = join28(input.runFolder, "trace.ndjson");
+  if (existsSync29(tracePath)) {
+    const runId = basename4(input.runFolder);
+    const sha2564 = sha256Text(readFileSync43(tracePath, "utf8"));
+    const trace = Ref.safeParse({
+      kind: "trace",
+      ref: "trace.ndjson#sequence=0",
+      run_id: runId,
+      flow_id: input.flowId,
+      sequence: 0
+    });
+    if (trace.success)
+      return { ref: trace.data, sha256: sha2564 };
+  }
+  return void 0;
+}
+function buildOperatorNote(input) {
+  const basis = `${input.flowId}\0${input.appliesTo}\0${input.text}\0${input.source.sha256}`;
+  const memoryId = `project-note-${sha256Text(basis).slice(0, 16)}`;
+  const sourceSha = input.source.ref.sha256 ?? input.source.sha256;
+  return MemoryInputV0.parse({
+    schema_version: 1,
+    memory_id: memoryId,
+    kind: "project",
+    source: {
+      ref: input.source.ref,
+      captured_at: input.capturedAt,
+      sha256: sourceSha
+    },
+    summary: input.text,
+    hints: [
+      {
+        id: `operator-note-${sha256Text(memoryId).slice(0, 12)}`,
+        text: input.text,
+        applies_to: input.appliesTo
+      }
+    ],
+    // Operator-filed facts are verified at capture against a present, hashed
+    // source; the injection path re-checks freshness later.
+    staleness: {
+      status: "fresh",
+      checked_at: input.capturedAt,
+      reason_codes: ["source_hash_verified"]
+    },
+    authority: "hint_only"
+  });
+}
+function factSummary(record2) {
+  return {
+    memory_id: record2.memory_id,
+    kind: record2.kind,
+    summary: record2.summary,
+    applies_to: record2.hints[0]?.applies_to,
+    flow_id: record2.source.ref.flow_id ?? null,
+    source_ref: { kind: record2.source.ref.kind, ref: record2.source.ref.ref },
+    staleness: record2.staleness.status
+  };
+}
+async function runMemoryCommand(argv, options = {}) {
+  const parsed = parseMemoryArgs(argv);
+  if (typeof parsed === "string") {
+    process.stderr.write(`error: ${parsed}
+`);
+    return 2;
+  }
+  const now = options.now ?? (() => /* @__PURE__ */ new Date());
+  const storeOptions = parsed.memoryDir === void 0 ? {} : { memoryDir: parsed.memoryDir };
+  try {
+    if (parsed.command === "note") {
+      const runFolder = parsed.runFolder ?? latestRunFolder(parsed.runsBase);
+      if (runFolder === void 0) {
+        process.stderr.write("error: no run folder to cite; run a flow first or pass --run-folder\n");
+        return 2;
+      }
+      const source = resolveNoteSource({ runFolder, flowId: parsed.flow });
+      if (source === void 0) {
+        process.stderr.write(`error: run folder has no citable artifact (run-envelope, result, or trace): ${runFolder}
+`);
+        return 2;
+      }
+      const record2 = buildOperatorNote({
+        flowId: parsed.flow,
+        appliesTo: parsed.appliesTo,
+        text: parsed.text,
+        source,
+        capturedAt: now().toISOString()
+      });
+      appendProjectFact(record2, storeOptions);
+      const resolved = resolveProjectId(storeOptions);
+      stampMemoryManifest(resolved, storeOptions);
+      const payload2 = {
+        recorded: true,
+        memory_id: record2.memory_id,
+        flow_id: parsed.flow,
+        project_id: resolved.projectId,
+        project_id_source: resolved.source,
+        source_ref: { kind: record2.source.ref.kind, ref: record2.source.ref.ref },
+        warnings: resolved.warnings.map((warning) => ({
+          code: warning.code,
+          message: warning.message
+        }))
+      };
+      if (parsed.json) {
+        writeJson4(payload2);
+      } else {
+        process.stdout.write(`Recorded project memory ${record2.memory_id} for flow ${parsed.flow} (project ${resolved.projectId}, citing ${record2.source.ref.kind} ${record2.source.ref.ref}).
+`);
+        for (const warning of resolved.warnings) {
+          process.stdout.write(`warning: ${warning.message}
+`);
+        }
+      }
+      return 0;
+    }
+    if (parsed.command === "list") {
+      const { facts, warnings } = readProjectFacts({
+        ...parsed.memoryDir === void 0 ? {} : { memoryDir: parsed.memoryDir },
+        ...parsed.flow === void 0 ? {} : { flowId: parsed.flow }
+      });
+      const payload2 = {
+        count: facts.length,
+        facts: facts.map(factSummary),
+        warnings: warnings.map((warning) => ({
+          code: warning.code,
+          message: warning.message,
+          line: warning.line
+        }))
+      };
+      if (parsed.json) {
+        writeJson4(payload2);
+      } else if (facts.length === 0) {
+        process.stdout.write("No project memory recorded.\n");
+      } else {
+        for (const fact of facts) {
+          process.stdout.write(`${fact.memory_id} [${fact.source.ref.flow_id ?? "no-flow"}] ${fact.summary}
+`);
+        }
+      }
+      return 0;
+    }
+    const result = forgetProjectFact(parsed.memoryId, {
+      ...parsed.memoryDir === void 0 ? {} : { memoryDir: parsed.memoryDir }
+    });
+    const payload = { forgotten: result.removed, memory_id: parsed.memoryId };
+    if (parsed.json) {
+      writeJson4(payload);
+    } else if (result.removed) {
+      process.stdout.write(`Forgot project memory ${parsed.memoryId}.
+`);
+    } else {
+      process.stdout.write(`No project memory with id ${parsed.memoryId}.
+`);
+    }
+    return result.removed ? 0 : 1;
+  } catch (error51) {
+    process.stderr.write(`error: ${error51 instanceof Error ? error51.message : String(error51)}
+`);
+    return 1;
+  }
+}
+function latestRunFolder(runsBase) {
+  const base = runsBase ?? join28(process.cwd(), ".circuit/runs");
+  try {
+    const folders = listCandidateRunFolders(base);
+    return folders.length === 0 ? void 0 : folders[folders.length - 1];
+  } catch {
+    return void 0;
+  }
+}
+
 // dist/app/run-envelope/shadow-record.js
-import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync8 } from "node:fs";
-import { dirname as dirname11, join as join22 } from "node:path";
+import { mkdirSync as mkdirSync12, writeFileSync as writeFileSync13 } from "node:fs";
+import { dirname as dirname12, join as join29 } from "node:path";
 var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
 function reportRef2(input) {
   return {
@@ -59935,9 +61622,9 @@ function writeRunEnvelopeShadowRecord(input) {
     child_run: childRun,
     artifact_links: artifactLinks
   });
-  const outPath = join22(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
-  mkdirSync7(dirname11(outPath), { recursive: true });
-  writeFileSync8(outPath, `${JSON.stringify(record2, null, 2)}
+  const outPath = join29(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
+  mkdirSync12(dirname12(outPath), { recursive: true });
+  writeFileSync13(outPath, `${JSON.stringify(record2, null, 2)}
 `);
   return { path: outPath, record: record2 };
 }
@@ -59986,7 +61673,8 @@ function emitPostRunArtifacts(input) {
     selectedProcess,
     processEvidence,
     recordedAt,
-    ...input.memoryContext === void 0 ? {} : { memoryContext: input.memoryContext }
+    ...input.memoryContext === void 0 ? {} : { memoryContext: input.memoryContext },
+    ...input.recallMemoryIndicator === void 0 ? {} : { recallMemoryIndicator: input.recallMemoryIndicator }
   }));
   return { operatorSummary, processEvidence, runEnvelope };
 }
@@ -60041,12 +61729,12 @@ function engineError(input) {
     ...input.runFolder === void 0 ? {} : { run_folder: input.runFolder }
   });
 }
-function writeJson4(value) {
+function writeJson5(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}
 `);
 }
 function invalidInvocation2(message, runFolder) {
-  writeJson4(engineError({
+  writeJson5(engineError({
     code: "invalid_invocation",
     message,
     ...runFolder === void 0 ? {} : { runFolder }
@@ -60077,18 +61765,18 @@ async function runRunsCommand(argv) {
   if (typeof parsed === "string")
     return invalidInvocation2(parsed);
   try {
-    writeJson4(projectRunStatusFromRunFolder(parsed.runFolder));
+    writeJson5(projectRunStatusFromRunFolder(parsed.runFolder));
     return 0;
   } catch (err) {
     if (err instanceof RunStatusFolderError) {
-      writeJson4(engineError({
+      writeJson5(engineError({
         code: err.code,
         message: err.message,
         runFolder: err.runFolder
       }));
       return 1;
     }
-    writeJson4(engineError({
+    writeJson5(engineError({
       code: "internal_error",
       message: err instanceof Error ? err.message : String(err),
       runFolder: parsed.runFolder
@@ -60107,6 +61795,7 @@ function usage() {
     "       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]",
     "       circuit runs show --run-folder <path> --json",
     "       circuit history rebuild|query|status --json [options]",
+    '       circuit memory note --flow <id> [--applies-to <kind>] "<text>" | memory list | memory forget <id>',
     "       circuit handoff [save|resume|done|brief|hook|hooks] [options]",
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     "       circuit version [--json]",
@@ -60128,12 +61817,12 @@ function readSourceVersion() {
   if (true)
     return "0.1.0-alpha.6";
   const candidates = [
-    resolve16(dirname12(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
-    resolve16(process.cwd(), "plugins/version.json")
+    resolve19(dirname13(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
+    resolve19(process.cwd(), "plugins/version.json")
   ];
   for (const candidate of candidates) {
     try {
-      const raw = JSON.parse(readFileSync36(candidate, "utf8"));
+      const raw = JSON.parse(readFileSync44(candidate, "utf8"));
       if (typeof raw.version === "string" && raw.version.length > 0)
         return raw.version;
     } catch {
@@ -60193,7 +61882,7 @@ function parseTopLevelInvocation(argv) {
     addForwardingCommand(name);
   parseCommanderOrThrow(program2, argv);
   if (invocation === void 0) {
-    throw new Error("missing command: use run, resume, handoff, history, create, runs, or version");
+    throw new Error("missing command: use run, resume, handoff, history, memory, create, runs, or version");
   }
   return invocation;
 }
@@ -60304,14 +61993,14 @@ function parseExecutionArgs(command, argv) {
 }
 function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   if (override !== void 0)
-    return resolve16(override);
-  const root = resolve16(flowRoot2 ?? "generated/flows");
+    return resolve19(override);
+  const root = resolve19(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
-    const perMode = resolve16(root, flowName, `${modeName}.json`);
-    if (existsSync23(perMode))
+    const perMode = resolve19(root, flowName, `${modeName}.json`);
+    if (existsSync30(perMode))
       return perMode;
   }
-  return resolve16(root, flowName, "circuit.json");
+  return resolve19(root, flowName, "circuit.json");
 }
 function progressReporter(enabled) {
   if (!enabled)
@@ -60436,10 +62125,10 @@ function validateFlowAxes(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync23(fixturePath)) {
+  if (!existsSync30(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
-  const bytes = readFileSync36(fixturePath);
+  const bytes = readFileSync44(fixturePath);
   const raw = JSON.parse(bytes.toString("utf8"));
   const flow = CompiledFlow.parse(raw);
   const policy2 = validateCompiledFlowKindPolicy(flow);
@@ -60489,7 +62178,7 @@ function historyRecallOutputFields(input) {
     history_recall: {
       status: input.report.status,
       memory_input_count: input.report.memory_input_count,
-      report_path: join23(input.runFolder, HISTORY_RECALL_REPORT_PATH),
+      report_path: join30(input.runFolder, HISTORY_RECALL_REPORT_PATH),
       rebuilt: input.report.rebuilt,
       ...input.report.index_state === void 0 ? {} : { index_state: input.report.index_state },
       warnings: input.report.warnings.map((warning) => ({
@@ -60499,9 +62188,10 @@ function historyRecallOutputFields(input) {
     }
   };
 }
-function runEnvelopeMemoryContext(report) {
-  if (report === void 0)
+function runEnvelopeMemoryContext(recall) {
+  if (recall === void 0)
     return void 0;
+  const report = recall.report;
   return {
     used: report.status === "used",
     memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id)
@@ -60534,6 +62224,11 @@ async function main(argv, options = {}) {
   if (invocation.command === "history") {
     return runHistoryCommand(invocation.argv);
   }
+  if (invocation.command === "memory") {
+    return runMemoryCommand(invocation.argv, {
+      ...options.now === void 0 ? {} : { now: options.now }
+    });
+  }
   if (invocation.command === "create") {
     return runCreateCommand(invocation.argv, {
       ...options.now === void 0 ? {} : { now: options.now }
@@ -60557,7 +62252,7 @@ async function main(argv, options = {}) {
 }
 async function runResumeCommand(args, options) {
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder = resolve16(args.runFolder);
+    const runFolder = resolve19(args.runFolder);
     const progress = progressReporter(args.progress === "jsonl");
     if (await isRuntimeRunFolder(runFolder)) {
       const runtimeResult = await resumeCompiledFlow({
@@ -60570,7 +62265,7 @@ async function runResumeCommand(args, options) {
         ...progress === void 0 ? {} : { progress },
         progressSurfaceForFlowId
       });
-      const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
+      const runResult = RunResult.parse(JSON.parse(readFileSync44(runtimeResult.resultPath, "utf8")));
       const priorRoute = readPriorRoute(runFolder);
       const postRunArtifactWarnings = [];
       const postRunArtifactContext = {
@@ -60679,13 +62374,13 @@ async function runExecutionCommand(args, options) {
     ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName },
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
-  const runFolder = resolve16(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
+  const runFolder = resolve19(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
   const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
-  const projectRoot = resolve16(options.configCwd ?? process.cwd());
+  const projectRoot = resolve19(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
     args,
@@ -60704,6 +62399,7 @@ async function runExecutionCommand(args, options) {
     const historyRecall = shouldPrepareHistoryRecall(options) ? prepareRunStartHistoryRecall({
       repoRoot: projectRoot,
       query: operatorGoal,
+      flowId: flow.id,
       now
     }) : void 0;
     const runtimeResult = await runCompiledFlowWithWaiting({
@@ -60724,8 +62420,9 @@ async function runExecutionCommand(args, options) {
       ...policyLayers.length === 0 ? {} : { policyLayers },
       ...progress === void 0 ? {} : { progress },
       ...progressSurface === void 0 ? {} : { progressSurface },
-      ...historyRecall === void 0 ? {} : { memoryInputs: historyRecall.memory_inputs },
-      ...historyRecall === void 0 ? {} : { historyRecallReport: historyRecall },
+      ...historyRecall === void 0 ? {} : { memoryInputs: historyRecall.report.memory_inputs },
+      ...historyRecall === void 0 ? {} : { historyRecallReport: historyRecall.report },
+      ...historyRecall === void 0 ? {} : { historyRecallPrecision: historyRecall.precision },
       ...args.includeUntrackedContent ? { evidencePolicy: { includeUntrackedFileContent: true } } : {}
     });
     if (isGraphCheckpointWaitingResult(runtimeResult)) {
@@ -60795,7 +62492,8 @@ async function runExecutionCommand(args, options) {
             allowedChoices: waitingResult.checkpoint.allowed_choices
           }
         }),
-        memoryContext: runEnvelopeMemoryContext(historyRecall)
+        memoryContext: runEnvelopeMemoryContext(historyRecall),
+        recallMemoryIndicator: historyRecall?.precision.indicator
       });
       process.stdout.write(`${JSON.stringify({
         schema_version: 1,
@@ -60816,7 +62514,7 @@ async function runExecutionCommand(args, options) {
           include: runtimeDecisionDiagnostics,
           decision: defaultRuntimeSupport
         }),
-        ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
+        ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall.report }),
         ...postRunArtifactWarningOutputFields(postRunArtifactWarnings2),
         ...operatorSummary2 === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary: operatorSummary2 }),
         ...runEnvelope2 === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope: runEnvelope2 }),
@@ -60825,7 +62523,7 @@ async function runExecutionCommand(args, options) {
 `);
       return 0;
     }
-    const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
+    const runResult = RunResult.parse(JSON.parse(readFileSync44(runtimeResult.resultPath, "utf8")));
     const selectedProcess = selectedProcessFields({
       processId: flow.id,
       routedBy: route.source,
@@ -60863,7 +62561,8 @@ async function runExecutionCommand(args, options) {
         runResult,
         resultPath: runtimeResult.resultPath
       }),
-      memoryContext: runEnvelopeMemoryContext(historyRecall)
+      memoryContext: runEnvelopeMemoryContext(historyRecall),
+      recallMemoryIndicator: historyRecall?.precision.indicator
     });
     let autonomousLoop;
     if (selectedAxes(args, route).autonomous === true && processEvidence !== void 0 && runEnvelope !== void 0) {
@@ -60900,7 +62599,7 @@ async function runExecutionCommand(args, options) {
               tournament: false,
               autonomous: parentAxes.autonomous && support.supportsAutonomous
             });
-            const attemptFolder = join23(runFolder, "attempts", `attempt-${attemptNumber}-${processId}`);
+            const attemptFolder = join30(runFolder, "attempts", `attempt-${attemptNumber}-${processId}`);
             const recoveryResult = await runCompiledFlowWithWaiting({
               flowBytes: recoveryFlow.bytes,
               compiledFlowPath: recoveryFlow.path,
@@ -60932,7 +62631,7 @@ async function runExecutionCommand(args, options) {
                 })
               };
             }
-            const recoveryRunResult = RunResult.parse(JSON.parse(readFileSync36(recoveryResult.resultPath, "utf8")));
+            const recoveryRunResult = RunResult.parse(JSON.parse(readFileSync44(recoveryResult.resultPath, "utf8")));
             return {
               projection: projectClosedProcessEvidence({
                 runFolder: attemptFolder,
@@ -60942,9 +62641,9 @@ async function runExecutionCommand(args, options) {
             };
           }
         });
-        const autonomousLoopPath = join23(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH);
-        mkdirSync8(dirname12(autonomousLoopPath), { recursive: true });
-        writeFileSync9(autonomousLoopPath, `${JSON.stringify(autonomousLoop, null, 2)}
+        const autonomousLoopPath = join30(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH);
+        mkdirSync13(dirname13(autonomousLoopPath), { recursive: true });
+        writeFileSync14(autonomousLoopPath, `${JSON.stringify(autonomousLoop, null, 2)}
 `);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -60976,7 +62675,7 @@ async function runExecutionCommand(args, options) {
         include: runtimeDecisionDiagnostics,
         decision: defaultRuntimeSupport
       }),
-      ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall }),
+      ...historyRecall === void 0 ? {} : historyRecallOutputFields({ runFolder, report: historyRecall.report }),
       ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
       ...operatorSummary === void 0 ? {} : operatorSummaryOutputFields({ operatorSummary }),
       ...runEnvelope === void 0 ? {} : runEnvelopeOutputFields({ runEnvelope }),
@@ -60985,7 +62684,7 @@ async function runExecutionCommand(args, options) {
           outcome: autonomousLoop.outcome,
           attempts: autonomousLoop.attempts.length,
           stop_reason: autonomousLoop.stopReason,
-          path: join23(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH)
+          path: join30(runFolder, AUTONOMOUS_LOOP_RELATIVE_PATH)
         }
       }
     }, null, 2)}

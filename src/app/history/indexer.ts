@@ -28,6 +28,8 @@ export const DEFAULT_RUNS_BASE = '.circuit/runs';
 export const DEFAULT_INDEX_DIR = '.circuit/history';
 export const HISTORY_DOCUMENTS_FILE = 'documents.v1.jsonl';
 export const HISTORY_MANIFEST_FILE = 'manifest.v1.json';
+export const HISTORY_MEMORY_MERGE_FILE = 'memory-merge.v1.json';
+export const HISTORY_MEMORY_EFFECT_FILE = 'memory-effect.v1.json';
 
 export class HistoryCommandError extends Error {
   constructor(

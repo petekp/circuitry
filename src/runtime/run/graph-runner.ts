@@ -539,6 +539,9 @@ async function executeExecutableFlowOutcomeUnsafe(
     ...(options.historyRecallReport === undefined
       ? {}
       : { historyRecallReport: options.historyRecallReport }),
+    ...(options.historyRecallPrecision === undefined
+      ? {}
+      : { historyRecallPrecision: options.historyRecallPrecision }),
     ...(options.resumeCheckpoint === undefined
       ? {}
       : { resumeCheckpoint: options.resumeCheckpoint }),
@@ -583,6 +586,15 @@ async function executeExecutableFlowOutcomeUnsafe(
     await appendFlowSelectionGuidance(context);
     if (options.historyRecallReport !== undefined) {
       await context.files.writeJson('reports/history/recall.json', options.historyRecallReport);
+    }
+    // Slice 3: the earned-precision audit sidecar mirrors the recall report on the
+    // same runtime write path, so file ownership is not split between CLI and
+    // runtime (circuit.ts only threads the data in; the runtime writes it).
+    if (options.historyRecallPrecision !== undefined) {
+      await context.files.writeJson(
+        'reports/history/recall-precision.json',
+        options.historyRecallPrecision,
+      );
     }
   }
 

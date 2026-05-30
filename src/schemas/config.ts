@@ -183,9 +183,27 @@ export type CircuitOverride = z.infer<typeof CircuitOverride>;
 // than silently stripping to empty defaults. `.default(...)` on every
 // non-version field preserves the ergonomic that a minimal
 // `{schema_version: 1}` parses as a fully-populated Config.
+// Slice 5 (D1): the operator-set project-identity override for self-auditing
+// project memory. When present it wins over git-remote inference and the
+// runs-base fallback (resolveProjectId), so an operator can pin a stable key
+// across worktrees/clones (or make the explicit value mandatory by setting it
+// and never relying on inference). A fanout-safe kebab-case slug because the id
+// is later hashed and stamped into provenance, never joined into a path.
+export const ProjectId = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9][a-z0-9-]*$/, {
+    message: 'project_id must be a fanout-safe kebab-case slug',
+  });
+export type ProjectId = z.infer<typeof ProjectId>;
+
 export const Config = z
   .object({
     schema_version: z.literal(1),
+    // Optional so a minimal `{schema_version: 1}` still parses; absent means
+    // "infer the project identity from the git remote, then the runs base".
+    project_id: ProjectId.optional(),
     host: HostConfig.default({ kind: 'generic-shell' }),
     relay: RelayConfig.default({
       default: 'auto',
