@@ -9,6 +9,7 @@ import {
   VerificationResult,
 } from '../../schemas/verification.js';
 import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const NonEmptyStringArray = z.array(z.string().min(1)).min(1);
 const StringArray = z.array(z.string().min(1));
@@ -726,23 +727,10 @@ export const PrototypeResultReportId = z.enum([
 ]);
 export type PrototypeResultReportId = z.infer<typeof PrototypeResultReportId>;
 
-export const PrototypeResultReportPointer = z
-  .object({
-    report_id: PrototypeResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const PrototypeResultReportPointer = resultReportPointer(
+  PrototypeResultReportId,
+  PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID,
+);
 export type PrototypeResultReportPointer = z.infer<typeof PrototypeResultReportPointer>;
 
 const PrototypeResultBase = z.object({

@@ -4,6 +4,7 @@ import {
   VerificationCommandResult,
   VerificationResult,
 } from '../../schemas/verification.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'build.brief': 'build.brief@v1',
@@ -190,23 +191,10 @@ export const BuildResultReportId = z.enum([
 ]);
 export type BuildResultReportId = z.infer<typeof BuildResultReportId>;
 
-export const BuildResultReportPointer = z
-  .object({
-    report_id: BuildResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const BuildResultReportPointer = resultReportPointer(
+  BuildResultReportId,
+  BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID,
+);
 export type BuildResultReportPointer = z.infer<typeof BuildResultReportPointer>;
 
 export const BuildResult = z

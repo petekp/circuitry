@@ -28692,6 +28692,35 @@ var buildReviewShapeHint = {
   ].join(" ")
 };
 
+// dist/flows/report-schema-kit.js
+function resultReportPointer(reportId, schemaByReportId, pathByReportId) {
+  return external_exports.object({
+    report_id: reportId,
+    path: external_exports.string().min(1),
+    schema: external_exports.string().min(1)
+  }).strict().superRefine((pointer, ctx) => {
+    const id = pointer.report_id;
+    const expectedSchema = schemaByReportId[id];
+    if (pointer.schema !== expectedSchema) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["schema"],
+        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
+      });
+    }
+    if (pathByReportId !== void 0) {
+      const expectedPath = pathByReportId[id];
+      if (pointer.path !== expectedPath) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["path"],
+          message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
+        });
+      }
+    }
+  });
+}
+
 // dist/flows/build/reports.js
 var BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   "build.brief": "build.brief@v1",
@@ -28813,20 +28842,7 @@ var BuildResultReportId = external_exports.enum([
   "build.verification",
   "build.review"
 ]);
-var BuildResultReportPointer = external_exports.object({
-  report_id: BuildResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var BuildResultReportPointer = resultReportPointer(BuildResultReportId, BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID);
 var BuildResult = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["complete", "needs_attention", "failed"]),
@@ -30679,20 +30695,7 @@ var ExploreResultReportId = external_exports.enum([
   "explore.tournament-review",
   "explore.decision"
 ]);
-var ExploreResultReportPointer = external_exports.object({
-  report_id: ExploreResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var ExploreResultReportPointer = resultReportPointer(ExploreResultReportId, EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID);
 var ExploreDefaultResultVerdictSnapshot = external_exports.object({
   compose_verdict: external_exports.string().min(1),
   review_verdict: ExploreReviewVerdictValue,
@@ -32660,28 +32663,7 @@ var FixResultReportId = external_exports.enum([
   "fix.change-set",
   "fix.review"
 ]);
-var FixResultReportPointer = external_exports.object({
-  report_id: FixResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = FIX_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-  const expectedPath = FIX_RESULT_PATH_BY_ARTIFACT_ID[pointer.report_id];
-  if (pointer.path !== expectedPath) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["path"],
-      message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var FixResultReportPointer = resultReportPointer(FixResultReportId, FIX_RESULT_SCHEMA_BY_ARTIFACT_ID, FIX_RESULT_PATH_BY_ARTIFACT_ID);
 var FixReviewStatus = external_exports.enum(["completed", "skipped"]);
 var FixResult = external_exports.object({
   summary: external_exports.string().min(1),
@@ -37892,20 +37874,7 @@ var PrototypeResultReportId = external_exports.enum([
   "prototype.checkpoint.request",
   "prototype.checkpoint.response"
 ]);
-var PrototypeResultReportPointer = external_exports.object({
-  report_id: PrototypeResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var PrototypeResultReportPointer = resultReportPointer(PrototypeResultReportId, PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID);
 var PrototypeResultBase = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["kept", "build_input_saved", "discarded", "needs_attention", "failed"]),
@@ -40584,28 +40553,7 @@ var PursuitResultReportId = external_exports.enum([
   "pursuit.verification",
   "pursuit.review"
 ]);
-var PursuitResultReportPointer = external_exports.object({
-  report_id: PursuitResultReportId,
-  path: external_exports.string().min(1),
-  schema: external_exports.string().min(1)
-}).strict().superRefine((pointer, ctx) => {
-  const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-  if (pointer.schema !== expectedSchema) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["schema"],
-      message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
-    });
-  }
-  const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
-  if (pointer.path !== expectedPath) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["path"],
-      message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
-    });
-  }
-});
+var PursuitResultReportPointer = resultReportPointer(PursuitResultReportId, PURSUIT_RESULT_SCHEMA_BY_REPORT_ID, PURSUIT_RESULT_PATH_BY_REPORT_ID);
 var PursuitResult = external_exports.object({
   summary: external_exports.string().min(1),
   outcome: external_exports.enum(["complete", "needs_attention", "blocked", "failed"]),

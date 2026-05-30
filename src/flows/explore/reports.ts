@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
 import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'explore.brief': 'explore.brief@v1',
@@ -311,23 +312,10 @@ export const ExploreResultReportId = z.enum([
 ]);
 export type ExploreResultReportId = z.infer<typeof ExploreResultReportId>;
 
-export const ExploreResultReportPointer = z
-  .object({
-    report_id: ExploreResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const ExploreResultReportPointer = resultReportPointer(
+  ExploreResultReportId,
+  EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID,
+);
 export type ExploreResultReportPointer = z.infer<typeof ExploreResultReportPointer>;
 
 export const ExploreDefaultResultVerdictSnapshot = z

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { VerificationCommand } from '../../schemas/verification.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const FIX_RESULT_SCHEMA_BY_ARTIFACT_ID = {
   'fix.brief': 'fix.brief@v1',
@@ -760,31 +761,11 @@ export const FixResultReportId = z.enum([
 ]);
 export type FixResultReportId = z.infer<typeof FixResultReportId>;
 
-export const FixResultReportPointer = z
-  .object({
-    report_id: FixResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = FIX_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-    const expectedPath = FIX_RESULT_PATH_BY_ARTIFACT_ID[pointer.report_id];
-    if (pointer.path !== expectedPath) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['path'],
-        message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const FixResultReportPointer = resultReportPointer(
+  FixResultReportId,
+  FIX_RESULT_SCHEMA_BY_ARTIFACT_ID,
+  FIX_RESULT_PATH_BY_ARTIFACT_ID,
+);
 export type FixResultReportPointer = z.infer<typeof FixResultReportPointer>;
 
 export const FixReviewStatus = z.enum(['completed', 'skipped']);

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { VerificationCommand, VerificationResult } from '../../schemas/verification.js';
+import { resultReportPointer } from '../report-schema-kit.js';
 
 const PURSUIT_RESULT_SCHEMA_BY_REPORT_ID = {
   'pursuit.contract': 'pursuit.contract@v1',
@@ -360,31 +361,11 @@ export const PursuitResultReportId = z.enum([
 ]);
 export type PursuitResultReportId = z.infer<typeof PursuitResultReportId>;
 
-export const PursuitResultReportPointer = z
-  .object({
-    report_id: PursuitResultReportId,
-    path: z.string().min(1),
-    schema: z.string().min(1),
-  })
-  .strict()
-  .superRefine((pointer, ctx) => {
-    const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
-    if (pointer.schema !== expectedSchema) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['schema'],
-        message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
-      });
-    }
-    const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
-    if (pointer.path !== expectedPath) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['path'],
-        message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`,
-      });
-    }
-  });
+export const PursuitResultReportPointer = resultReportPointer(
+  PursuitResultReportId,
+  PURSUIT_RESULT_SCHEMA_BY_REPORT_ID,
+  PURSUIT_RESULT_PATH_BY_REPORT_ID,
+);
 export type PursuitResultReportPointer = z.infer<typeof PursuitResultReportPointer>;
 
 export const PursuitResult = z
