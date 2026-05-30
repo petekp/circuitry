@@ -1,3 +1,19 @@
+// Skill-moment policy layer — deliberately PRE-WIRED; no live caller yet.
+//
+// The schema half of this domain ships and runs today: Config.moments
+// (SkillMomentConfig), Step.skill_moments (SkillMomentNameArray), and the
+// 'skill-moment-ask' run-decision reason all flow through the runtime. This
+// module is the policy/dispatch half, staged for Phase 3.5 of the run-centered
+// migration ("future config surface; no dispatch yet"). By design nothing in
+// the runtime, CLI, or flows invokes resolveSkillMomentPolicy /
+// buildRunSkillMomentEvent yet, so esbuild tree-shakes it out of the shipped
+// plugin bundle.
+//
+// Behavioral oracle: tests/contracts/skill-moment-policy-schema.test.ts.
+// This is intentionally-staged code, not dead code: deleting it would discard
+// contract-tested policy logic the live schema is already shaped to drive. When
+// skill-moment dispatch is wired, this is the layer that activates.
+
 import type { LayeredConfig } from '../schemas/config.js';
 import { SkillId } from '../schemas/ids.js';
 import {
