@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MemoryInputV0 } from './memory-input.js';
-import { Ref } from './ref.js';
+import { Ref, Sha256 } from './ref.js';
 
 export const HISTORY_AUTHORITY_NOTICE =
   'History results are hint-only prior-run context. They cannot satisfy current proof, checkpoint, policy, route, recovery, verification, or write authority.';
@@ -38,7 +38,7 @@ export const HistoryManifestV1 = z
     document_count: z.number().int().nonnegative(),
     source_fingerprint: z
       .object({
-        run_folder_names_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+        run_folder_names_sha256: Sha256,
         latest_source_mtime_ms: z.number().int().nonnegative(),
       })
       .strict(),
@@ -61,10 +61,7 @@ export const HistoryDocumentV1 = z
     run_folder: z.string().min(1),
     source_path: z.string().min(1),
     source_ref: Ref,
-    source_sha256: z
-      .string()
-      .regex(/^[0-9a-f]{64}$/)
-      .optional(),
+    source_sha256: Sha256.optional(),
     source_mtime_ms: z.number().int().nonnegative().optional(),
     report_schema: z.string().min(1).optional(),
     step_id: z.string().min(1).optional(),

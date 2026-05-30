@@ -15,7 +15,7 @@ import {
 } from './guidance-decision.js';
 import { CompiledFlowId, InvocationId, RunId, SkillId, SkillSlotId, StepId } from './ids.js';
 import { ProofAssessmentId, ProofStatus } from './proof-assessment.js';
-import { Ref } from './ref.js';
+import { Ref, Sha256 } from './ref.js';
 import { ResolvedSelection } from './selection-policy.js';
 import { FanoutFailurePolicy, RelayRole } from './step.js';
 
@@ -26,13 +26,10 @@ const TraceEntryBase = z.object({
   run_id: RunId,
 });
 
-// SHA-256 over raw bytes, 64-char lowercase hex. Mirrors the convention
-// used by `ManifestHash` in src/schemas/manifest.ts so durable transcript
-// hashes are shape-compatible with manifest hashes at audit time.
-const HEX64 = /^[0-9a-f]{64}$/;
-const ContentHash = z.string().regex(HEX64, {
-  message: 'must be a 64-character lowercase hex SHA-256 digest',
-});
+// SHA-256 over raw bytes, 64-char lowercase hex. Reuses the canonical
+// `Sha256` scalar (src/schemas/ref.ts) so durable transcript hashes are
+// shape-compatible with every other content hash at audit time.
+const ContentHash = Sha256;
 
 export const RunBootstrappedTraceEntry = TraceEntryBase.extend({
   kind: z.literal('run.bootstrapped'),

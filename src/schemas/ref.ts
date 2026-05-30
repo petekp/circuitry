@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import { CompiledFlowId, RunId, StepId } from './ids.js';
 
-export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, {
+// Canonical 64-char lowercase hex SHA-256 pattern. Single source of truth
+// for every hex-digest check in the codebase: the `Sha256` Zod scalar below
+// (and its aliases ManifestHash/ContentHash/etc.) for schema validation, and
+// any runtime `.test()` guard that needs the RegExp object directly.
+export const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+export const Sha256 = z.string().regex(SHA256_HEX, {
   message: 'must be a 64-character lowercase hex SHA-256 digest',
 });
 export type Sha256 = z.infer<typeof Sha256>;

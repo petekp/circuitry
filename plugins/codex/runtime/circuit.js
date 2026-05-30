@@ -26706,6 +26706,95 @@ var RunRelativePath = external_exports.string().min(1, { message: "run-relative 
   message: "run-relative path must not contain empty, current-directory, or parent-directory segments"
 }).brand();
 
+// dist/schemas/ref.js
+var SHA256_HEX = /^[0-9a-f]{64}$/;
+var Sha256 = external_exports.string().regex(SHA256_HEX, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RefKind = external_exports.enum([
+  "work_contract",
+  "policy",
+  "trace",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory",
+  "operator_input"
+]);
+var ContentRefKinds = /* @__PURE__ */ new Set([
+  "work_contract",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory"
+]);
+var Ref = external_exports.object({
+  kind: RefKind,
+  ref: external_exports.string().min(1),
+  sha256: Sha256.optional(),
+  run_id: RunId.optional(),
+  flow_id: CompiledFlowId.optional(),
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional()
+}).strict().superRefine((ref, ctx) => {
+  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sha256"],
+      message: `${ref.kind} refs require sha256`
+    });
+  }
+  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["flow_id"],
+      message: "work_contract refs require flow_id"
+    });
+  }
+  if (ref.kind !== "trace")
+    return;
+  if (ref.run_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["run_id"],
+      message: "trace refs require run_id"
+    });
+  }
+  if (ref.sequence === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sequence"],
+      message: "trace refs require sequence"
+    });
+    return;
+  }
+  const expected = `trace.ndjson#sequence=${ref.sequence}`;
+  if (ref.ref !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["ref"],
+      message: `trace refs must use ${expected}`
+    });
+  }
+});
+
 // dist/schemas/skill.js
 var SkillDomain = external_exports.enum(["coding", "design", "research", "ops", "domain-general"]);
 var descriptorOwnPropertyGuard = external_exports.custom((raw) => {
@@ -26732,7 +26821,6 @@ var SkillDescriptorBody = external_exports.object({
   domain: SkillDomain.default("domain-general")
 }).strict();
 var SkillDescriptor = descriptorOwnPropertyGuard.pipe(SkillDescriptorBody);
-var HEX64 = /^[0-9a-f]{64}$/;
 var UserSkillEntry = external_exports.object({
   id: SkillId,
   name: external_exports.string().min(1).optional(),
@@ -26740,7 +26828,7 @@ var UserSkillEntry = external_exports.object({
   trigger: external_exports.string().min(1).optional(),
   root: external_exports.string().min(1),
   path: external_exports.string().min(1),
-  sha256: external_exports.string().regex(HEX64),
+  sha256: Sha256,
   bytes: external_exports.number().int().nonnegative()
 }).strict();
 var SkillSlot = external_exports.object({
@@ -28804,96 +28892,6 @@ import { readFileSync as readFileSync4 } from "node:fs";
 // dist/schemas/hashing.js
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-
-// dist/schemas/ref.js
-var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
-var RefKind = external_exports.enum([
-  "work_contract",
-  "policy",
-  "trace",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory",
-  "operator_input"
-]);
-var ContentRefKinds = /* @__PURE__ */ new Set([
-  "work_contract",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory"
-]);
-var Ref = external_exports.object({
-  kind: RefKind,
-  ref: external_exports.string().min(1),
-  sha256: Sha256.optional(),
-  run_id: RunId.optional(),
-  flow_id: CompiledFlowId.optional(),
-  step_id: StepId.optional(),
-  attempt: external_exports.number().int().positive().optional(),
-  sequence: external_exports.number().int().nonnegative().optional()
-}).strict().superRefine((ref, ctx) => {
-  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sha256"],
-      message: `${ref.kind} refs require sha256`
-    });
-  }
-  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["flow_id"],
-      message: "work_contract refs require flow_id"
-    });
-  }
-  if (ref.kind !== "trace")
-    return;
-  if (ref.run_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["run_id"],
-      message: "trace refs require run_id"
-    });
-  }
-  if (ref.sequence === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sequence"],
-      message: "trace refs require sequence"
-    });
-    return;
-  }
-  const expected = `trace.ndjson#sequence=${ref.sequence}`;
-  if (ref.ref !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["ref"],
-      message: `trace refs must use ${expected}`
-    });
-  }
-});
-
-// dist/schemas/hashing.js
 function canonicalJson(value) {
   return JSON.stringify(value, (_key, item) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
@@ -35211,10 +35209,7 @@ var TraceEntryBase = external_exports.object({
   recorded_at: external_exports.string().datetime(),
   run_id: RunId
 });
-var HEX642 = /^[0-9a-f]{64}$/;
-var ContentHash = external_exports.string().regex(HEX642, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
+var ContentHash = Sha256;
 var RunBootstrappedTraceEntry = TraceEntryBase.extend({
   kind: external_exports.literal("run.bootstrapped"),
   flow_id: CompiledFlowId,
@@ -44540,10 +44535,7 @@ var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
 import { createHash as createHash3 } from "node:crypto";
-var HEX643 = /^[0-9a-f]{64}$/;
-var ManifestHash = external_exports.string().regex(HEX643, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
+var ManifestHash = Sha256;
 var BASE64 = /^[A-Za-z0-9+/=\r\n]*$/;
 var ManifestSnapshot = external_exports.object({
   schema_version: external_exports.literal(1),
@@ -48814,7 +48806,7 @@ var HistoryManifestV1 = external_exports.object({
   run_count: external_exports.number().int().nonnegative(),
   document_count: external_exports.number().int().nonnegative(),
   source_fingerprint: external_exports.object({
-    run_folder_names_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/),
+    run_folder_names_sha256: Sha256,
     latest_source_mtime_ms: external_exports.number().int().nonnegative()
   }).strict(),
   warnings: external_exports.array(HistoryWarningV1)
@@ -48830,7 +48822,7 @@ var HistoryDocumentV1 = external_exports.object({
   run_folder: external_exports.string().min(1),
   source_path: external_exports.string().min(1),
   source_ref: Ref,
-  source_sha256: external_exports.string().regex(/^[0-9a-f]{64}$/).optional(),
+  source_sha256: Sha256.optional(),
   source_mtime_ms: external_exports.number().int().nonnegative().optional(),
   report_schema: external_exports.string().min(1).optional(),
   step_id: external_exports.string().min(1).optional(),
