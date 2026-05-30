@@ -1,6 +1,5 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { basename, isAbsolute, relative, resolve } from 'node:path';
-import { resolveRunFilePath, validateRunFilePath } from '../runtime/run-files/paths.js';
 import {
   CompiledFlowId,
   type HistoryDocumentV1 as HistoryDocument,
@@ -13,6 +12,7 @@ import {
 } from '../schemas/index.js';
 import { sha256Hex } from '../shared/connector-relay.js';
 import { mtimeMs } from '../shared/run-artifact-io.js';
+import { resolveRunFilePath, validateRunFilePath } from '../shared/run-file-paths.js';
 
 const HIGH_VALUE_FIELDS = new Set([
   'goal',

@@ -43085,6 +43085,72 @@ function policyRefsForRuntimeInputs(input) {
   return refs;
 }
 
+// dist/shared/run-file-paths.js
+import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
+import { isAbsolute as isAbsolute7, relative as relative7, resolve as resolve5, sep } from "node:path";
+function isInsideOrSame3(root, target) {
+  const fromRoot = relative7(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+}
+function validateRunFilePath(runRelativePath2) {
+  const issues = [];
+  if (runRelativePath2.trim().length === 0) {
+    issues.push("must be non-empty");
+  }
+  if (isAbsolute7(runRelativePath2)) {
+    issues.push("must be relative");
+  }
+  if (runRelativePath2.includes("\\")) {
+    issues.push('must use POSIX "/" separators');
+  }
+  if (runRelativePath2.includes(":")) {
+    issues.push("must not contain drive-letter or colon forms");
+  }
+  if (runRelativePath2.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
+    issues.push("must not contain empty, current-directory, or parent-directory segments");
+  }
+  return issues;
+}
+function resolveRunFilePath(runDir, runRelativePath2) {
+  if (runRelativePath2.trim().length === 0) {
+    throw new Error("run file path must be non-empty");
+  }
+  if (isAbsolute7(runRelativePath2)) {
+    throw new Error(`run file path must be relative: ${runRelativePath2}`);
+  }
+  const root = resolve5(runDir);
+  const fullPath = resolve5(root, runRelativePath2);
+  if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
+    throw new Error(`run file path escapes run directory: ${runRelativePath2}`);
+  }
+  if (fullPath === root) {
+    throw new Error(`run file path must name a file: ${runRelativePath2}`);
+  }
+  const validation = validateRunFilePath(runRelativePath2);
+  if (validation.length > 0) {
+    throw new Error(`run file path ${validation[0]}: ${runRelativePath2}`);
+  }
+  if (existsSync9(root)) {
+    if (lstatSync4(root).isSymbolicLink()) {
+      throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
+    }
+    const rootReal = realpathSync3.native(root);
+    let cursor = root;
+    for (const segment of runRelativePath2.split("/")) {
+      cursor = resolve5(cursor, segment);
+      if (!existsSync9(cursor))
+        break;
+      if (lstatSync4(cursor).isSymbolicLink()) {
+        throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
+      }
+      if (!isInsideOrSame3(rootReal, realpathSync3.native(cursor))) {
+        throw new Error(`run file path escapes run directory through symlink: ${runRelativePath2}`);
+      }
+    }
+  }
+  return fullPath;
+}
+
 // dist/schemas/work-contract-projection.js
 var ReportSlot = external_exports.object({
   step_id: StepId,
@@ -43801,72 +43867,6 @@ var TERMINAL_TARGETS = [
   "@handoff",
   "@escalate"
 ];
-
-// dist/runtime/run-files/paths.js
-import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute7, relative as relative7, resolve as resolve5, sep } from "node:path";
-function isInsideOrSame3(root, target) {
-  const fromRoot = relative7(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
-}
-function validateRunFilePath(runRelativePath2) {
-  const issues = [];
-  if (runRelativePath2.trim().length === 0) {
-    issues.push("must be non-empty");
-  }
-  if (isAbsolute7(runRelativePath2)) {
-    issues.push("must be relative");
-  }
-  if (runRelativePath2.includes("\\")) {
-    issues.push('must use POSIX "/" separators');
-  }
-  if (runRelativePath2.includes(":")) {
-    issues.push("must not contain drive-letter or colon forms");
-  }
-  if (runRelativePath2.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
-    issues.push("must not contain empty, current-directory, or parent-directory segments");
-  }
-  return issues;
-}
-function resolveRunFilePath(runDir, runRelativePath2) {
-  if (runRelativePath2.trim().length === 0) {
-    throw new Error("run file path must be non-empty");
-  }
-  if (isAbsolute7(runRelativePath2)) {
-    throw new Error(`run file path must be relative: ${runRelativePath2}`);
-  }
-  const root = resolve5(runDir);
-  const fullPath = resolve5(root, runRelativePath2);
-  if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
-    throw new Error(`run file path escapes run directory: ${runRelativePath2}`);
-  }
-  if (fullPath === root) {
-    throw new Error(`run file path must name a file: ${runRelativePath2}`);
-  }
-  const validation = validateRunFilePath(runRelativePath2);
-  if (validation.length > 0) {
-    throw new Error(`run file path ${validation[0]}: ${runRelativePath2}`);
-  }
-  if (existsSync9(root)) {
-    if (lstatSync4(root).isSymbolicLink()) {
-      throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
-    }
-    const rootReal = realpathSync3.native(root);
-    let cursor = root;
-    for (const segment of runRelativePath2.split("/")) {
-      cursor = resolve5(cursor, segment);
-      if (!existsSync9(cursor))
-        break;
-      if (lstatSync4(cursor).isSymbolicLink()) {
-        throw new Error(`run file path crosses symlink: ${runRelativePath2}`);
-      }
-      if (!isInsideOrSame3(rootReal, realpathSync3.native(cursor))) {
-        throw new Error(`run file path escapes run directory through symlink: ${runRelativePath2}`);
-      }
-    }
-  }
-  return fullPath;
-}
 
 // dist/runtime/manifest/validate-executable-flow.js
 function requiredRoutesForStep() {

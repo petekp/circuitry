@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { resolveRunFilePath } from '../runtime/run-files/paths.js';
 import {
   HISTORY_AUTHORITY_NOTICE,
   type HistoryDocumentV1 as HistoryDocument,
@@ -12,6 +11,7 @@ import {
   type HistoryWarningV1,
 } from '../schemas/index.js';
 import { sha256Hex } from '../shared/connector-relay.js';
+import { resolveRunFilePath } from '../shared/run-file-paths.js';
 import {
   HistoryCommandError,
   type HistoryIndex,

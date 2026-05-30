@@ -7,13 +7,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tournamentCheckpointPresentation } from '../runtime/projections/tournament-checkpoint-context.js';
-import { resolveRunFilePath } from '../runtime/run-files/paths.js';
 import { optionalRunClosedOutcome } from '../runtime/trace/trace-fields.js';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
 import { RunStatusProjectionV1 } from '../schemas/run-status.js';
 import { type RunClosedOutcome, TraceEntry as TraceEntrySchema } from '../schemas/trace-entry.js';
 import { sha256Hex } from '../shared/connector-relay.js';
 import type { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
+import { resolveRunFilePath } from '../shared/run-file-paths.js';
 import {
   errorMessage,
   invalidProjection,

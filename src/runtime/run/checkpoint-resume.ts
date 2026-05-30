@@ -26,6 +26,7 @@ import { projectCheckpointBoundaryV0 } from '../../shared/checkpoint-boundary.js
 import { sha256Hex } from '../../shared/connector-relay.js';
 import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import type { ProgressReporter, RelayFn } from '../../shared/relay-runtime-types.js';
+import { resolveRunFilePath } from '../../shared/run-file-paths.js';
 import {
   projectWorkContractProjectionV0,
   runtimeWorkContractRefForProjectedRef,
@@ -35,7 +36,6 @@ import type { ExecutorRegistry } from '../executors/index.js';
 import type { RelayConnector } from '../executors/relay.js';
 import type { CheckpointStep, ExecutableFlow } from '../manifest/executable-flow.js';
 import { fromCompiledFlow } from '../manifest/from-compiled-flow.js';
-import { resolveRunFilePath } from '../run-files/paths.js';
 import { stringArrayValue, traceString } from '../trace/trace-fields.js';
 import { TraceStore } from '../trace/trace-store.js';
 import type {

@@ -1,7 +1,7 @@
+import { validateRunFilePath } from '../../shared/run-file-paths.js';
 import { type RouteTarget, TERMINAL_TARGETS } from '../domain/route.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepId } from '../domain/step.js';
-import { validateRunFilePath } from '../run-files/paths.js';
 import type { ExecutableFlow } from './executable-flow.js';
 
 export interface ExecutableFlowValidation {
