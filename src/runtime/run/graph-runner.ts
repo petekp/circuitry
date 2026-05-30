@@ -139,7 +139,17 @@ async function terminalOutcomeBoundToPrimaryResult(
   const primaryResultPath = pkg.runtimeSurface?.primaryResult?.path;
   if (primaryResultPath === undefined) return undefined;
 
-  const primaryResult = await context.files.readJson(primaryResultPath);
+  // The primary result is read at close time to bind the run outcome. Reading it
+  // can throw (the file may be absent, or hold malformed JSON), and a throw here
+  // would turn an otherwise-successful @complete close into a runtime exception.
+  // Fail open: if the bound read cannot be completed, fall through to the
+  // proof-derived outcome rather than crashing the close path.
+  let primaryResult: unknown;
+  try {
+    primaryResult = await context.files.readJson(primaryResultPath);
+  } catch {
+    return undefined;
+  }
   if (typeof primaryResult !== 'object' || primaryResult === null) return undefined;
   const primaryOutcome = (primaryResult as { readonly outcome?: unknown }).outcome;
   if (typeof primaryOutcome !== 'string') return undefined;

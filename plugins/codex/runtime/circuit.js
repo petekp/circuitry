@@ -51948,7 +51948,12 @@ async function terminalOutcomeBoundToPrimaryResult(context, outcome) {
   const primaryResultPath = pkg.runtimeSurface?.primaryResult?.path;
   if (primaryResultPath === void 0)
     return void 0;
-  const primaryResult = await context.files.readJson(primaryResultPath);
+  let primaryResult;
+  try {
+    primaryResult = await context.files.readJson(primaryResultPath);
+  } catch {
+    return void 0;
+  }
   if (typeof primaryResult !== "object" || primaryResult === null)
     return void 0;
   const primaryOutcome = primaryResult.outcome;
