@@ -1,17 +1,18 @@
 import {
+  RUBRIC_DIM_SCORE_BY_JUDGMENT,
   RubricDimResult,
-  type RubricDimScore,
   type RubricJudgment,
   RubricResult,
   type RubricRuntimeSignal,
   RubricTieBreak,
+  aggregateRubricScore,
+  roundRubricScore,
 } from '../schemas/rubric.js';
 
-export const RUBRIC_DIM_SCORE_BY_JUDGMENT = {
-  pass: 1,
-  concern: 0.5,
-  fail: 0,
-} as const satisfies Record<RubricJudgment, RubricDimScore>;
+// Re-exported for callers that depend on the producer-side name. The canonical
+// definition (and the scoring formula it feeds) lives in ../schemas/rubric.ts
+// so the producer and the validator share one source (CSR-4).
+export { RUBRIC_DIM_SCORE_BY_JUDGMENT };
 
 export const THREE_AXIS_RUBRIC_TIE_BREAK_ORDER = [
   'evidence_rigor',
@@ -71,9 +72,7 @@ export function combineRubricResult(input: RubricResultInput): RubricResult {
     throw new Error('combineRubricResult requires at least one dim');
   }
 
-  const aggregateScore = roundedRubricScore(
-    Object.values(dims).reduce((sum, dim) => sum + dim.dim_score, 0) / dimIds.length,
-  );
+  const aggregateScore = aggregateRubricScore(Object.values(dims).map((dim) => dim.dim_score));
   const runtimeVetoCount = Object.values(dims).filter((dim) => dim.runtime_vetoed).length;
 
   return RubricResult.parse({
@@ -141,7 +140,7 @@ export function rankRubricCandidates<T extends RubricCandidate>(
     margin:
       runnerUp === undefined
         ? null
-        : roundedRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
+        : roundRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
     tie_break: RubricTieBreak.parse({
       ordered_dims: [...orderedDims],
       final_reason: finalReason,
@@ -195,8 +194,4 @@ function tieBreakReason(
     }
   }
   return 'original_ordinal';
-}
-
-function roundedRubricScore(value: number): number {
-  return Number(value.toFixed(3));
 }

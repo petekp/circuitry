@@ -9,15 +9,27 @@ export type RubricJudgment = z.infer<typeof RubricJudgment>;
 export const RubricDimScore = z.union([z.literal(1), z.literal(0.5), z.literal(0)]);
 export type RubricDimScore = z.infer<typeof RubricDimScore>;
 
-const DIM_SCORE_BY_JUDGMENT: Record<RubricJudgment, RubricDimScore> = {
+// CSR-4 — canonical rubric scoring formula. This module is the leaf that
+// both the validator (the RubricResult/RubricDimResult superRefines below)
+// and the producer (src/shared/rubric.ts combineRubricResult) reuse, so the
+// score a producer writes is computed by the exact same code the validator
+// re-checks. shared/rubric.ts already imports this module; the reverse import
+// would be a cycle, so the formula lives here rather than in shared.
+export const RUBRIC_DIM_SCORE_BY_JUDGMENT: Record<RubricJudgment, RubricDimScore> = {
   pass: 1,
   concern: 0.5,
   fail: 0,
 };
 
-function roundedAggregateScore(scores: readonly RubricDimScore[]): number {
+/** Round a rubric score to the v1 three-decimal precision. */
+export function roundRubricScore(value: number): number {
+  return Number(value.toFixed(3));
+}
+
+/** Equal-weight rounded mean of the per-dim scores. */
+export function aggregateRubricScore(scores: readonly RubricDimScore[]): number {
   const total = scores.reduce<number>((sum, score) => sum + score, 0);
-  return Number((total / scores.length).toFixed(3));
+  return roundRubricScore(total / scores.length);
 }
 
 export const RubricDimResult = z
@@ -32,7 +44,7 @@ export const RubricDimResult = z
   .superRefine((dim, ctx) => {
     const expectedFinalScore: RubricJudgment =
       dim.runtime_signal === 'missing' ? 'fail' : dim.model_judgment;
-    const expectedDimScore = DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
+    const expectedDimScore = RUBRIC_DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
     const expectedRuntimeVetoed = dim.runtime_signal === 'missing';
 
     if (dim.final_score !== expectedFinalScore) {
@@ -102,7 +114,7 @@ export const RubricResult = z
       return;
     }
 
-    const expectedAggregate = roundedAggregateScore(dims.map(([, dim]) => dim.dim_score));
+    const expectedAggregate = aggregateRubricScore(dims.map(([, dim]) => dim.dim_score));
     if (result.aggregate_score !== expectedAggregate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

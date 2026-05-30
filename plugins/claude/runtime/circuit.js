@@ -26853,14 +26853,17 @@ var SkillSlotArray = external_exports.array(SkillSlot).superRefine((slots, ctx) 
 var RubricRuntimeSignal = external_exports.enum(["met", "missing", "n/a"]);
 var RubricJudgment = external_exports.enum(["pass", "concern", "fail"]);
 var RubricDimScore = external_exports.union([external_exports.literal(1), external_exports.literal(0.5), external_exports.literal(0)]);
-var DIM_SCORE_BY_JUDGMENT = {
+var RUBRIC_DIM_SCORE_BY_JUDGMENT = {
   pass: 1,
   concern: 0.5,
   fail: 0
 };
-function roundedAggregateScore(scores) {
+function roundRubricScore(value) {
+  return Number(value.toFixed(3));
+}
+function aggregateRubricScore(scores) {
   const total = scores.reduce((sum, score) => sum + score, 0);
-  return Number((total / scores.length).toFixed(3));
+  return roundRubricScore(total / scores.length);
 }
 var RubricDimResult = external_exports.object({
   runtime_signal: RubricRuntimeSignal,
@@ -26870,7 +26873,7 @@ var RubricDimResult = external_exports.object({
   runtime_vetoed: external_exports.boolean()
 }).strict().superRefine((dim, ctx) => {
   const expectedFinalScore = dim.runtime_signal === "missing" ? "fail" : dim.model_judgment;
-  const expectedDimScore = DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
+  const expectedDimScore = RUBRIC_DIM_SCORE_BY_JUDGMENT[expectedFinalScore];
   const expectedRuntimeVetoed = dim.runtime_signal === "missing";
   if (dim.final_score !== expectedFinalScore) {
     ctx.addIssue({
@@ -26925,7 +26928,7 @@ var RubricResult = external_exports.object({
     });
     return;
   }
-  const expectedAggregate = roundedAggregateScore(dims.map(([, dim]) => dim.dim_score));
+  const expectedAggregate = aggregateRubricScore(dims.map(([, dim]) => dim.dim_score));
   if (result.aggregate_score !== expectedAggregate) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -30273,11 +30276,6 @@ ${choiceCards}
 };
 
 // dist/shared/rubric.js
-var RUBRIC_DIM_SCORE_BY_JUDGMENT = {
-  pass: 1,
-  concern: 0.5,
-  fail: 0
-};
 var THREE_AXIS_RUBRIC_TIE_BREAK_ORDER = [
   "evidence_rigor",
   "actionability",
@@ -30307,7 +30305,7 @@ function combineRubricResult(input) {
   if (dimIds.length === 0) {
     throw new Error("combineRubricResult requires at least one dim");
   }
-  const aggregateScore = roundedRubricScore(Object.values(dims).reduce((sum, dim) => sum + dim.dim_score, 0) / dimIds.length);
+  const aggregateScore = aggregateRubricScore(Object.values(dims).map((dim) => dim.dim_score));
   const runtimeVetoCount = Object.values(dims).filter((dim) => dim.runtime_vetoed).length;
   return RubricResult.parse({
     dims,
@@ -30364,7 +30362,7 @@ function rankRubricCandidates(candidates, orderedDims = THREE_AXIS_RUBRIC_TIE_BR
     winner,
     ...runnerUp === void 0 ? {} : { runner_up: runnerUp },
     ranked,
-    margin: runnerUp === void 0 ? null : roundedRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
+    margin: runnerUp === void 0 ? null : roundRubricScore(winner.result.aggregate_score - runnerUp.result.aggregate_score),
     tie_break: RubricTieBreak.parse({
       ordered_dims: [...orderedDims],
       final_reason: finalReason
@@ -30408,9 +30406,6 @@ function tieBreakReason(winner, runnerUp, orderedDims) {
     }
   }
   return "original_ordinal";
-}
-function roundedRubricScore(value) {
-  return Number(value.toFixed(3));
 }
 
 // dist/flows/explore/relay-hints.js
