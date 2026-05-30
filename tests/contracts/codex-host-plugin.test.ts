@@ -401,6 +401,12 @@ describe('Codex host plugin package', () => {
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
       writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts')));
+      // The wrapper imports ./launcher-core.ts at top-level — copy it so the
+      // fixture script can load.
+      writeFileSync(
+        join(scriptsDir, 'launcher-core.ts'),
+        readFileSync(resolve(PLUGIN_ROOT, 'scripts/launcher-core.ts')),
+      );
       writeFileSync(
         fakeBin,
         [

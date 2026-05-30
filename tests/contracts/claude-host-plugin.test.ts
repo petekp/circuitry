@@ -241,11 +241,15 @@ describe('Claude Code host plugin package', () => {
       mkdirSync(scriptsDir, { recursive: true });
       mkdirSync(binDir, { recursive: true });
       writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts')));
-      // The wrapper imports ./auto-open-policy.ts at top-level — copy it so
-      // the fixture script can load.
+      // The wrapper imports ./auto-open-policy.ts and ./launcher-core.ts at
+      // top-level — copy them so the fixture script can load.
       writeFileSync(
         join(scriptsDir, 'auto-open-policy.ts'),
         readFileSync(resolve(PLUGIN_ROOT, 'scripts/auto-open-policy.ts')),
+      );
+      writeFileSync(
+        join(scriptsDir, 'launcher-core.ts'),
+        readFileSync(resolve(PLUGIN_ROOT, 'scripts/launcher-core.ts')),
       );
       writeFileSync(
         fakeBin,

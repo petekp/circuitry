@@ -10,8 +10,25 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  GENERATED_FLOW_MIRROR_ROOT_ENV,
+  type JsonRecord,
+  MIN_NODE_VERSION,
+  type RuntimeCommand,
+  type RuntimeContext,
+  type RuntimeResolution,
+  listMarkdownFiles,
+  nodeVersionSupported,
+  parseProgressEvents,
+  readJson,
+  resolveRuntimeCommand as resolveRuntimeCommandCore,
+  runtimeArgs,
+  runtimeEnv as runtimeEnvCore,
+  shouldInjectCreateTemplateRoot,
+  shouldInjectPackagedFlowRoot,
+} from './launcher-core.ts';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
@@ -19,20 +36,7 @@ const packagedFlowRoot = resolve(pluginRoot, 'flows');
 const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit.js');
 const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 const CODEX_FEATURES_TIMEOUT_MS = 5_000;
-const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
-const RUNTIME_SOURCE_ENV = 'CIRCUIT_RUNTIME_SOURCE';
-const RUNTIME_PATH_ENV = 'CIRCUIT_RUNTIME_PATH';
-const PLUGIN_ROOT_ENV = 'CIRCUIT_PLUGIN_ROOT';
-const MIN_NODE_VERSION = '22.18.0';
 
-type JsonRecord = Record<string, unknown>;
-type RuntimeCommand = {
-  source: string;
-  command: string;
-  path: string;
-  argsPrefix: string[];
-};
-type RuntimeResolution = { ok: true; runtime: RuntimeCommand } | { ok: false; message: string };
 type CheckResult = {
   name: string;
   ok: boolean;
@@ -40,115 +44,21 @@ type CheckResult = {
   severity?: 'warning';
 };
 
-function findLocalLauncher(): string | undefined {
-  const candidate = resolve(process.cwd(), 'bin/circuit');
-  if (existsSync(candidate)) return candidate;
-  return undefined;
-}
-
-function findPathCommand(command: string): string | undefined {
-  const pathValue = process.env.PATH ?? '';
-  for (const segment of pathValue.split(delimiter)) {
-    if (segment.length === 0) continue;
-    const candidate = resolve(segment, command);
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
-
 const rawArgs = process.argv.slice(2);
 
-function numericVersionParts(version: string): number[] {
-  return version.split('.').map((part) => Number.parseInt(part, 10));
-}
-
-function versionAtLeast(current: string, minimum: string): boolean {
-  const currentParts = numericVersionParts(current);
-  const minimumParts = numericVersionParts(minimum);
-  for (let index = 0; index < Math.max(currentParts.length, minimumParts.length); index += 1) {
-    const currentPart = currentParts[index] ?? 0;
-    const minimumPart = minimumParts[index] ?? 0;
-    if (currentPart > minimumPart) return true;
-    if (currentPart < minimumPart) return false;
-  }
-  return true;
-}
-
-function nodeVersionSupported(): boolean {
-  return versionAtLeast(process.versions.node, MIN_NODE_VERSION);
-}
-
-function runtimeResolutionError(message: string): RuntimeResolution {
-  return { ok: false, message };
-}
-
-function runtimeResolution(runtime: RuntimeCommand): RuntimeResolution {
-  return { ok: true, runtime };
-}
+// The dev-fallback bin/circuit lookup is anchored to the current working dir.
+const runtimeContext: RuntimeContext = {
+  pluginRoot,
+  bundledRuntimePath,
+  localLauncherBaseDir: process.cwd(),
+};
 
 function resolveRuntimeCommand(): RuntimeResolution {
-  const override = process.env.CIRCUIT_CLI;
-  if (override !== undefined && override.length > 0) {
-    if (!isAbsolute(override)) {
-      return runtimeResolutionError('CIRCUIT_CLI must be an absolute path');
-    }
-    if (!existsSync(override)) {
-      return runtimeResolutionError(`CIRCUIT_CLI does not exist: ${override}`);
-    }
-    return runtimeResolution({
-      source: 'override',
-      command: override,
-      path: override,
-      argsPrefix: [],
-    });
-  }
-
-  if (existsSync(bundledRuntimePath)) {
-    return runtimeResolution({
-      source: 'bundled',
-      command: process.execPath,
-      path: bundledRuntimePath,
-      argsPrefix: [bundledRuntimePath],
-    });
-  }
-
-  if (process.env.CIRCUIT_DEV === '1') {
-    const localLauncher = findLocalLauncher();
-    if (localLauncher !== undefined) {
-      return runtimeResolution({
-        source: 'dev-fallback',
-        command: localLauncher,
-        path: localLauncher,
-        argsPrefix: [],
-      });
-    }
-    const pathLauncher = findPathCommand('circuit');
-    if (pathLauncher !== undefined) {
-      return runtimeResolution({
-        source: 'dev-fallback',
-        command: pathLauncher,
-        path: pathLauncher,
-        argsPrefix: [],
-      });
-    }
-  }
-
-  return runtimeResolutionError(
-    `Circuit plugin packaging error: bundled runtime is missing at ${bundledRuntimePath}. Reinstall or upgrade the Circuit plugin.`,
-  );
-}
-
-function runtimeArgs(runtime: RuntimeCommand, args: readonly string[]): string[] {
-  return [...runtime.argsPrefix, ...args];
+  return resolveRuntimeCommandCore(runtimeContext);
 }
 
 function runtimeEnv(runtime: RuntimeCommand, baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return {
-    ...baseEnv,
-    [RUNTIME_SOURCE_ENV]: runtime.source,
-    [RUNTIME_PATH_ENV]: runtime.path,
-    [PLUGIN_ROOT_ENV]: pluginRoot,
-  };
+  return runtimeEnvCore(runtime, baseEnv, pluginRoot);
 }
 
 function check(name: string, ok: boolean, detail?: unknown): CheckResult {
@@ -161,30 +71,10 @@ function warningCheck(name: string, ok: boolean, detail?: unknown): CheckResult 
     : { name, ok, detail, severity: 'warning' };
 }
 
-function readJson<T = JsonRecord>(path: string): T {
-  return JSON.parse(readFileSync(path, 'utf8')) as T;
-}
-
 function skillNameFromMarkdown(path: string): string | undefined {
   const text = readFileSync(path, 'utf8');
   const match = /^name:\s*(\S+)\s*$/m.exec(text);
   return match?.[1];
-}
-
-function listMarkdownFiles(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => entry.name);
-}
-
-function parseProgressEvents(stderr: string): JsonRecord[] {
-  const events: JsonRecord[] = [];
-  for (const line of stderr.split(/\r?\n/)) {
-    if (line.trim().length === 0) continue;
-    events.push(JSON.parse(line));
-  }
-  return events;
 }
 
 function codexHome(): string {
@@ -602,19 +492,6 @@ function runDoctor(): number {
     )}\n`,
   );
   return ok ? 0 : 1;
-}
-
-function shouldInjectPackagedFlowRoot(args: readonly string[]): boolean {
-  if (args.includes('--fixture') || args.includes('--flow-root')) return false;
-  if (args.includes('--help') || args.includes('-h')) return false;
-  if (args[0] === 'resume' || args.includes('--checkpoint-choice')) return false;
-  return args[0] === 'run';
-}
-
-function shouldInjectCreateTemplateRoot(args: readonly string[]): boolean {
-  if (args.includes('--template-flow-root')) return false;
-  if (args.includes('--help') || args.includes('-h')) return false;
-  return args[0] === 'create';
 }
 
 const injectPackagedFlowRoot = shouldInjectPackagedFlowRoot(rawArgs);
