@@ -9,6 +9,7 @@ import {
   deterministicNow,
   makeStubRelayer,
 } from '../helpers/runtime-fixtures.js';
+import { withScopedEnv } from '../helpers/scoped-env.js';
 
 import { main } from '../../src/cli/circuit.js';
 import { BuildBrief, BuildVerification } from '../../src/flows/build/reports.js';
@@ -682,9 +683,7 @@ describe('Build checkpoint execution substrate', () => {
       runId: 'b3000000-0000-0000-0000-000000000018',
       goal: 'Resume invalid checkpoint with runtime enabled',
     });
-    const oldStrict = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
       const { code, stdout, stderr } = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 30, 0)),
@@ -695,13 +694,7 @@ describe('Build checkpoint execution substrate', () => {
       expect(code).toBe(2);
       expect(stdout).toBe('');
       expect(stderr.trim()).toBe(`error: ${INVALID_RUN_FOLDER_MESSAGE}`);
-    } finally {
-      if (oldStrict === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldStrict;
-      }
-    }
+    });
   });
 
   it('fails closed for invalid checkpoint folders in status and resume', async () => {
@@ -727,11 +720,7 @@ describe('Build checkpoint execution substrate', () => {
       },
     });
 
-    const oldDisabled = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    const oldDiagnostics = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
       const resumed = await captureOutput(() =>
         main(['resume', '--run-folder', runFolder, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 3, 25, 5, 45, 0)),
@@ -742,18 +731,7 @@ describe('Build checkpoint execution substrate', () => {
       expect(resumed.code).toBe(2);
       expect(resumed.stdout).toBe('');
       expect(resumed.stderr.trim()).toBe(`error: ${INVALID_RUN_FOLDER_MESSAGE}`);
-    } finally {
-      if (oldDisabled === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDisabled;
-      }
-      if (oldDiagnostics === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDiagnostics;
-      }
-    }
+    });
   });
 
   it('rejects checkpoint resume choices outside the declared allow list', async () => {

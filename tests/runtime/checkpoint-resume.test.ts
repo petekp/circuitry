@@ -23,6 +23,7 @@ import { RunResult } from '../../src/schemas/result.js';
 import { sha256Hex } from '../../src/shared/connector-relay.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { captureJson, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
+import { withScopedEnv } from '../helpers/scoped-env.js';
 
 const GOAL = 'prove runtime checkpoint resume';
 const RUN_ID = '11111111-1111-4111-8111-111111111111';
@@ -1067,9 +1068,7 @@ describe('runtime checkpoint pause/resume fixture', () => {
   it('routes CLI resume by saved runtime engine marker even when default runtime routing is disabled', async () => {
     const runDir = join(tempDir, 'cli-resume');
     await createWaitingFixture({ runDir });
-    const oldDisable = process.env.CIRCUIT_SHOW_RUNTIME_DECISION;
-    process.env.CIRCUIT_SHOW_RUNTIME_DECISION = '1';
-    try {
+    await withScopedEnv({ CIRCUIT_SHOW_RUNTIME_DECISION: '1' }, async () => {
       const { result: code, json: output } = await captureJson<Record<string, unknown>>(() =>
         main(['resume', '--run-folder', runDir, '--checkpoint-choice', 'continue'], {
           now: deterministicNow(Date.UTC(2026, 0, 4)),
@@ -1087,12 +1086,6 @@ describe('runtime checkpoint pause/resume fixture', () => {
       });
       expect(output).not.toHaveProperty('runtime');
       expect(typeof output.result_path).toBe('string');
-    } finally {
-      if (oldDisable === undefined) {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = undefined;
-      } else {
-        process.env.CIRCUIT_SHOW_RUNTIME_DECISION = oldDisable;
-      }
-    }
+    });
   });
 });
