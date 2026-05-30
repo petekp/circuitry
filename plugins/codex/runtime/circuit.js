@@ -56398,116 +56398,18 @@ async function runAutonomousContinuation(input) {
   });
 }
 
-// dist/run-envelope/shadow-record.js
-import { mkdirSync as mkdirSync4, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname7, join as join15 } from "node:path";
-var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
-function reportRef2(input) {
-  return {
-    kind: "report",
-    ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256OfFile(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId)
-  };
-}
-function requestRef2(input) {
-  return {
-    kind: "request",
-    ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256OfFile(input.path),
-    run_id: RunId.parse(input.runId),
-    flow_id: CompiledFlowId.parse(input.flowId),
-    step_id: StepId.parse(input.stepId)
-  };
-}
-function childResultEvidence(input) {
-  return {
-    source: "child_result",
-    ref: reportRef2(input)
-  };
-}
-function writeRunEnvelopeShadowRecord(input) {
-  const selectedProcess = {
-    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
-    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
-    router_reason: input.selectedProcess.router_reason,
-    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
-  };
-  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
-    const resultRef = childResultEvidence({
-      runFolder: input.runFolder,
-      path: input.child.resultPath,
-      runId: input.child.runResult.run_id,
-      flowId: input.child.runResult.flow_id
-    });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.runResult.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
-        outcome: input.child.runResult.outcome,
-        trace_entries_observed: input.child.runResult.trace_entries_observed,
-        manifest_hash: input.child.runResult.manifest_hash,
-        result_ref: resultRef
-      },
-      artifactLinks: [resultRef.ref]
-    };
-  })() : (() => {
-    const checkpointRequestRef = requestRef2({
-      runFolder: input.runFolder,
-      path: input.child.checkpoint.request_path,
-      runId: input.child.run_id,
-      flowId: input.child.flow_id,
-      stepId: input.child.checkpoint.step_id
-    });
-    return {
-      childRun: {
-        run_id: RunId.parse(input.child.run_id),
-        run_folder: input.runFolder,
-        flow_id: CompiledFlowId.parse(input.child.flow_id),
-        outcome: "checkpoint_waiting",
-        trace_entries_observed: input.child.trace_entries_observed,
-        manifest_hash: input.child.manifest_hash,
-        checkpoint: {
-          step_id: StepId.parse(input.child.checkpoint.step_id),
-          request_ref: checkpointRequestRef,
-          allowed_choices: [...input.child.checkpoint.allowed_choices]
-        }
-      },
-      artifactLinks: [checkpointRequestRef]
-    };
-  })();
-  const record2 = RunEnvelopeShadowRecord.parse({
-    schema: "run.envelope-shadow@v0",
-    mode: "shadow",
-    shadow_reason: "source-owned-run-not-active",
-    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
-    operator_intent: input.operatorIntent,
-    recorded_at: input.recordedAt,
-    selected_process: selectedProcess,
-    child_run: childRun,
-    artifact_links: artifactLinks
-  });
-  const outPath = join15(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
-  mkdirSync4(dirname7(outPath), { recursive: true });
-  writeFileSync4(outPath, `${JSON.stringify(record2, null, 2)}
-`);
-  return { path: outPath, record: record2 };
-}
-
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
 import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join16, resolve as resolve10 } from "node:path";
+import { join as join15, resolve as resolve10 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
-  return join16(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+  return join15(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
 }
 function projectConfigPath(cwd = process.cwd()) {
-  return join16(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+  return join15(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
 }
 function parseConfigYaml(text, sourcePath) {
   try {
@@ -56815,8 +56717,8 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync19, mkdirSync as mkdirSync5, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
-import { dirname as dirname8, isAbsolute as isAbsolute11, join as join17, relative as relative11, resolve as resolve11 } from "node:path";
+import { existsSync as existsSync19, mkdirSync as mkdirSync4, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { dirname as dirname7, isAbsolute as isAbsolute11, join as join16, relative as relative11, resolve as resolve11 } from "node:path";
 
 // dist/shared/operator-summary/json.js
 import { existsSync as existsSync18, readFileSync as readFileSync29 } from "node:fs";
@@ -57362,7 +57264,7 @@ function projectSummary(input) {
 
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
-  const path = join17(runFolder, "reports", "operator-summary.json");
+  const path = join16(runFolder, "reports", "operator-summary.json");
   if (!existsSync19(path))
     return {};
   try {
@@ -57381,13 +57283,13 @@ function readPriorRoute(runFolder) {
 }
 var HTML_REPORT_LABEL = "Operator summary (HTML)";
 function jsonPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.json");
+  return join16(runFolder, "reports", "operator-summary.json");
 }
 function markdownPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.md");
+  return join16(runFolder, "reports", "operator-summary.md");
 }
 function htmlPath(runFolder) {
-  return join17(runFolder, "reports", "operator-summary.html");
+  return join16(runFolder, "reports", "operator-summary.html");
 }
 function isInsideOrSame4(root, target) {
   const fromRoot = relative11(root, target);
@@ -57454,7 +57356,7 @@ function evidenceLinks2(runFolder, report) {
   });
 }
 function readAutoResolutions(runFolder) {
-  const tracePath = join17(runFolder, "trace.ndjson");
+  const tracePath = join16(runFolder, "trace.ndjson");
   if (!existsSync19(tracePath))
     return [];
   const records = [];
@@ -57557,7 +57459,7 @@ function writeOperatorSummary(input) {
   const autoResolutions = readAutoResolutions(input.runFolder);
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
-  mkdirSync5(dirname8(outJsonPath), { recursive: true });
+  mkdirSync4(dirname7(outJsonPath), { recursive: true });
   const projector = getHtmlProjector(flowId);
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath;
@@ -57592,7 +57494,7 @@ function writeOperatorSummary(input) {
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
-      writeFileSync5(candidateHtmlPath, renderedHtml);
+      writeFileSync4(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
       if (existsSync19(candidateHtmlPath))
@@ -57665,9 +57567,9 @@ function writeOperatorSummary(input) {
     ...autoResolutions.length === 0 ? {} : { auto_resolutions: autoResolutions },
     ...input.runResult.outcome === "checkpoint_waiting" ? { checkpoint: input.runResult.checkpoint } : {}
   });
-  writeFileSync5(outJsonPath, `${JSON.stringify(candidate, null, 2)}
+  writeFileSync4(outJsonPath, `${JSON.stringify(candidate, null, 2)}
 `);
-  writeFileSync5(outMarkdownPath, renderMarkdown(candidate));
+  writeFileSync4(outMarkdownPath, renderMarkdown(candidate));
   return outHtmlPath === void 0 ? { summary: candidate, jsonPath: outJsonPath, markdownPath: outMarkdownPath } : {
     summary: candidate,
     jsonPath: outJsonPath,
@@ -57678,14 +57580,14 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync20, mkdirSync as mkdirSync6, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync20, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname10, join as join18, resolve as resolve13 } from "node:path";
+import { dirname as dirname9, join as join17, resolve as resolve13 } from "node:path";
 var import_yaml3 = __toESM(require_dist(), 1);
 
 // dist/cli/runtime-routing-policy.js
 import { readFileSync as readFileSync31 } from "node:fs";
-import { dirname as dirname9, relative as relative12, resolve as resolve12 } from "node:path";
+import { dirname as dirname8, relative as relative12, resolve as resolve12 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -57718,7 +57620,7 @@ function fixtureEligibleForRuntime(input) {
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync31(resolve12(dirname9(resolve12(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync31(resolve12(dirname8(resolve12(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -57837,38 +57739,38 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve13(args.home ?? join18(homedir3(), ".config", "circuit", "custom"));
+  return resolve13(args.home ?? join17(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
-  return join18(home, "drafts", slug);
+  return join17(home, "drafts", slug);
 }
 function publishedRoot(home, slug) {
-  return join18(home, "skills", slug);
+  return join17(home, "skills", slug);
 }
 function flowRoot(home) {
-  return join18(home, "flows");
+  return join17(home, "flows");
 }
 function customFlowInvocation(slug, home) {
   return `circuit run ${slug} --flow-root '${flowRoot(home)}' --goal '<task>' --progress jsonl`;
 }
 function commandRoot(home) {
-  return join18(home, "commands");
+  return join17(home, "commands");
 }
 function reportsRoot(home) {
-  return join18(home, "reports");
+  return join17(home, "reports");
 }
 function manifestPath(home) {
-  return join18(home, "manifest.json");
+  return join17(home, "manifest.json");
 }
 function resultPath(home, slug) {
-  return join18(reportsRoot(home), `${slug}-create-result.json`);
+  return join17(reportsRoot(home), `${slug}-create-result.json`);
 }
 function summaryPath(home, slug) {
-  return join18(reportsRoot(home), `${slug}-operator-summary.md`);
+  return join17(reportsRoot(home), `${slug}-operator-summary.md`);
 }
 function writeText(path, text) {
-  mkdirSync6(dirname10(path), { recursive: true });
-  writeFileSync6(path, text.endsWith("\n") ? text : `${text}
+  mkdirSync5(dirname9(path), { recursive: true });
+  writeFileSync5(path, text.endsWith("\n") ? text : `${text}
 `);
 }
 function writeJson(path, value) {
@@ -57999,16 +57901,16 @@ function publishManifest(input) {
         id: input.slug,
         description: input.description,
         archetype: "build",
-        flow_path: join18(flowRoot(input.home), input.slug, "circuit.json"),
-        skill_path: join18(publishedRoot(input.home, input.slug), "SKILL.md"),
-        command_path: join18(commandRoot(input.home), `${input.slug}.md`),
+        flow_path: join17(flowRoot(input.home), input.slug, "circuit.json"),
+        skill_path: join17(publishedRoot(input.home, input.slug), "SKILL.md"),
+        command_path: join17(commandRoot(input.home), `${input.slug}.md`),
         published_at: input.createdAt
       }
     ]
   });
 }
 function writeValidationResult(input) {
-  writeJson(join18(draftRoot(input.home, input.slug), "validation-result.json"), {
+  writeJson(join17(draftRoot(input.home, input.slug), "validation-result.json"), {
     schema_version: 1,
     status: "valid",
     validated_flow_id: input.flow.id,
@@ -58018,13 +57920,13 @@ function writeValidationResult(input) {
 function writeDraft(input) {
   const root = draftRoot(input.home, input.slug);
   rmSync2(root, { recursive: true, force: true });
-  mkdirSync6(root, { recursive: true });
+  mkdirSync5(root, { recursive: true });
   const descriptor = circuitYaml(input.slug, input.description);
-  validateCircuitYamlDescriptor(descriptor, join18(root, "circuit.yaml"), input.slug);
-  writeText(join18(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
-  writeText(join18(root, "circuit.yaml"), descriptor);
-  writeJson(join18(root, "circuit.json"), input.flow);
-  writeText(join18(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
+  validateCircuitYamlDescriptor(descriptor, join17(root, "circuit.yaml"), input.slug);
+  writeText(join17(root, "SKILL.md"), skillMarkdown(input.slug, input.description, input.home));
+  writeText(join17(root, "circuit.yaml"), descriptor);
+  writeJson(join17(root, "circuit.json"), input.flow);
+  writeText(join17(root, "command.md"), commandMarkdown(input.slug, input.description, input.home));
   writeValidationResult({
     home: input.home,
     slug: input.slug,
@@ -58033,26 +57935,26 @@ function writeDraft(input) {
   });
 }
 function loadDraftFlow(home, slug) {
-  const path = join18(draftRoot(home, slug), "circuit.json");
+  const path = join17(draftRoot(home, slug), "circuit.json");
   const flow = CompiledFlow.parse(JSON.parse(readFileSync32(path, "utf8")));
   validateCustomFlow(slug, flow, "custom flow draft");
   return flow;
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync20(join18(draft, "SKILL.md"))) {
+  if (!existsSync20(join17(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
-  const descriptor = readFileSync32(join18(draft, "circuit.yaml"), "utf8");
-  validateCircuitYamlDescriptor(descriptor, join18(draft, "circuit.yaml"), input.slug);
+  const descriptor = readFileSync32(join17(draft, "circuit.yaml"), "utf8");
+  validateCircuitYamlDescriptor(descriptor, join17(draft, "circuit.yaml"), input.slug);
   const skillRoot = publishedRoot(input.home, input.slug);
-  const customFlowRoot = join18(flowRoot(input.home), input.slug);
-  mkdirSync6(skillRoot, { recursive: true });
-  mkdirSync6(customFlowRoot, { recursive: true });
-  writeText(join18(skillRoot, "SKILL.md"), readFileSync32(join18(draft, "SKILL.md"), "utf8"));
-  writeText(join18(skillRoot, "circuit.yaml"), descriptor);
-  writeText(join18(customFlowRoot, "circuit.json"), readFileSync32(join18(draft, "circuit.json"), "utf8"));
-  writeText(join18(commandRoot(input.home), `${input.slug}.md`), readFileSync32(join18(draft, "command.md"), "utf8"));
+  const customFlowRoot = join17(flowRoot(input.home), input.slug);
+  mkdirSync5(skillRoot, { recursive: true });
+  mkdirSync5(customFlowRoot, { recursive: true });
+  writeText(join17(skillRoot, "SKILL.md"), readFileSync32(join17(draft, "SKILL.md"), "utf8"));
+  writeText(join17(skillRoot, "circuit.yaml"), descriptor);
+  writeText(join17(customFlowRoot, "circuit.json"), readFileSync32(join17(draft, "circuit.json"), "utf8"));
+  writeText(join17(commandRoot(input.home), `${input.slug}.md`), readFileSync32(join17(draft, "command.md"), "utf8"));
   publishManifest(input);
 }
 function summaryMarkdown(input) {
@@ -58116,11 +58018,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync20(join18(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync20(join17(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync20(join18(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync20(join17(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -58144,11 +58046,11 @@ async function runCreateCommand(argv, options = {}) {
       status,
       slug,
       draft_path: draftRoot(home, slug),
-      validation_path: join18(draftRoot(home, slug), "validation-result.json"),
+      validation_path: join17(draftRoot(home, slug), "validation-result.json"),
       ...args.publish ? {
         published_path: publishedRoot(home, slug),
-        flow_path: join18(flowRoot(home), slug, "circuit.json"),
-        command_path: join18(commandRoot(home), `${slug}.md`),
+        flow_path: join17(flowRoot(home), slug, "circuit.json"),
+        command_path: join17(commandRoot(home), `${slug}.md`),
         manifest_path: manifestPath(home)
       } : {},
       operator_summary_markdown_path: summaryPath(home, slug)
@@ -58186,9 +58088,9 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync22, mkdirSync as mkdirSync7, readFileSync as readFileSync35, writeFileSync as writeFileSync8 } from "node:fs";
+import { copyFileSync, existsSync as existsSync22, mkdirSync as mkdirSync6, readFileSync as readFileSync35, writeFileSync as writeFileSync7 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname11, join as join22, resolve as resolve15 } from "node:path";
+import { dirname as dirname10, join as join21, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/run-folder-projector.js
@@ -58196,10 +58098,10 @@ import { constants, accessSync, statSync as statSync3 } from "node:fs";
 import { resolve as resolve14 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
-import { readFileSync as readFileSync33, writeFileSync as writeFileSync7 } from "node:fs";
-import { join as join19 } from "node:path";
+import { readFileSync as readFileSync33, writeFileSync as writeFileSync6 } from "node:fs";
+import { join as join18 } from "node:path";
 function manifestSnapshotPath(runFolder) {
-  return join19(runFolder, "manifest.snapshot.json");
+  return join18(runFolder, "manifest.snapshot.json");
 }
 function readManifestSnapshot(runFolder) {
   const text = readFileSync33(manifestSnapshotPath(runFolder), "utf8");
@@ -58212,7 +58114,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 
 // dist/run-status/projection-common.js
 import { existsSync as existsSync21 } from "node:fs";
-import { join as join20 } from "node:path";
+import { join as join19 } from "node:path";
 function errorMessage3(err) {
   return err instanceof Error ? err.message : String(err);
 }
@@ -58247,8 +58149,8 @@ function readSavedFlowForProjection(manifestBytesBase64, manifestFlowId) {
 }
 function optionalReportPaths(runFolder) {
   const result = runResultPath(runFolder);
-  const operatorSummary = join20(runFolder, "reports", "operator-summary.json");
-  const operatorSummaryMarkdown = join20(runFolder, "reports", "operator-summary.md");
+  const operatorSummary = join19(runFolder, "reports", "operator-summary.json");
+  const operatorSummaryMarkdown = join19(runFolder, "reports", "operator-summary.md");
   return {
     ...existsSync21(result) ? { result_path: result } : {},
     ...existsSync21(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
@@ -58268,12 +58170,12 @@ function stepMetadata(flow, stepId) {
 
 // dist/run-status/runtime-run-folder.js
 import { readFileSync as readFileSync34 } from "node:fs";
-import { join as join21 } from "node:path";
+import { join as join20 } from "node:path";
 function isRecord6(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readRawTraceEntries(runFolder) {
-  const tracePath = join21(runFolder, "trace.ndjson");
+  const tracePath = join20(runFolder, "trace.ndjson");
   const text = readFileSync34(tracePath, "utf8");
   const trimmed = text.trim();
   if (trimmed.length === 0)
@@ -58516,7 +58418,7 @@ function runtimeWaitingCheckpointProjection(input) {
   const presentation = tournamentCheckpointPresentation({
     readJson: (path) => {
       try {
-        return JSON.parse(readFileSync34(join21(input.runFolder, path), "utf8"));
+        return JSON.parse(readFileSync34(join20(input.runFolder, path), "utf8"));
       } catch {
         return void 0;
       }
@@ -58839,34 +58741,34 @@ function continuityRoot(controlPlane) {
   return resolve15(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
-  return join22(continuityRoot(controlPlane), "records");
+  return join21(continuityRoot(controlPlane), "records");
 }
 function indexPath(controlPlane) {
-  return join22(continuityRoot(controlPlane), "index.json");
+  return join21(continuityRoot(controlPlane), "index.json");
 }
 function recordPath(controlPlane, recordId) {
-  return join22(recordsRoot(controlPlane), `${recordId}.json`);
+  return join21(recordsRoot(controlPlane), `${recordId}.json`);
 }
 function utilityReportsRoot(controlPlane) {
-  return join22(continuityRoot(controlPlane), "reports");
+  return join21(continuityRoot(controlPlane), "reports");
 }
 function handoffResultPath(controlPlane, action) {
-  return join22(utilityReportsRoot(controlPlane), `${action}-result.json`);
+  return join21(utilityReportsRoot(controlPlane), `${action}-result.json`);
 }
 function operatorSummaryPath(controlPlane) {
-  return join22(utilityReportsRoot(controlPlane), "operator-summary.md");
+  return join21(utilityReportsRoot(controlPlane), "operator-summary.md");
 }
 function activeRunPath(controlPlane) {
-  return join22(controlPlane, "active-run.md");
+  return join21(controlPlane, "active-run.md");
 }
 function writeJson2(path, value) {
-  mkdirSync7(dirname11(path), { recursive: true });
-  writeFileSync8(path, `${JSON.stringify(value, null, 2)}
+  mkdirSync6(dirname10(path), { recursive: true });
+  writeFileSync7(path, `${JSON.stringify(value, null, 2)}
 `);
 }
 function writeMarkdown(path, value) {
-  mkdirSync7(dirname11(path), { recursive: true });
-  writeFileSync8(path, value.endsWith("\n") ? value : `${value}
+  mkdirSync6(dirname10(path), { recursive: true });
+  writeFileSync7(path, value.endsWith("\n") ? value : `${value}
 `);
 }
 function composeHandoffBrief(record2, state, debt) {
@@ -59105,7 +59007,7 @@ function missingDefaultLauncherMessage(launcher) {
   ].join(" ");
 }
 function defaultLauncherPath() {
-  return resolveDefaultLauncher(process.env.CIRCUIT_PLUGIN_ROOT, dirname11(fileURLToPath2(import.meta.url)));
+  return resolveDefaultLauncher(process.env.CIRCUIT_PLUGIN_ROOT, dirname10(fileURLToPath2(import.meta.url)));
 }
 function parseCodexHooksHost(args) {
   if (args.host === "codex")
@@ -59253,7 +59155,7 @@ function launcherPathFromCircuitHookCommand(command) {
   return launcher;
 }
 function writeHooksConfig(path, config2) {
-  mkdirSync7(dirname11(path), { recursive: true });
+  mkdirSync6(dirname10(path), { recursive: true });
   let backupPath;
   if (existsSync22(path)) {
     const candidate = `${path}.circuit-backup`;
@@ -59262,7 +59164,7 @@ function writeHooksConfig(path, config2) {
       backupPath = candidate;
     }
   }
-  writeFileSync8(path, `${JSON.stringify(config2, null, 2)}
+  writeFileSync7(path, `${JSON.stringify(config2, null, 2)}
 `);
   return backupPath === void 0 ? {} : { backupPath };
 }
@@ -59962,6 +59864,153 @@ async function runHistoryCommand(argv) {
   }
 }
 
+// dist/run-envelope/shadow-record.js
+import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync8 } from "node:fs";
+import { dirname as dirname11, join as join22 } from "node:path";
+var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
+function reportRef2(input) {
+  return {
+    kind: "report",
+    ref: runRelativePath(input.runFolder, input.path),
+    sha256: sha256OfFile(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId)
+  };
+}
+function requestRef2(input) {
+  return {
+    kind: "request",
+    ref: runRelativePath(input.runFolder, input.path),
+    sha256: sha256OfFile(input.path),
+    run_id: RunId.parse(input.runId),
+    flow_id: CompiledFlowId.parse(input.flowId),
+    step_id: StepId.parse(input.stepId)
+  };
+}
+function childResultEvidence(input) {
+  return {
+    source: "child_result",
+    ref: reportRef2(input)
+  };
+}
+function writeRunEnvelopeShadowRecord(input) {
+  const selectedProcess = {
+    process_id: CompiledFlowId.parse(input.selectedProcess.process_id),
+    ...input.selectedProcess.routed_by === void 0 ? {} : { routed_by: input.selectedProcess.routed_by },
+    router_reason: input.selectedProcess.router_reason,
+    ...input.selectedProcess.entry_mode === void 0 ? {} : { entry_mode: input.selectedProcess.entry_mode }
+  };
+  const { childRun, artifactLinks } = input.child.kind === "closed" ? (() => {
+    const resultRef = childResultEvidence({
+      runFolder: input.runFolder,
+      path: input.child.resultPath,
+      runId: input.child.runResult.run_id,
+      flowId: input.child.runResult.flow_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.runResult.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.runResult.flow_id),
+        outcome: input.child.runResult.outcome,
+        trace_entries_observed: input.child.runResult.trace_entries_observed,
+        manifest_hash: input.child.runResult.manifest_hash,
+        result_ref: resultRef
+      },
+      artifactLinks: [resultRef.ref]
+    };
+  })() : (() => {
+    const checkpointRequestRef = requestRef2({
+      runFolder: input.runFolder,
+      path: input.child.checkpoint.request_path,
+      runId: input.child.run_id,
+      flowId: input.child.flow_id,
+      stepId: input.child.checkpoint.step_id
+    });
+    return {
+      childRun: {
+        run_id: RunId.parse(input.child.run_id),
+        run_folder: input.runFolder,
+        flow_id: CompiledFlowId.parse(input.child.flow_id),
+        outcome: "checkpoint_waiting",
+        trace_entries_observed: input.child.trace_entries_observed,
+        manifest_hash: input.child.manifest_hash,
+        checkpoint: {
+          step_id: StepId.parse(input.child.checkpoint.step_id),
+          request_ref: checkpointRequestRef,
+          allowed_choices: [...input.child.checkpoint.allowed_choices]
+        }
+      },
+      artifactLinks: [checkpointRequestRef]
+    };
+  })();
+  const record2 = RunEnvelopeShadowRecord.parse({
+    schema: "run.envelope-shadow@v0",
+    mode: "shadow",
+    shadow_reason: "source-owned-run-not-active",
+    run_id: input.child.kind === "closed" ? RunId.parse(input.child.runResult.run_id) : RunId.parse(input.child.run_id),
+    operator_intent: input.operatorIntent,
+    recorded_at: input.recordedAt,
+    selected_process: selectedProcess,
+    child_run: childRun,
+    artifact_links: artifactLinks
+  });
+  const outPath = join22(input.runFolder, RUN_ENVELOPE_SHADOW_RELATIVE_PATH);
+  mkdirSync7(dirname11(outPath), { recursive: true });
+  writeFileSync8(outPath, `${JSON.stringify(record2, null, 2)}
+`);
+  return { path: outPath, record: record2 };
+}
+
+// dist/cli/post-run-artifacts.js
+function tryPostRunArtifact(label, context, write) {
+  try {
+    return write();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    context.warnings.push({ label, message });
+    if (!context.progressJsonl) {
+      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}
+`);
+    }
+    return void 0;
+  }
+}
+function postRunArtifactWarningOutputFields(warnings) {
+  if (warnings.length === 0)
+    return {};
+  return {
+    post_run_artifact_warnings: warnings.map((warning) => ({
+      label: warning.label,
+      message: warning.message
+    }))
+  };
+}
+function emitPostRunArtifacts(input) {
+  const { context, runFolder, operatorIntent, recordedAt, selectedProcess, child } = input;
+  const operatorSummary = tryPostRunArtifact("operator-summary", context, input.writeOperatorSummary);
+  tryPostRunArtifact("run-envelope-shadow", context, () => writeRunEnvelopeShadowRecord({
+    runFolder,
+    operatorIntent,
+    selectedProcess,
+    child,
+    recordedAt
+  }));
+  const processEvidence = tryPostRunArtifact("process-evidence", context, () => writeProcessEvidenceProjection({
+    runFolder,
+    projection: input.buildProcessEvidenceProjection()
+  }));
+  const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", context, () => writeRunEnvelopeRecord({
+    runFolder,
+    operatorIntent,
+    selectedProcess,
+    processEvidence,
+    recordedAt,
+    ...input.memoryContext === void 0 ? {} : { memoryContext: input.memoryContext }
+  }));
+  return { operatorSummary, processEvidence, runEnvelope };
+}
+
 // dist/cli/run-output.js
 function routeOutputFields(input) {
   return {
@@ -59971,6 +60020,14 @@ function routeOutputFields(input) {
     ...input.routerSignal === void 0 ? {} : { router_signal: input.routerSignal },
     ...input.entryMode === void 0 ? {} : { entry_mode: input.entryMode },
     ...input.entryModeSource === void 0 ? {} : { entry_mode_source: input.entryModeSource }
+  };
+}
+function selectedProcessFields(input) {
+  return {
+    process_id: input.processId,
+    ...input.routedBy === void 0 ? {} : { routed_by: input.routedBy },
+    router_reason: input.routerReason,
+    ...input.entryMode === void 0 ? {} : { entry_mode: input.entryMode }
   };
 }
 function operatorSummaryOutputFields(input) {
@@ -60070,29 +60127,6 @@ async function runRunsCommand(argv) {
 var DEFAULT_RUNS_BASE2 = ".circuit/runs";
 var AUTONOMOUS_LOOP_RELATIVE_PATH = "reports/autonomous-loop.json";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
-function tryPostRunArtifact(label, context, write) {
-  try {
-    return write();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    context.warnings.push({ label, message });
-    if (!context.progressJsonl) {
-      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}
-`);
-    }
-    return void 0;
-  }
-}
-function postRunArtifactWarningOutputFields(warnings) {
-  if (warnings.length === 0)
-    return {};
-  return {
-    post_run_artifact_warnings: warnings.map((warning) => ({
-      label: warning.label,
-      message: warning.message
-    }))
-  };
-}
 function usage() {
   return [
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
@@ -60518,12 +60552,10 @@ function historyRecallOutputFields(input) {
 }
 function runEnvelopeMemoryContext(report) {
   if (report === void 0)
-    return {};
+    return void 0;
   return {
-    memoryContext: {
-      used: report.status === "used",
-      memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id)
-    }
+    used: report.status === "used",
+    memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id)
   };
 }
 function shouldPrepareHistoryRecall(options) {
@@ -60569,68 +60601,67 @@ async function main(argv, options = {}) {
 `);
     return 2;
   }
+  if (args.command === "resume") {
+    return runResumeCommand(args, options);
+  }
+  return runExecutionCommand(args, options);
+}
+async function runResumeCommand(args, options) {
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder2 = resolve16(args.runFolder);
-    const progress2 = progressReporter(args.progress === "jsonl");
-    if (await isRuntimeRunFolder(runFolder2)) {
+    const runFolder = resolve16(args.runFolder);
+    const progress = progressReporter(args.progress === "jsonl");
+    if (await isRuntimeRunFolder(runFolder)) {
       const runtimeResult = await resumeCompiledFlow({
-        runDir: runFolder2,
+        runDir: runFolder,
         selection: args.checkpointChoice,
         now: options.now ?? (() => /* @__PURE__ */ new Date()),
         childCompiledFlowResolver: defaultChildCompiledFlowResolver(void 0),
         ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
-        ...progress2 === void 0 ? {} : { progress: progress2 },
+        ...progress === void 0 ? {} : { progress },
         progressSurfaceForFlowId
       });
       const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
-      const priorRoute = readPriorRoute(runFolder2);
+      const priorRoute = readPriorRoute(runFolder);
       const postRunArtifactWarnings = [];
       const postRunArtifactContext = {
         progressJsonl: args.progress === "jsonl",
         warnings: postRunArtifactWarnings
       };
-      const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
-        runFolder: runFolder2,
-        runResult,
-        route: {
-          selectedFlow: runResult.flow_id,
-          ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
-          ...priorRoute.routerReason === void 0 ? {} : { routerReason: priorRoute.routerReason }
-        }
-      }));
       const recordedAt = (options.now ?? (() => /* @__PURE__ */ new Date()))().toISOString();
-      const selectedProcess = {
-        process_id: runResult.flow_id,
-        ...priorRoute.routedBy === void 0 ? {} : { routed_by: priorRoute.routedBy },
-        router_reason: priorRoute.routerReason ?? "checkpoint resume"
-      };
-      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
-        runFolder: runFolder2,
+      const selectedProcess = selectedProcessFields({
+        processId: runResult.flow_id,
+        ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
+        routerReason: priorRoute.routerReason ?? "checkpoint resume"
+      });
+      const { operatorSummary, runEnvelope } = emitPostRunArtifacts({
+        context: postRunArtifactContext,
+        runFolder,
         operatorIntent: runResult.goal,
+        recordedAt,
         selectedProcess,
         child: {
           kind: "closed",
           runResult,
           resultPath: runtimeResult.resultPath
         },
-        recordedAt
-      }));
-      const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
-        runFolder: runFolder2,
-        projection: projectClosedProcessEvidence({
-          runFolder: runFolder2,
+        writeOperatorSummary: () => writeOperatorSummary({
+          runFolder,
+          runResult,
+          route: {
+            selectedFlow: runResult.flow_id,
+            ...priorRoute.routedBy === void 0 ? {} : { routedBy: priorRoute.routedBy },
+            ...priorRoute.routerReason === void 0 ? {} : { routerReason: priorRoute.routerReason }
+          }
+        }),
+        buildProcessEvidenceProjection: () => projectClosedProcessEvidence({
+          runFolder,
           runResult,
           resultPath: runtimeResult.resultPath
-        })
-      }));
-      const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
-        runFolder: runFolder2,
-        operatorIntent: runResult.goal,
-        selectedProcess,
-        processEvidence,
-        recordedAt
-      }));
+        }),
+        // Resume reuses the saved run; it records no fresh memory context.
+        memoryContext: void 0
+      });
       const resumeRuntimeFields = showRuntimeDecision() ? {
         runtime_reason: RUNTIME_POLICY_REASONS.checkpointResume
       } : {};
@@ -60638,7 +60669,7 @@ async function main(argv, options = {}) {
         schema_version: 1,
         run_id: runResult.run_id,
         flow_id: runResult.flow_id,
-        run_folder: runFolder2,
+        run_folder: runFolder,
         outcome: runResult.outcome,
         trace_entries_observed: runResult.trace_entries_observed,
         result_path: runtimeResult.resultPath,
@@ -60653,6 +60684,9 @@ async function main(argv, options = {}) {
     process.stderr.write("error: run folder is not a resumable Circuit run folder\n");
     return 2;
   }
+  return runExecutionCommand(args, options);
+}
+async function runExecutionCommand(args, options) {
   if (args.goal === void 0) {
     throw new Error("internal error: --goal missing outside checkpoint resume mode");
   }
@@ -60683,6 +60717,12 @@ async function main(argv, options = {}) {
     label: `Selected ${route.flowName}`,
     display: progressDisplay(`Circuit: ${selectedStatusText}`, "major", "info"),
     presentation: progressPresentation({ blockId: runId, statusText: selectedStatusText }),
+    // These route facets mirror routeOutputFields, but the route.selected event
+    // is a typed discriminated-union member (ProgressEvent), not the loosely
+    // typed stdout JSON. Spreading a Record<string, unknown> builder here erases
+    // the literal property types and breaks the union parse, so the fields stay
+    // inline. The shared shape is the selectedProcessFields builder used by the
+    // three selected_process literals below.
     selected_flow: flow.id,
     routed_by: route.source,
     router_reason: route.reason,
@@ -60755,30 +60795,23 @@ async function main(argv, options = {}) {
           allowed_choices: runtimeResult.checkpoint.allowedChoices
         }
       };
-      const selectedProcess2 = {
-        process_id: flow.id,
-        routed_by: route.source,
-        router_reason: route.reason,
-        ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-      };
+      const selectedProcess2 = selectedProcessFields({
+        processId: flow.id,
+        routedBy: route.source,
+        routerReason: route.reason,
+        ...entryModeSelection.entryModeName === void 0 ? {} : { entryMode: entryModeSelection.entryModeName }
+      });
       const postRunArtifactWarnings2 = [];
       const postRunArtifactContext2 = {
         progressJsonl: args.progress === "jsonl",
         warnings: postRunArtifactWarnings2
       };
-      const operatorSummary2 = tryPostRunArtifact("operator-summary", postRunArtifactContext2, () => writeOperatorSummary({
-        runFolder,
-        runResult: waitingResult,
-        route: {
-          selectedFlow: route.flowName,
-          routedBy: route.source,
-          routerReason: route.reason
-        }
-      }));
       const recordedAt2 = now().toISOString();
-      tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext2, () => writeRunEnvelopeShadowRecord({
+      const { operatorSummary: operatorSummary2, runEnvelope: runEnvelope2 } = emitPostRunArtifacts({
+        context: postRunArtifactContext2,
         runFolder,
         operatorIntent: operatorGoal,
+        recordedAt: recordedAt2,
         selectedProcess: selectedProcess2,
         child: {
           kind: "checkpoint_waiting",
@@ -60792,11 +60825,16 @@ async function main(argv, options = {}) {
             allowed_choices: waitingResult.checkpoint.allowed_choices
           }
         },
-        recordedAt: recordedAt2
-      }));
-      const processEvidence2 = tryPostRunArtifact("process-evidence", postRunArtifactContext2, () => writeProcessEvidenceProjection({
-        runFolder,
-        projection: projectCheckpointWaitingProcessEvidence({
+        writeOperatorSummary: () => writeOperatorSummary({
+          runFolder,
+          runResult: waitingResult,
+          route: {
+            selectedFlow: route.flowName,
+            routedBy: route.source,
+            routerReason: route.reason
+          }
+        }),
+        buildProcessEvidenceProjection: () => projectCheckpointWaitingProcessEvidence({
           runFolder,
           runId: waitingResult.run_id,
           flowId: waitingResult.flow_id,
@@ -60807,16 +60845,9 @@ async function main(argv, options = {}) {
             requestPath: runtimeResult.checkpoint.requestPath,
             allowedChoices: waitingResult.checkpoint.allowed_choices
           }
-        })
-      }));
-      const runEnvelope2 = processEvidence2 === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext2, () => writeRunEnvelopeRecord({
-        runFolder,
-        operatorIntent: operatorGoal,
-        selectedProcess: selectedProcess2,
-        processEvidence: processEvidence2,
-        recordedAt: recordedAt2,
-        ...runEnvelopeMemoryContext(historyRecall)
-      }));
+        }),
+        memoryContext: runEnvelopeMemoryContext(historyRecall)
+      });
       process.stdout.write(`${JSON.stringify({
         schema_version: 1,
         run_id: waitingResult.run_id,
@@ -60846,54 +60877,45 @@ async function main(argv, options = {}) {
       return 0;
     }
     const runResult = RunResult.parse(JSON.parse(readFileSync36(runtimeResult.resultPath, "utf8")));
-    const selectedProcess = {
-      process_id: flow.id,
-      routed_by: route.source,
-      router_reason: route.reason,
-      ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName }
-    };
+    const selectedProcess = selectedProcessFields({
+      processId: flow.id,
+      routedBy: route.source,
+      routerReason: route.reason,
+      ...entryModeSelection.entryModeName === void 0 ? {} : { entryMode: entryModeSelection.entryModeName }
+    });
     const postRunArtifactWarnings = [];
     const postRunArtifactContext = {
       progressJsonl: args.progress === "jsonl",
       warnings: postRunArtifactWarnings
     };
-    const operatorSummary = tryPostRunArtifact("operator-summary", postRunArtifactContext, () => writeOperatorSummary({
-      runFolder,
-      runResult,
-      route: {
-        selectedFlow: route.flowName,
-        routedBy: route.source,
-        routerReason: route.reason
-      }
-    }));
     const recordedAt = now().toISOString();
-    tryPostRunArtifact("run-envelope-shadow", postRunArtifactContext, () => writeRunEnvelopeShadowRecord({
+    const { operatorSummary, processEvidence, runEnvelope } = emitPostRunArtifacts({
+      context: postRunArtifactContext,
       runFolder,
       operatorIntent: operatorGoal,
+      recordedAt,
       selectedProcess,
       child: {
         kind: "closed",
         runResult,
         resultPath: runtimeResult.resultPath
       },
-      recordedAt
-    }));
-    const processEvidence = tryPostRunArtifact("process-evidence", postRunArtifactContext, () => writeProcessEvidenceProjection({
-      runFolder,
-      projection: projectClosedProcessEvidence({
+      writeOperatorSummary: () => writeOperatorSummary({
+        runFolder,
+        runResult,
+        route: {
+          selectedFlow: route.flowName,
+          routedBy: route.source,
+          routerReason: route.reason
+        }
+      }),
+      buildProcessEvidenceProjection: () => projectClosedProcessEvidence({
         runFolder,
         runResult,
         resultPath: runtimeResult.resultPath
-      })
-    }));
-    const runEnvelope = processEvidence === void 0 ? void 0 : tryPostRunArtifact("run-envelope", postRunArtifactContext, () => writeRunEnvelopeRecord({
-      runFolder,
-      operatorIntent: operatorGoal,
-      selectedProcess,
-      processEvidence,
-      recordedAt,
-      ...runEnvelopeMemoryContext(historyRecall)
-    }));
+      }),
+      memoryContext: runEnvelopeMemoryContext(historyRecall)
+    });
     let autonomousLoop;
     if (selectedAxes(args, route).autonomous === true && processEvidence !== void 0 && runEnvelope !== void 0) {
       const primaryProjection = processEvidence.projection;

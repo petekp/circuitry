@@ -10,6 +10,20 @@ export interface RouteOutputFieldsInput {
   readonly entryModeSource?: 'explicit' | 'classifier';
 }
 
+export interface SelectedProcessFieldsInput {
+  readonly processId: string;
+  readonly routedBy?: 'explicit' | 'classifier';
+  readonly routerReason: string;
+  readonly entryMode?: string;
+}
+
+export interface SelectedProcessFields {
+  readonly process_id: string;
+  readonly routed_by?: 'explicit' | 'classifier';
+  readonly router_reason: string;
+  readonly entry_mode?: string;
+}
+
 export interface OperatorSummaryOutputFieldsInput {
   readonly operatorSummary: OperatorSummaryWriteResult;
 }
@@ -26,6 +40,20 @@ export function routeOutputFields(input: RouteOutputFieldsInput): Record<string,
     ...(input.routerSignal === undefined ? {} : { router_signal: input.routerSignal }),
     ...(input.entryMode === undefined ? {} : { entry_mode: input.entryMode }),
     ...(input.entryModeSource === undefined ? {} : { entry_mode_source: input.entryModeSource }),
+  };
+}
+
+// The selected_process literal shared by the run-envelope shadow + source
+// writers (and the route.selected progress event's process facet). The three
+// post-run call sites (closed run, checkpoint-waiting, resume) restate the same
+// shape; this builder owns the optional-field collapsing so the key order and
+// omission rules stay identical across them.
+export function selectedProcessFields(input: SelectedProcessFieldsInput): SelectedProcessFields {
+  return {
+    process_id: input.processId,
+    ...(input.routedBy === undefined ? {} : { routed_by: input.routedBy }),
+    router_reason: input.routerReason,
+    ...(input.entryMode === undefined ? {} : { entry_mode: input.entryMode }),
   };
 }
 

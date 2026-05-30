@@ -1,0 +1,133 @@
+import { writeProcessEvidenceProjection } from '../process-evidence/projection.js';
+import {
+  type WriteRunEnvelopeShadowRecordInput,
+  writeRunEnvelopeShadowRecord,
+} from '../run-envelope/shadow-record.js';
+import {
+  type WriteRunEnvelopeRecordInput,
+  type WriteRunEnvelopeRecordResult,
+  writeRunEnvelopeRecord as writeSourceRunEnvelopeRecord,
+} from '../run-envelope/source-record.js';
+// Post-run artifact emission for the run/resume execution paths.
+//
+// The four post-run artifacts (operator-summary, run-envelope-shadow,
+// process-evidence, run-envelope) are written in a fixed order, each wrapped in
+// tryPostRunArtifact so a single writer failure degrades to a recorded warning
+// instead of aborting the run. The run-envelope is only written when process
+// evidence succeeded (it consumes the projection result).
+//
+// This ordering + guard used to be inlined three times (closed run,
+// checkpoint-waiting, resume), differing only in the child descriptor, the
+// process-evidence projection, and whether a memory context is recorded. Owning
+// it here closes the latent copy-divergence: the resume path passes
+// memoryContext explicitly undefined rather than silently omitting it.
+import type { ProcessEvidenceProjection as ProcessEvidenceProjectionValue } from '../schemas/process-evidence.js';
+import type { OperatorSummaryWriteResult } from '../shared/operator-summary-writer.js';
+
+export type PostRunArtifactWarning = {
+  readonly label: string;
+  readonly message: string;
+};
+
+export type PostRunArtifactContext = {
+  readonly progressJsonl: boolean;
+  readonly warnings: PostRunArtifactWarning[];
+};
+
+export function tryPostRunArtifact<T>(
+  label: string,
+  context: PostRunArtifactContext,
+  write: () => T,
+): T | undefined {
+  try {
+    return write();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    context.warnings.push({ label, message });
+    if (!context.progressJsonl) {
+      process.stderr.write(`warning: post-run artifact ${label} failed: ${message}\n`);
+    }
+    return undefined;
+  }
+}
+
+export function postRunArtifactWarningOutputFields(
+  warnings: readonly PostRunArtifactWarning[],
+): Record<string, unknown> {
+  if (warnings.length === 0) return {};
+  return {
+    post_run_artifact_warnings: warnings.map((warning) => ({
+      label: warning.label,
+      message: warning.message,
+    })),
+  };
+}
+
+type WrittenProcessEvidence = {
+  readonly path: string;
+  readonly projection: ProcessEvidenceProjectionValue;
+};
+
+export interface EmitPostRunArtifactsInput {
+  readonly context: PostRunArtifactContext;
+  readonly runFolder: string;
+  readonly operatorIntent: string;
+  readonly recordedAt: string;
+  readonly selectedProcess: WriteRunEnvelopeShadowRecordInput['selectedProcess'];
+  readonly child: WriteRunEnvelopeShadowRecordInput['child'];
+  readonly writeOperatorSummary: () => OperatorSummaryWriteResult;
+  readonly buildProcessEvidenceProjection: () => ProcessEvidenceProjectionValue;
+  // Resume omits the memory context entirely; the run paths pass the history
+  // recall context. Always supplied explicitly so the divergence is visible at
+  // the call site rather than latent in this builder.
+  readonly memoryContext: WriteRunEnvelopeRecordInput['memoryContext'];
+}
+
+export interface EmitPostRunArtifactsResult {
+  readonly operatorSummary: OperatorSummaryWriteResult | undefined;
+  readonly processEvidence: WrittenProcessEvidence | undefined;
+  readonly runEnvelope: WriteRunEnvelopeRecordResult | undefined;
+}
+
+export function emitPostRunArtifacts(input: EmitPostRunArtifactsInput): EmitPostRunArtifactsResult {
+  const { context, runFolder, operatorIntent, recordedAt, selectedProcess, child } = input;
+
+  const operatorSummary = tryPostRunArtifact(
+    'operator-summary',
+    context,
+    input.writeOperatorSummary,
+  );
+
+  tryPostRunArtifact('run-envelope-shadow', context, () =>
+    writeRunEnvelopeShadowRecord({
+      runFolder,
+      operatorIntent,
+      selectedProcess,
+      child,
+      recordedAt,
+    }),
+  );
+
+  const processEvidence = tryPostRunArtifact('process-evidence', context, () =>
+    writeProcessEvidenceProjection({
+      runFolder,
+      projection: input.buildProcessEvidenceProjection(),
+    }),
+  );
+
+  const runEnvelope =
+    processEvidence === undefined
+      ? undefined
+      : tryPostRunArtifact('run-envelope', context, () =>
+          writeSourceRunEnvelopeRecord({
+            runFolder,
+            operatorIntent,
+            selectedProcess,
+            processEvidence,
+            recordedAt,
+            ...(input.memoryContext === undefined ? {} : { memoryContext: input.memoryContext }),
+          }),
+        );
+
+  return { operatorSummary, processEvidence, runEnvelope };
+}
