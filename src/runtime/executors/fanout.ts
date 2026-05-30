@@ -1,8 +1,8 @@
 import { join as joinPath } from 'node:path';
+import { connectorCapabilities } from '../../connectors/resolver.js';
 import { FanoutFailurePolicy } from '../../schemas/step.js';
 import { buildFanoutAggregate } from '../../shared/fanout-aggregate-report.js';
 import { evaluateFanoutJoinPolicy } from '../../shared/fanout-join-policy.js';
-import { connectorCapabilities } from '../connectors/resolver.js';
 import type { RunFileRef } from '../domain/run-file.js';
 import type { StepOutcome } from '../domain/step.js';
 import {

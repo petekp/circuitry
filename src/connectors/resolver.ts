@@ -3,24 +3,24 @@
 // Relay connector choice is layered: explicit invocation, role config, flow
 // config, default config, then the auto fallback. Keep capability and provider
 // checks here so executors can assume the selected connector can run the role.
-import type { WorkRootKind } from '../../schemas/change-packet.js';
-import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
-import type { ConnectorReference } from '../../schemas/config.js';
+import type { WorkRootKind } from '../schemas/change-packet.js';
+import type { LayeredConfig as LayeredConfigValue } from '../schemas/config.js';
+import type { ConnectorReference } from '../schemas/config.js';
 import type {
   ConnectorCapabilities,
   EnabledConnector,
   RelayResolutionSource,
   ResolvedConnector,
-} from '../../schemas/connector.js';
+} from '../schemas/connector.js';
 import {
   BUILTIN_CONNECTOR_CAPABILITIES,
   BUILTIN_CONNECTOR_SPECS,
   type ConnectorProvider,
   EnabledConnector as EnabledConnectorSchema,
-} from '../../schemas/connector.js';
-import type { CompiledFlowId } from '../../schemas/ids.js';
-import type { ResolvedSelection } from '../../schemas/selection-policy.js';
-import type { RelayRole } from '../../schemas/step.js';
+} from '../schemas/connector.js';
+import type { CompiledFlowId } from '../schemas/ids.js';
+import type { ResolvedSelection } from '../schemas/selection-policy.js';
+import type { RelayRole } from '../schemas/step.js';
 import type { ResolvedConnectorDecision } from './connector.js';
 
 type RelayConfigValue = LayeredConfigValue['config']['relay'];

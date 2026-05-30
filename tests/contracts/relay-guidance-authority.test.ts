@@ -13,7 +13,7 @@ describe('relay guidance authority boundary', () => {
       'utf8',
     );
     const connectorResolverSource = readFileSync(
-      join(process.cwd(), 'src/runtime/connectors/resolver.ts'),
+      join(process.cwd(), 'src/connectors/resolver.ts'),
       'utf8',
     );
     const selectionResolverSource = readFileSync(

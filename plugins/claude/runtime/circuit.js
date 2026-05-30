@@ -37938,7 +37938,7 @@ var prototypeVariantChoiceOptionsComposeBuilder = {
   }
 };
 
-// dist/runtime/connectors/resolver.js
+// dist/connectors/resolver.js
 function mergedRelayConfig(layers) {
   const merged = {
     default: "auto",

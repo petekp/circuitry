@@ -2,14 +2,14 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
 import {
   assertConnectorCanRunRole,
   assertConnectorSelectionCompatible,
   classifyConnectorFilesystem,
   classifyRelayWriteMode,
   resolveConnectorForGuidanceInput,
-} from '../../src/runtime/connectors/resolver.js';
+} from '../../src/connectors/resolver.js';
+import type { RuntimeIndexedRelayStep } from '../../src/flows/registries/runtime-index.js';
 import type { RelayConnector } from '../../src/runtime/executors/relay.js';
 import type { ExecutableFlow, RelayStep } from '../../src/runtime/manifest/executable-flow.js';
 import { executeExecutableFlow } from '../../src/runtime/run/graph-runner.js';
