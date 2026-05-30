@@ -22,6 +22,7 @@ describe('runtime capabilities', () => {
       'progressSurface',
       'memoryInputs',
       'historyRecallReport',
+      'historyRecallPrecision',
     ]);
   });
 });

@@ -1,6 +1,7 @@
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import type {
+  HistoryRecallPrecisionV1 as HistoryRecallPrecisionValue,
   HistoryRecallReportV1 as HistoryRecallReportValue,
   MemoryInputV0 as MemoryInputValue,
 } from '../../schemas/index.js';
@@ -37,6 +38,7 @@ export const RUNTIME_CAPABILITY_NAMES = [
   'progressSurface',
   'memoryInputs',
   'historyRecallReport',
+  'historyRecallPrecision',
 ] as const;
 
 export type RuntimeCapabilityName = (typeof RUNTIME_CAPABILITY_NAMES)[number];
@@ -59,4 +61,5 @@ export interface RuntimeExecutionCapabilities {
   readonly progressSurface?: CompiledFlowProgressSurface;
   readonly memoryInputs?: readonly MemoryInputValue[];
   readonly historyRecallReport?: HistoryRecallReportValue;
+  readonly historyRecallPrecision?: HistoryRecallPrecisionValue;
 }

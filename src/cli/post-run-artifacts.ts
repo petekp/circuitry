@@ -81,6 +81,10 @@ export interface EmitPostRunArtifactsInput {
   // recall context. Always supplied explicitly so the divergence is visible at
   // the call site rather than latent in this builder.
   readonly memoryContext: WriteRunEnvelopeRecordInput['memoryContext'];
+  // Recall precision indicator (self-auditing memory): written into the source
+  // run-envelope record when a run-start recall produced an earned-precision
+  // audit. Optional; resume and recall-less paths omit it.
+  readonly recallMemoryIndicator?: WriteRunEnvelopeRecordInput['recallMemoryIndicator'];
 }
 
 export interface EmitPostRunArtifactsResult {
@@ -126,6 +130,9 @@ export function emitPostRunArtifacts(input: EmitPostRunArtifactsInput): EmitPost
             processEvidence,
             recordedAt,
             ...(input.memoryContext === undefined ? {} : { memoryContext: input.memoryContext }),
+            ...(input.recallMemoryIndicator === undefined
+              ? {}
+              : { recallMemoryIndicator: input.recallMemoryIndicator }),
           }),
         );
 

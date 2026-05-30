@@ -118,6 +118,9 @@ export async function runCompiledFlowWithWaiting(
       ...(options.historyRecallReport === undefined
         ? {}
         : { historyRecallReport: options.historyRecallReport }),
+      ...(options.historyRecallPrecision === undefined
+        ? {}
+        : { historyRecallPrecision: options.historyRecallPrecision }),
       ...(options.maxSteps === undefined ? {} : { maxSteps: options.maxSteps }),
     },
   );

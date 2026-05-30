@@ -41,6 +41,7 @@ import { parseCommanderOrThrow } from './commander-support.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runHistoryCommand } from './history.js';
+import { runMemoryCommand } from './memory.js';
 import {
   type PostRunArtifactContext,
   type PostRunArtifactWarning,
@@ -148,6 +149,7 @@ export function usage(): string {
     '       circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]',
     '       circuit runs show --run-folder <path> --json',
     '       circuit history rebuild|query|status --json [options]',
+    '       circuit memory note --flow <id> [--applies-to <kind>] "<text>" | memory list | memory forget <id>',
     '       circuit handoff [save|resume|done|brief|hook|hooks] [options]',
     '       circuit create --description "<flow idea>" [--name <slug>] [--publish --yes]',
     '       circuit version [--json]',
@@ -253,7 +255,9 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   parseCommanderOrThrow(program, argv);
 
   if (invocation === undefined) {
-    throw new Error('missing command: use run, resume, handoff, history, create, runs, or version');
+    throw new Error(
+      'missing command: use run, resume, handoff, history, memory, create, runs, or version',
+    );
   }
   return invocation;
 }
@@ -636,7 +640,7 @@ function classifyRuntimeSupport(input: {
 
 function historyRecallOutputFields(input: {
   readonly runFolder: string;
-  readonly report: ReturnType<typeof prepareRunStartHistoryRecall>;
+  readonly report: ReturnType<typeof prepareRunStartHistoryRecall>['report'];
 }) {
   return {
     history_recall: {
@@ -654,9 +658,10 @@ function historyRecallOutputFields(input: {
 }
 
 function runEnvelopeMemoryContext(
-  report: ReturnType<typeof prepareRunStartHistoryRecall> | undefined,
+  recall: ReturnType<typeof prepareRunStartHistoryRecall> | undefined,
 ): { readonly used: boolean; readonly memoryInputIds: readonly string[] } | undefined {
-  if (report === undefined) return undefined;
+  if (recall === undefined) return undefined;
+  const report = recall.report;
   return {
     used: report.status === 'used',
     memoryInputIds: report.memory_inputs.map((memory) => memory.memory_id),
@@ -691,6 +696,11 @@ export async function main(argv: readonly string[], options: CliMainOptions = {}
   }
   if (invocation.command === 'history') {
     return runHistoryCommand(invocation.argv);
+  }
+  if (invocation.command === 'memory') {
+    return runMemoryCommand(invocation.argv, {
+      ...(options.now === undefined ? {} : { now: options.now }),
+    });
   }
   if (invocation.command === 'create') {
     return runCreateCommand(invocation.argv, {
@@ -902,6 +912,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
       ? prepareRunStartHistoryRecall({
           repoRoot: projectRoot,
           query: operatorGoal,
+          flowId: flow.id as unknown as string,
           now,
         })
       : undefined;
@@ -925,8 +936,9 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
       ...(policyLayers.length === 0 ? {} : { policyLayers }),
       ...(progress === undefined ? {} : { progress }),
       ...(progressSurface === undefined ? {} : { progressSurface }),
-      ...(historyRecall === undefined ? {} : { memoryInputs: historyRecall.memory_inputs }),
-      ...(historyRecall === undefined ? {} : { historyRecallReport: historyRecall }),
+      ...(historyRecall === undefined ? {} : { memoryInputs: historyRecall.report.memory_inputs }),
+      ...(historyRecall === undefined ? {} : { historyRecallReport: historyRecall.report }),
+      ...(historyRecall === undefined ? {} : { historyRecallPrecision: historyRecall.precision }),
       ...(args.includeUntrackedContent
         ? { evidencePolicy: { includeUntrackedFileContent: true } }
         : {}),
@@ -1003,6 +1015,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
             },
           }),
         memoryContext: runEnvelopeMemoryContext(historyRecall),
+        recallMemoryIndicator: historyRecall?.precision.indicator,
       });
       process.stdout.write(
         `${JSON.stringify(
@@ -1031,7 +1044,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
             }),
             ...(historyRecall === undefined
               ? {}
-              : historyRecallOutputFields({ runFolder, report: historyRecall })),
+              : historyRecallOutputFields({ runFolder, report: historyRecall.report })),
             ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
             ...(operatorSummary === undefined
               ? {}
@@ -1088,6 +1101,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
           resultPath: runtimeResult.resultPath,
         }),
       memoryContext: runEnvelopeMemoryContext(historyRecall),
+      recallMemoryIndicator: historyRecall?.precision.indicator,
     });
     // S10: in autonomous mode, drive the continuation loop. Attempt 1 reuses the
     // primary run above; follow-up attempts run the routed recovery flow for real
@@ -1247,7 +1261,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
           }),
           ...(historyRecall === undefined
             ? {}
-            : historyRecallOutputFields({ runFolder, report: historyRecall })),
+            : historyRecallOutputFields({ runFolder, report: historyRecall.report })),
           ...postRunArtifactWarningOutputFields(postRunArtifactWarnings),
           ...(operatorSummary === undefined
             ? {}

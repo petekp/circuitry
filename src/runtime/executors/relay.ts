@@ -469,6 +469,9 @@ export async function executeProductionRelayAttempt(input: {
     context.acceptanceRetryFeedback,
     context.goal,
     context.memoryInputs ?? [],
+    // Slice 4 D4: thread the active flow into the always-on pull affordance so the
+    // agent's copyable command already targets the correct flow for suppression.
+    context.flow.id,
   );
 
   const request = step.writes?.request;

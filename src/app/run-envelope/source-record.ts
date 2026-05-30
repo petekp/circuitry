@@ -57,6 +57,10 @@ export type WriteRunEnvelopeRecordInput = {
   readonly recordedAt: string;
   readonly memoryContext?: MemoryContextInput;
   readonly memoryUpdates?: readonly MemoryUpdateInput[];
+  // Slice 3: the earned-precision recall indicator. It fills
+  // surface_output.memory_indicator ONLY when no proposed/recorded memory-write
+  // event exists (a write-side indicator takes precedence — see writeRunEnvelopeRecord).
+  readonly recallMemoryIndicator?: string;
 };
 
 export type WriteRunEnvelopeRecordResult = {
@@ -623,9 +627,16 @@ export function writeRunEnvelopeRecord(
     processEvidence,
     ...(input.memoryUpdates === undefined ? {} : { updates: input.memoryUpdates }),
   });
-  const memoryIndicator = memoryEvents.find(
+  // Slice 3 precedence rule: a write-side proposed/recorded memory-update
+  // indicator (Slice 5's surface) wins the single surface_output.memory_indicator;
+  // the recall-derived earned-precision indicator fills it only when no
+  // memory-write event exists. On a Slice-3-only corpus there are no write events,
+  // so the field carries the recall indicator; once Slice 5 also runs, the
+  // write-side indicator takes precedence and the recall one stays in the sidecar.
+  const writeIndicator = memoryEvents.find(
     (event) => event.action === 'proposed' || event.action === 'recorded',
   )?.operator_indicator;
+  const memoryIndicator = writeIndicator ?? input.recallMemoryIndicator;
 
   const record = RunEnvelopeRecord.parse({
     schema: 'run.envelope@v0',
