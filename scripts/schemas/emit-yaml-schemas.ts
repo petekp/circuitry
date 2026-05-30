@@ -1,26 +1,13 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { z } from 'zod';
+import { formatWithBiome, stableJson } from '../shared/format.ts';
 import {
   type YamlEditorSchemaTarget,
   loadYamlEditorSchemaTargets,
 } from './yaml-schema-registry.ts';
 
 const projectRoot = resolve(new URL('../..', import.meta.url).pathname);
-
-function stableJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
-
-function formatJson(relPath: string, content: string): string {
-  return execFileSync('npx', ['biome', 'format', '--stdin-file-path', relPath], {
-    cwd: projectRoot,
-    input: content,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-}
 
 function generatedSchemaFor(target: YamlEditorSchemaTarget): Record<string, unknown> {
   const converted = z.toJSONSchema(target.schema, {
@@ -67,7 +54,7 @@ export async function emitYamlSchemas(options: { readonly check?: boolean } = {}
   for (const target of await loadYamlEditorSchemaTargets()) {
     writeOrCheck(
       target.schemaPath,
-      formatJson(target.schemaPath, stableJson(generatedSchemaFor(target))),
+      formatWithBiome(target.schemaPath, stableJson(generatedSchemaFor(target)), projectRoot),
       check,
     );
   }

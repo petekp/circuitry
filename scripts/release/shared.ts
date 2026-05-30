@@ -11,6 +11,7 @@ import type { z } from 'zod';
 // yaml-schema-registry.ts.
 import type * as ReleaseChecksModule from '../../src/release/checks.js';
 import type * as ReleaseSchemasModule from '../../src/release/schemas.js';
+import { formatWithBiome as formatWithBiomeShared, stableJson } from '../shared/format.ts';
 
 export const projectRoot = resolve(new URL('../..', import.meta.url).pathname);
 
@@ -65,17 +66,13 @@ export function fileIsPresent(relPath: string): boolean {
   }
 }
 
-export function stableJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
+// Re-exported from scripts/shared/format.ts (the single source of truth shared
+// with the YAML-schema emitter). Kept exported here so the release scripts that
+// already import them from './shared.ts' need no change.
+export { stableJson };
 
 export function formatWithBiome(relPath: string, content: string): string {
-  return execFileSync('npx', ['biome', 'format', '--stdin-file-path', relPath], {
-    cwd: projectRoot,
-    input: content,
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  return formatWithBiomeShared(relPath, content, projectRoot);
 }
 
 export function writeOrCheck(relPath: string, content: string, check: boolean): void {
