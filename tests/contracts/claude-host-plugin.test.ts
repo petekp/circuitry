@@ -5,22 +5,30 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import {
+  CLI_ONLY_UTILITIES,
+  GENERATED_FLOW_MIRROR_ROOT_ENV,
+  REPO_ROOT,
+  ROUTED_ONLY_FLOWS,
+  VersionManifest,
+  cleanPluginEnv,
+  collectJsonFiles,
+  copyWrapperWithSidecars,
+  envWithOverride,
+  noAmbientCliPath,
+  publicHostFlowFiles,
+} from '../helpers/host-plugin-fixtures.js';
 
-const REPO_ROOT = resolve('.');
 const PLUGIN_ROOT = resolve(REPO_ROOT, 'plugins/claude');
-const GENERATED_FLOW_MIRROR_ROOT_ENV = 'CIRCUIT_GENERATED_FLOW_MIRROR_ROOT';
 const EXPECTED_CLAUDE_COMMANDS = ['handoff', 'run'];
-const CLI_ONLY_UTILITIES = ['create'];
-const ROUTED_ONLY_FLOWS = ['build', 'explore', 'fix', 'prototype', 'review'];
 const RAW_PROGRESS_INVOCATION =
   /node "\$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/circuit\.ts" (?!present\b)[^\n]*--progress jsonl/;
 
@@ -32,7 +40,6 @@ const PluginManifest = z
   })
   .passthrough();
 
-const VersionManifest = z.object({ version: z.string().min(1) });
 const MarketplaceManifest = z.object({
   name: z.literal('circuit'),
   owner: z.object({ name: z.literal('Pete Petrash') }),
@@ -44,42 +51,6 @@ const MarketplaceManifest = z.object({
     }),
   ),
 });
-
-function collectJsonFiles(root: string, prefix = ''): string[] {
-  const entries = readdirSync(resolve(root, prefix), { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    const rel = join(prefix, entry.name);
-    if (entry.isDirectory()) return collectJsonFiles(root, rel);
-    return entry.isFile() && entry.name.endsWith('.json') ? [rel] : [];
-  });
-}
-
-function publicHostFlowFiles(files: string[]): string[] {
-  return files.filter(
-    (file) =>
-      !file.startsWith('runtime-proof/') &&
-      !file.startsWith('goal/') &&
-      !file.endsWith('.work-contract.v0.json') &&
-      !file.includes('never-a-mode'),
-  );
-}
-
-function noAmbientCliPath(): string {
-  const systemSegments = process.platform === 'win32' ? [] : ['/usr/bin', '/bin'];
-  return [dirname(process.execPath), ...systemSegments].join(delimiter);
-}
-
-function cleanPluginEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  env.CIRCUIT_CLI = undefined;
-  env.CIRCUIT_DEV = undefined;
-  env.PATH = noAmbientCliPath();
-  return { ...env, ...extra };
-}
-
-function envWithOverride(fakeBin: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  return cleanPluginEnv({ ...extra, CIRCUIT_CLI: fakeBin });
-}
 
 describe('Claude Code host plugin package', () => {
   it('declares a self-contained Claude Code plugin package', () => {
@@ -236,21 +207,14 @@ describe('Claude Code host plugin package', () => {
       const tempPluginRoot = join(tempDir, 'plugin');
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
-      const wrapperPath = join(scriptsDir, 'circuit.ts');
       const fakeBin = join(binDir, 'circuit');
-      mkdirSync(scriptsDir, { recursive: true });
-      mkdirSync(binDir, { recursive: true });
-      writeFileSync(wrapperPath, readFileSync(resolve(PLUGIN_ROOT, 'scripts/circuit.ts')));
       // The wrapper imports ./auto-open-policy.ts and ./launcher-core.ts at
       // top-level — copy them so the fixture script can load.
-      writeFileSync(
-        join(scriptsDir, 'auto-open-policy.ts'),
-        readFileSync(resolve(PLUGIN_ROOT, 'scripts/auto-open-policy.ts')),
-      );
-      writeFileSync(
-        join(scriptsDir, 'launcher-core.ts'),
-        readFileSync(resolve(PLUGIN_ROOT, 'scripts/launcher-core.ts')),
-      );
+      const wrapperPath = copyWrapperWithSidecars(PLUGIN_ROOT, scriptsDir, [
+        'auto-open-policy.ts',
+        'launcher-core.ts',
+      ]);
+      mkdirSync(binDir, { recursive: true });
       writeFileSync(
         fakeBin,
         [
