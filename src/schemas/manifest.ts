@@ -44,7 +44,7 @@ export const ManifestSnapshot = z
       decoded = Buffer.from(snap.bytes_base64, 'base64');
     } catch {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['bytes_base64'],
         message: 'bytes_base64 failed to decode as base64',
       });
@@ -53,7 +53,7 @@ export const ManifestSnapshot = z
     const computed = createHash('sha256').update(decoded).digest('hex');
     if (computed !== snap.hash) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['hash'],
         message: `manifest hash mismatch: declared=${snap.hash} computed=${computed} (sha256 over decoded bytes_base64)`,
       });

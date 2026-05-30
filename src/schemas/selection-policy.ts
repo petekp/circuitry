@@ -28,7 +28,7 @@ const UniqueSkillArray = z.array(SkillId).superRefine((arr, ctx) => {
   const duplicates = [...new Set(arr.filter((skill, index) => arr.indexOf(skill) !== index))];
   if (duplicates.length === 0) return;
   ctx.addIssue({
-    code: z.ZodIssueCode.custom,
+    code: 'custom',
     message: `skills array contains duplicates: ${duplicates.join(', ')}`,
   });
 });
@@ -169,7 +169,7 @@ const SelectionResolutionBody = z
   .strict();
 
 const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: string) => {
-  ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: 'custom', path, message });
 };
 
 // Single-pass enforcement on the applied chain:

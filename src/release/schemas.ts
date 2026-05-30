@@ -121,7 +121,7 @@ export const OriginalCapabilitySnapshot = z
       if (capability === undefined) continue;
       if (capabilityIds.has(capability.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['capabilities', index, 'id'],
           message: `duplicate capability id: ${capability.id}`,
         });
@@ -130,7 +130,7 @@ export const OriginalCapabilitySnapshot = z
       for (const sourceRef of capability.source_refs) {
         if (!sourceIds.has(sourceRef)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['capabilities', index, 'source_refs'],
             message: `unknown source ref: ${sourceRef}`,
           });
@@ -268,7 +268,7 @@ export const CurrentCapabilitySnapshot = z
       if (capability === undefined) continue;
       if (ids.has(capability.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['capabilities', index, 'id'],
           message: `duplicate current capability id: ${capability.id}`,
         });
@@ -312,7 +312,7 @@ export const ParityExceptionLedger = z
       if (exception === undefined) continue;
       if (ids.has(exception.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['exceptions', index, 'id'],
           message: `duplicate exception id: ${exception.id}`,
         });
@@ -364,7 +364,7 @@ export const PublicClaimLedger = z
       if (claim === undefined) continue;
       if (ids.has(claim.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['claims', index, 'id'],
           message: `duplicate claim id: ${claim.id}`,
         });
@@ -414,7 +414,7 @@ export const ProofScenarioIndex = z
       if (scenario === undefined) continue;
       if (ids.has(scenario.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['scenarios', offset, 'id'],
           message: `duplicate proof scenario id: ${scenario.id}`,
         });

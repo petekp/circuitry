@@ -73,7 +73,7 @@ export const PursuitContract = z
     for (const [index, pursuit] of contract.pursuits.entries()) {
       if (seen.has(pursuit.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['pursuits', index, 'id'],
           message: `duplicate pursuit id: ${pursuit.id}`,
         });
@@ -136,7 +136,7 @@ export const PursuitGraph = z
     for (const [index, node] of graph.nodes.entries()) {
       if (nodeIds.has(node.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['nodes', index, 'id'],
           message: `duplicate node id: ${node.id}`,
         });
@@ -146,14 +146,14 @@ export const PursuitGraph = z
     for (const [index, edge] of graph.edges.entries()) {
       if (!nodeIds.has(edge.from)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['edges', index, 'from'],
           message: `edge references unknown pursuit id: ${edge.from}`,
         });
       }
       if (!nodeIds.has(edge.to)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['edges', index, 'to'],
           message: `edge references unknown pursuit id: ${edge.to}`,
         });
@@ -166,7 +166,7 @@ export const PursuitGraph = z
       for (const [index, id] of group.pursuit_ids.entries()) {
         if (!nodeIds.has(id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['groups', groupIndex, 'pursuit_ids', index],
             message: `group references unknown pursuit id: ${id}`,
           });
@@ -176,7 +176,7 @@ export const PursuitGraph = z
     for (const [index, item] of graph.blocked.entries()) {
       if (!nodeIds.has(item.pursuit_id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['blocked', index, 'pursuit_id'],
           message: `blocked item references unknown pursuit id: ${item.pursuit_id}`,
         });
@@ -208,7 +208,7 @@ export const PursuitWavePlan = z
     for (const [index, wave] of plan.waves.entries()) {
       if (wave.kind === 'code-change' && wave.execution !== 'serial') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['waves', index, 'execution'],
           message: 'code-change waves must execute serially in Pursuits V1',
         });
@@ -250,7 +250,7 @@ export const PursuitBatch = z
       for (const [index, item] of batch[field].entries()) {
         if (item.status !== expectedStatus) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [field, index, 'status'],
             message: `status must be '${expectedStatus}' for ${field} items`,
           });
@@ -259,21 +259,21 @@ export const PursuitBatch = z
     }
     if (batch.verdict === 'accept' && (batch.blocked.length > 0 || batch.failed.length > 0)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: "verdict must not be 'accept' when blocked or failed items exist",
       });
     }
     if (batch.verdict === 'accept' && batch.skipped.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: "verdict must not be 'accept' when skipped items exist",
       });
     }
     if (batch.verdict === 'blocked' && batch.blocked.length === 0 && batch.failed.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: "verdict must be backed by blocked or failed items when it is 'blocked'",
       });
@@ -288,7 +288,7 @@ export const PursuitBatch = z
       for (const [index, item] of items.entries()) {
         if (seen.has(item.pursuit_id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: [field, index, 'pursuit_id'],
             message: `duplicate pursuit id in batch: ${item.pursuit_id}`,
           });
@@ -327,21 +327,21 @@ export const PursuitReview = z
     );
     if (review.verdict === 'clean' && review.findings.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['findings'],
         message: "findings must be empty when verdict is 'clean'",
       });
     }
     if (review.verdict !== 'clean' && review.findings.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['findings'],
         message: `findings must be non-empty when verdict is '${review.verdict}'`,
       });
     }
     if (review.verdict === 'needs-followup' && mediumOrHigher.length > 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message:
           "verdict must be 'blocked' when review findings include medium, high, or critical severity",
@@ -371,7 +371,7 @@ export const PursuitResultReportPointer = z
     const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
     if (pointer.schema !== expectedSchema) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['schema'],
         message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
       });
@@ -379,7 +379,7 @@ export const PursuitResultReportPointer = z
     const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
     if (pointer.path !== expectedPath) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['path'],
         message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`,
       });
@@ -407,7 +407,7 @@ export const PursuitResult = z
       result.completed_count + result.skipped_count + result.blocked_count + result.failed_count;
     if (accounted !== result.total_pursuits) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['total_pursuits'],
         message: 'total_pursuits must equal completed + skipped + blocked + failed counts',
       });
@@ -415,28 +415,28 @@ export const PursuitResult = z
     if (result.outcome === 'complete') {
       if (result.verification_status !== 'passed') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['verification_status'],
           message: "verification_status must be 'passed' when outcome is 'complete'",
         });
       }
       if (result.review_verdict !== 'clean') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['review_verdict'],
           message: "review_verdict must be 'clean' when outcome is 'complete'",
         });
       }
       if (result.blocked_count > 0 || result.failed_count > 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['outcome'],
           message: "outcome must not be 'complete' when pursuits are blocked or failed",
         });
       }
       if (result.skipped_count > 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['outcome'],
           message: "outcome must not be 'complete' when pursuits are skipped",
         });

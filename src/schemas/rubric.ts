@@ -49,7 +49,7 @@ export const RubricDimResult = z
 
     if (dim.final_score !== expectedFinalScore) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['final_score'],
         message:
           dim.runtime_signal === 'missing'
@@ -59,14 +59,14 @@ export const RubricDimResult = z
     }
     if (dim.dim_score !== expectedDimScore) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['dim_score'],
         message: `dim_score must be ${expectedDimScore} for final_score '${expectedFinalScore}'`,
       });
     }
     if (dim.runtime_vetoed !== expectedRuntimeVetoed) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['runtime_vetoed'],
         message: `runtime_vetoed must be ${String(expectedRuntimeVetoed)} when runtime_signal is '${dim.runtime_signal}'`,
       });
@@ -85,7 +85,7 @@ export const RubricTieBreak = z
     for (const [index, dimId] of tieBreak.ordered_dims.entries()) {
       if (seen.has(dimId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['ordered_dims', index],
           message: `duplicate tie-break dim '${dimId}'`,
         });
@@ -107,7 +107,7 @@ export const RubricResult = z
     const dims = Object.entries(result.dims);
     if (dims.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['dims'],
         message: 'rubric result must include at least one dim',
       });
@@ -117,7 +117,7 @@ export const RubricResult = z
     const expectedAggregate = aggregateRubricScore(dims.map(([, dim]) => dim.dim_score));
     if (result.aggregate_score !== expectedAggregate) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['aggregate_score'],
         message: `aggregate_score must be the equal-weight rounded mean (${expectedAggregate})`,
       });
@@ -126,7 +126,7 @@ export const RubricResult = z
     const expectedRuntimeVetoCount = dims.filter(([, dim]) => dim.runtime_vetoed).length;
     if (result.runtime_veto_count !== expectedRuntimeVetoCount) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['runtime_veto_count'],
         message: `runtime_veto_count must be ${expectedRuntimeVetoCount}`,
       });
@@ -135,7 +135,7 @@ export const RubricResult = z
     for (const [index, dimId] of result.tie_break.ordered_dims.entries()) {
       if (result.dims[dimId] === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['tie_break', 'ordered_dims', index],
           message: `tie-break dim '${dimId}' must exist in dims`,
         });

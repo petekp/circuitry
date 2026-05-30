@@ -74,7 +74,7 @@ export const SchematicEvidenceRequirements = z
     for (const [index, requirement] of requirements.entries()) {
       if (seen.has(requirement)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [index],
           message: `duplicate evidence requirement: ${requirement}`,
         });
@@ -206,14 +206,14 @@ export const SchematicStep = z
     for (const route of Object.keys(item.routes)) {
       if (!FlowRoute.safeParse(route).success) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['routes', route],
           message: `unknown schematic route outcome: ${route}`,
         });
       }
       if (seenRoutes.has(route)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['routes', route],
           message: `duplicate route outcome: ${route}`,
         });
@@ -223,14 +223,14 @@ export const SchematicStep = z
     for (const route of Object.keys(item.route_overrides)) {
       if (!FlowRoute.safeParse(route).success) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['route_overrides', route],
           message: `unknown schematic route outcome: ${route}`,
         });
       }
       if (!Object.hasOwn(item.routes, route)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['route_overrides', route],
           message: `route override must target a declared route outcome: ${route}`,
         });
@@ -265,7 +265,7 @@ function validateExecutionShape(
     const expectReport = () => {
       if (!has('report_path')) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['writes', 'report_path'],
           message: `${kind} execution requires writes.report_path`,
         });
@@ -275,7 +275,7 @@ function validateExecutionShape(
       for (const key of ['request_path', 'receipt_path', 'result_path'] as const) {
         if (!has(key)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['writes', key],
             message: `relay execution requires writes.${key}`,
           });
@@ -286,7 +286,7 @@ function validateExecutionShape(
       for (const key of ['checkpoint_request_path', 'checkpoint_response_path'] as const) {
         if (!has(key)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['writes', key],
             message: `checkpoint execution requires writes.${key}`,
           });
@@ -296,7 +296,7 @@ function validateExecutionShape(
     const expectSubRunSlots = () => {
       if (!has('result_path')) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['writes', 'result_path'],
           message: 'sub-run execution requires writes.result_path',
         });
@@ -305,7 +305,7 @@ function validateExecutionShape(
     const forbid = (key: keyof StepWrites, allowedKinds: string) => {
       if (has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['writes', key],
           message: `writes.${key} is only allowed for ${allowedKinds} execution`,
         });
@@ -348,7 +348,7 @@ function validateExecutionShape(
         expectReport();
         if (!has('branches_dir_path')) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['writes', 'branches_dir_path'],
             message: 'fanout execution requires writes.branches_dir_path',
           });
@@ -367,7 +367,7 @@ function validateExecutionShape(
     const expectField = (field: 'required' | 'allow' | 'pass', forKinds: string) => {
       if (g[field] === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['check', field],
           message: `${forKinds} execution requires check.${field}`,
         });
@@ -379,7 +379,7 @@ function validateExecutionShape(
     ) => {
       if (g[field] !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['check', field],
           message: `check.${field} is only allowed for ${allowedKinds} execution`,
         });
@@ -396,14 +396,14 @@ function validateExecutionShape(
       case 'checkpoint':
         if (g.allow === undefined && g.allow_from === undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['check', 'allow'],
             message: 'checkpoint execution requires check.allow or check.allow_from',
           });
         }
         if (g.allow !== undefined && g.allow_from !== undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['check', 'allow'],
             message: 'checkpoint execution cannot declare both check.allow and check.allow_from',
           });
@@ -429,35 +429,35 @@ function validateExecutionShape(
 
   if (item.checkpoint_policy !== undefined && kind !== 'checkpoint') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['checkpoint_policy'],
       message: 'checkpoint_policy is only allowed for checkpoint execution',
     });
   }
   if (item.acceptance_criteria !== undefined && kind !== 'relay') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['acceptance_criteria'],
       message: 'acceptance_criteria is only allowed for relay execution',
     });
   }
   if (item.route_from_report !== undefined && kind !== 'compose' && kind !== 'relay') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['route_from_report'],
       message: 'route_from_report is only allowed for compose or relay execution',
     });
   }
   if (kind === 'fanout' && item.fanout === undefined) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['fanout'],
       message: 'fanout execution requires fanout metadata',
     });
   }
   if (item.fanout !== undefined && kind !== 'fanout') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['fanout'],
       message: 'fanout metadata is only allowed for fanout execution',
     });
@@ -533,7 +533,7 @@ export const FlowSchematic = z
       const prior = itemIds.get(item.id);
       if (prior !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['items', index, 'id'],
           message: `duplicate schematic item id: ${item.id} also appears at index ${prior}`,
         });
@@ -543,7 +543,7 @@ export const FlowSchematic = z
 
     if (!itemIds.has(schematic.starts_at)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['starts_at'],
         message: `starts_at references unknown item id: ${schematic.starts_at}`,
       });
@@ -554,7 +554,7 @@ export const FlowSchematic = z
         if (StepRouteTerminalTarget.safeParse(target).success) continue;
         if (!itemIds.has(target)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['items', index, 'routes', route],
             message: `route target references unknown schematic item id: ${target}`,
           });
@@ -565,7 +565,7 @@ export const FlowSchematic = z
           if (StepRouteTerminalTarget.safeParse(target).success) continue;
           if (!itemIds.has(target)) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: 'custom',
               path: ['items', index, 'route_overrides', route, depth],
               message: `route override target references unknown schematic item id: ${target}`,
             });
@@ -579,7 +579,7 @@ export const FlowSchematic = z
       const key = `${alias.generic}\0${alias.actual}`;
       if (aliases.has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['contract_aliases', index],
           message: `duplicate contract alias: ${alias.generic} -> ${alias.actual}`,
         });
@@ -593,7 +593,7 @@ export const FlowSchematic = z
       for (const [index, stage] of schematic.stages.entries()) {
         if (seenCanonicals.has(stage.canonical)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['stages', index, 'canonical'],
             message: `duplicate canonical stage mapping: ${stage.canonical}`,
           });
@@ -601,7 +601,7 @@ export const FlowSchematic = z
         seenCanonicals.add(stage.canonical);
         if (seenIds.has(stage.id as unknown as string)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['stages', index, 'id'],
             message: `duplicate stage id: ${stage.id}`,
           });
@@ -615,7 +615,7 @@ export const FlowSchematic = z
       for (const canonical of itemCanonicals) {
         if (!seenCanonicals.has(canonical)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['stages'],
             message: `stages is missing an entry for canonical stage '${canonical}' which is used by at least one item`,
           });
@@ -634,7 +634,7 @@ export const FlowSchematic = z
       const stage = stageById.get(fanOutStage);
       if (stage === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['axes', 'tournament_fan_out_stage'],
           message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`,
         });
@@ -646,7 +646,7 @@ export const FlowSchematic = z
             item.fanout.join.policy !== 'aggregate-survivors'
           ) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: 'custom',
               path: ['items', index, 'fanout'],
               message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE,
             });
@@ -663,7 +663,7 @@ export const FlowSchematic = z
       for (const [index, omitted] of schematic.stage_path_policy.omits.entries()) {
         if (seenOmits.has(omitted)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['stage_path_policy', 'omits', index],
             message: `duplicate omitted stage: ${omitted}`,
           });
@@ -676,7 +676,7 @@ export const FlowSchematic = z
         for (const omitted of seenOmits) {
           if (declared.has(omitted)) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: 'custom',
               path: ['stage_path_policy', 'omits'],
               message: `canonical stage '${omitted}' is both declared in stages and listed in stage_path_policy.omits`,
             });
@@ -690,7 +690,7 @@ export const FlowSchematic = z
       for (const omitted of seenOmits) {
         if (itemCanonicals.has(omitted)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['stage_path_policy', 'omits'],
             message: `canonical stage '${omitted}' is omitted but used by at least one item`,
           });
@@ -708,7 +708,7 @@ function validateActiveSchematicCompleteness(schematic: FlowSchematic, ctx: z.Re
   const requireField = (field: 'version' | 'entry' | 'axes' | 'stage_path_policy' | 'stages') => {
     if (schematic[field] !== undefined) return;
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: [field],
       message: `active schematic requires ${field}`,
     });
@@ -723,28 +723,28 @@ function validateActiveSchematicCompleteness(schematic: FlowSchematic, ctx: z.Re
   for (const [index, item] of schematic.items.entries()) {
     if (item.protocol === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['items', index, 'protocol'],
         message: 'active schematic item requires protocol',
       });
     }
     if (item.writes === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['items', index, 'writes'],
         message: 'active schematic item requires writes',
       });
     }
     if (item.check === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['items', index, 'check'],
         message: 'active schematic item requires check',
       });
     }
     if (item.execution.kind === 'checkpoint' && item.checkpoint_policy === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['items', index, 'checkpoint_policy'],
         message: 'active checkpoint schematic item requires checkpoint_policy',
       });

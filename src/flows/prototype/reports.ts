@@ -49,7 +49,7 @@ function addPathIssue(
   message: string,
 ): void {
   ctx.addIssue({
-    code: z.ZodIssueCode.custom,
+    code: 'custom',
     path: [...path],
     message,
   });
@@ -252,7 +252,7 @@ function refineExactPrototypeRubricDims(
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `missing rubric dim '${dimId}'`,
       });
@@ -261,7 +261,7 @@ function refineExactPrototypeRubricDims(
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`,
       });
@@ -737,7 +737,7 @@ export const PrototypeResultReportPointer = z
     const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
     if (pointer.schema !== expectedSchema) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['schema'],
         message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
       });

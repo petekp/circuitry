@@ -121,7 +121,7 @@ function refineExactExploreRubricDims(
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `missing rubric dim '${dimId}'`,
       });
@@ -130,7 +130,7 @@ function refineExactExploreRubricDims(
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`,
       });
@@ -167,7 +167,7 @@ export const ExploreDecisionOptions = z
     for (const [index, option] of report.options.entries()) {
       if (seen.has(option.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['options', index, 'id'],
           message: `duplicate option id '${option.id}'`,
         });
@@ -218,7 +218,7 @@ export const ExploreTournamentAggregate = z
   .superRefine((aggregate, ctx) => {
     if (aggregate.branch_count !== aggregate.branches.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['branch_count'],
         message: 'branch_count must match branches.length',
       });
@@ -226,14 +226,14 @@ export const ExploreTournamentAggregate = z
     for (const [index, branch] of aggregate.branches.entries()) {
       if (branch.child_outcome === 'complete' && branch.result_body === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['branches', index, 'result_body'],
           message: 'complete tournament branches must include result_body provenance',
         });
       }
       if (branch.child_outcome === 'complete' && branch.rubric_result === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['branches', index, 'rubric_result'],
           message: 'complete tournament branches must include rubric_result provenance',
         });
@@ -244,7 +244,7 @@ export const ExploreTournamentAggregate = z
         branch.result_body.option_id !== branch.branch_id
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['branches', index, 'result_body', 'option_id'],
           message: `branch_id '${branch.branch_id}' must match result_body.option_id '${branch.result_body.option_id}'`,
         });
@@ -322,7 +322,7 @@ export const ExploreResultReportPointer = z
     const expectedSchema = EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
     if (pointer.schema !== expectedSchema) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['schema'],
         message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`,
       });
@@ -370,7 +370,7 @@ function refineExploreEvidenceLinks(
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['evidence_links', index, 'report_id'],
         message: `duplicate report_id '${pointer.report_id}'`,
       });
@@ -382,7 +382,7 @@ function refineExploreEvidenceLinks(
     expectedReportIds.every((reportId) => seen.has(reportId));
   if (!matchesSet) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['evidence_links'],
       message: `evidence_links must contain exactly: ${expectedReportIds.join(', ')}`,
     });
@@ -407,7 +407,7 @@ export const ExploreDefaultResult = z
       snapshot.missed_angle_count > 0;
     if (requiresFoldIns && result.review_fold_ins === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['review_fold_ins'],
         message:
           'review_fold_ins is required when the default Explore review verdict or counts report fold-ins',
@@ -418,14 +418,14 @@ export const ExploreDefaultResult = z
     if (foldIns === undefined) return;
     if (foldIns.objections.length !== snapshot.objection_count) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['review_fold_ins', 'objections'],
         message: 'review_fold_ins.objections length must match verdict_snapshot.objection_count',
       });
     }
     if (foldIns.missed_angles.length !== snapshot.missed_angle_count) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['review_fold_ins', 'missed_angles'],
         message:
           'review_fold_ins.missed_angles length must match verdict_snapshot.missed_angle_count',

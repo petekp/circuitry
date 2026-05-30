@@ -96,35 +96,35 @@ export const RecoveryRouteBindingV0 = z
     if (binding.kind === 'retry_same_step_with_feedback') {
       if (binding.route_target !== binding.step_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['route_target'],
           message: 'retry_same_step_with_feedback must target the same step',
         });
       }
       if (!requiredRefs.has('acceptance_feedback')) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['required_refs'],
           message: 'retry_same_step_with_feedback requires acceptance_feedback refs',
         });
       }
       if (!binding.attempt_budget.consumes_step_attempt) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['attempt_budget', 'consumes_step_attempt'],
           message: 'retry_same_step_with_feedback consumes the step attempt budget',
         });
       }
       if (!binding.attempt_budget.must_respect_max_attempts) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['attempt_budget', 'must_respect_max_attempts'],
           message: 'retry_same_step_with_feedback must respect max_attempts',
         });
       }
       if (binding.attempt_budget.retry_target !== 'same_step') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['attempt_budget', 'retry_target'],
           message: 'retry_same_step_with_feedback requires retry_target same_step',
         });
@@ -138,7 +138,7 @@ export const RecoveryRouteBindingV0 = z
       )
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['allowed_failure_causes'],
         message: 'unknown_failure cannot route to retry, verification, or independent review',
       });
@@ -151,7 +151,7 @@ export const RecoveryRouteBindingV0 = z
       !requiredRefs.has('change_packet')
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['required_refs'],
         message:
           'safe_apply_reject requires safe_apply_result, runtime_diff, or change_packet refs',
@@ -160,7 +160,7 @@ export const RecoveryRouteBindingV0 = z
 
     if (causes.has('generated_surface_drift') && !requiredRefs.has('generated_surface_evidence')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['required_refs'],
         message: 'generated_surface_drift requires generated_surface_evidence refs',
       });
@@ -172,7 +172,7 @@ export const RecoveryRouteBindingV0 = z
       !requiredRefs.has('change_packet')
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['required_refs'],
         message: 'protected_file_touched requires runtime_diff or change_packet refs',
       });
@@ -180,7 +180,7 @@ export const RecoveryRouteBindingV0 = z
 
     if (binding.source_ref.kind !== 'work_contract') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source_ref', 'kind'],
         message: 'recovery route bindings must point back to WorkContract refs',
       });

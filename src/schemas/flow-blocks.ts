@@ -88,7 +88,7 @@ export const FlowInputContractSet = z
     for (const [index, contract] of contracts.entries()) {
       if (seen.has(contract)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [index],
           message: `duplicate input contract: ${contract}`,
         });
@@ -106,7 +106,7 @@ const nonEmptyUniqueStrings = z
     for (const [index, value] of values.entries()) {
       if (seen.has(value)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: [index],
           message: `duplicate value: ${value}`,
         });
@@ -151,7 +151,7 @@ export const FlowBlock = z
     for (const [index, route] of block.allowed_routes.entries()) {
       if (routeSet.has(route)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['allowed_routes', index],
           message: `duplicate route: ${route}`,
         });
@@ -162,28 +162,28 @@ export const FlowBlock = z
     if (block.id === 'human-decision') {
       if (block.human_interaction !== 'mode-dependent') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['human_interaction'],
           message: 'human-decision must be mode-dependent',
         });
       }
       if (block.host_capabilities.claude.length === 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['host_capabilities', 'claude'],
           message: 'human-decision must name a Claude host strategy',
         });
       }
       if (block.host_capabilities.codex.length === 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['host_capabilities', 'codex'],
           message: 'human-decision must name a Codex host strategy',
         });
       }
       if (block.host_capabilities.non_interactive.length === 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['host_capabilities', 'non_interactive'],
           message: 'human-decision must name a non-interactive host strategy',
         });
@@ -192,7 +192,7 @@ export const FlowBlock = z
 
     if (block.id === 'close-with-evidence' && !routeSet.has('complete')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['allowed_routes'],
         message: 'close-with-evidence must allow complete',
       });
@@ -212,7 +212,7 @@ export const FlowBlockCatalog = z
       const prior = seen.get(block.id);
       if (prior !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['blocks', index, 'id'],
           message: `duplicate block id: ${block.id} also appears at index ${prior}`,
         });
@@ -223,7 +223,7 @@ export const FlowBlockCatalog = z
     for (const requiredId of FLOW_BLOCK_IDS) {
       if (!seen.has(requiredId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['blocks'],
           message: `missing block id: ${requiredId}`,
         });

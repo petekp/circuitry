@@ -114,7 +114,7 @@ export const Evidence = z
   .superRefine((evidence, ctx) => {
     if (!EvidenceRefKinds[evidence.kind].includes(evidence.ref.kind)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['ref', 'kind'],
         message: `${evidence.kind} evidence cannot use ${evidence.ref.kind} refs`,
       });
@@ -122,7 +122,7 @@ export const Evidence = z
 
     if (RuntimeOwnedEvidenceKinds.has(evidence.kind) && evidence.producer !== 'runtime') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['producer'],
         message: `${evidence.kind} evidence must be produced by the runtime`,
       });
@@ -130,7 +130,7 @@ export const Evidence = z
 
     if (evidence.producer === 'worker' && evidence.result === 'pass') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['result'],
         message: 'worker-produced evidence cannot be marked pass by itself',
       });
@@ -138,7 +138,7 @@ export const Evidence = z
 
     if (evidence.independence === 'self' && evidence.result === 'pass') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['independence'],
         message: 'self evidence cannot prove a claim',
       });
@@ -146,7 +146,7 @@ export const Evidence = z
 
     if (evidence.kind === 'review' && evidence.independence === 'self') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['independence'],
         message: 'review evidence must be independent or runtime-owned',
       });
@@ -209,7 +209,7 @@ export const ProofAssessmentResult = z
   .superRefine((result, ctx) => {
     if (result.status === 'proven' && result.recovery !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['recovery'],
         message: 'proven claims must not declare a recovery route',
       });
@@ -221,7 +221,7 @@ export const ProofAssessmentResult = z
       result.contradictions.length === 0
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['recovery'],
         message:
           'non-proven claims without recovery must explain the missing or contradicted proof',
@@ -285,7 +285,7 @@ export const ProofAssessment = z
     for (const [index, claim] of assessment.claims.entries()) {
       if (claimIds.has(claim.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['claims', index, 'id'],
           message: `duplicate claim '${claim.id}'`,
         });
@@ -298,7 +298,7 @@ export const ProofAssessment = z
     for (const [index, evidence] of assessment.evidence.entries()) {
       if (evidenceById.has(evidence.id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence', index, 'id'],
           message: `duplicate evidence '${evidence.id}'`,
         });
@@ -307,7 +307,7 @@ export const ProofAssessment = z
       for (const [claimIndex, claimId] of evidence.covers_claims.entries()) {
         if (!claimIds.has(claimId)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['evidence', index, 'covers_claims', claimIndex],
             message: `evidence covers undeclared claim '${claimId}'`,
           });
@@ -319,14 +319,14 @@ export const ProofAssessment = z
     for (const [index, result] of assessment.results.entries()) {
       if (!claimIds.has(result.claim_id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['results', index, 'claim_id'],
           message: `result references undeclared claim '${result.claim_id}'`,
         });
       }
       if (resultsByClaim.has(result.claim_id)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['results', index, 'claim_id'],
           message: `duplicate proof result for claim '${result.claim_id}'`,
         });
@@ -337,7 +337,7 @@ export const ProofAssessment = z
         const evidence = evidenceById.get(id);
         if (evidence === undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['results', index, 'evidence_refs', evidenceIndex],
             message: `result references undeclared evidence '${id}'`,
           });
@@ -348,7 +348,7 @@ export const ProofAssessment = z
       if (result.status === 'proven') {
         if (result.missing.length > 0 || result.contradictions.length > 0) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['results', index, 'status'],
             message: 'proven claims cannot list missing evidence or contradictions',
           });
@@ -359,7 +359,7 @@ export const ProofAssessment = z
           )
         ) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['results', index, 'evidence_refs'],
             message:
               'proven claims require passing runtime or independent evidence beyond report shape',
@@ -371,7 +371,7 @@ export const ProofAssessment = z
     for (const requiredClaimId of requiredClaimIds) {
       if (!resultsByClaim.has(requiredClaimId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['results'],
           message: `missing proof result for required claim '${requiredClaimId}'`,
         });
@@ -387,7 +387,7 @@ export const ProofAssessment = z
     const expectedOverall = worstStatus(relevantResults.map((result) => result.status));
     if (assessment.overall_status !== expectedOverall) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expectedOverall}' for the required claim results`,
       });
@@ -395,7 +395,7 @@ export const ProofAssessment = z
 
     if (assessment.close_allowed && relevantResults.some((result) => result.status !== 'proven')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['close_allowed'],
         message: 'close_allowed requires every required claim to be proven',
       });

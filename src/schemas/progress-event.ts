@@ -36,14 +36,14 @@ export const ProgressPresentation = z
   .superRefine((presentation, ctx) => {
     if (presentation.line_mode === 'replace_slot' && presentation.slot_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['slot_id'],
         message: 'slot_id is required when line_mode is replace_slot',
       });
     }
     if (presentation.line_mode !== 'suppress' && presentation.status_text === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status_text'],
         message: 'status_text is required unless line_mode is suppress',
       });

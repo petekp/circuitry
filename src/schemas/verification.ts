@@ -32,26 +32,26 @@ const ProjectRelativeCwd = z
   .superRefine((cwd, ctx) => {
     if (cwd.startsWith('/') || cwd.startsWith('~') || /^[A-Za-z]:[\\/]/.test(cwd)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'cwd must be project-relative and cannot use absolute or home paths',
       });
     }
     if (cwd.startsWith('\\\\') || cwd.startsWith('//')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'cwd must not use UNC or network absolute paths',
       });
     }
     const parts = cwd.split('/');
     if (parts.some((part) => part === '..')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'cwd must not escape the project root',
       });
     }
     if (cwd !== '.' && parts.some((part) => part.length === 0 || part === '.')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         message: 'cwd must be "." or a normalized project-relative path',
       });
     }
@@ -73,7 +73,7 @@ export const VerificationCommand = z
     const binary = commandBinaryName(firstArg);
     if (SHELL_BINARIES.has(binary)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['argv'],
         message: 'verification commands must use direct argv execution, not a shell executable',
       });
@@ -97,7 +97,7 @@ export const VerificationCommandResult = z
     const expected = result.exit_code === 0 ? 'passed' : 'failed';
     if (result.status !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['status'],
         message: `status must be '${expected}' when exit_code is ${result.exit_code}`,
       });
@@ -117,7 +117,7 @@ export const VerificationResult = z
       : 'passed';
     if (verification.overall_status !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['overall_status'],
         message: `overall_status must be '${expected}' for command results`,
       });

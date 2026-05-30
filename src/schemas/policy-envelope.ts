@@ -55,7 +55,7 @@ export const PolicySelectionRequest = SelectionOverride.superRefine((selection, 
   const forbidden = findForbiddenInvocationOptionKey(selection.invocation_options);
   if (forbidden === undefined) return;
   ctx.addIssue({
-    code: z.ZodIssueCode.custom,
+    code: 'custom',
     path: ['invocation_options', forbidden],
     message: `invocation_options cannot carry authority key '${forbidden}'`,
   });
@@ -75,14 +75,14 @@ const ConnectorRules = z
     for (const [name, descriptor] of Object.entries(rules.registry)) {
       if (reserved.has(name)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['registry', name],
           message: `connector name '${name}' is reserved and cannot be used as a custom connector key`,
         });
       }
       if (descriptor.name !== name) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['registry', name, 'name'],
           message: `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`,
         });
@@ -275,7 +275,7 @@ export const PolicyEnvelopeV2 = z
     const checkConnectorName = (path: (string | number)[], name: string) => {
       if (builtinConnectors.has(name) || registeredConnectors.has(name)) return;
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path,
         message: `connector '${name}' is not registered`,
       });
@@ -285,7 +285,7 @@ export const PolicyEnvelopeV2 = z
       if (ref === undefined || ref.kind !== 'named') return;
       if (!registeredConnectors.has(ref.name)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path,
           message: `connector '${ref.name}' is not registered`,
         });

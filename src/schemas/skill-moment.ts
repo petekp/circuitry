@@ -108,7 +108,7 @@ export const SkillMomentName = z.string().superRefine((value, ctx) => {
 
   if (SHIPPED_SHAPE_RE.test(value)) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: `unknown shipped Skill Moment '${value}'`,
     });
     return;
@@ -116,7 +116,7 @@ export const SkillMomentName = z.string().superRefine((value, ctx) => {
 
   if (!CUSTOM_MOMENT_RE.test(value)) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'custom Skill Moments must be namespaced as <namespace>/<before|after>:<name>',
     });
     return;
@@ -124,7 +124,7 @@ export const SkillMomentName = z.string().superRefine((value, ctx) => {
 
   if (SHIPPED_MOMENTS.has(momentBody(value))) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'custom Skill Moments must not reuse shipped moment names',
     });
   }
@@ -136,7 +136,7 @@ export const SkillMomentNameArray = z.array(SkillMomentName).superRefine((moment
   for (const [index, moment] of moments.entries()) {
     if (seen.has(moment)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [index],
         message: `duplicate Skill Moment '${moment}'`,
       });
@@ -157,7 +157,7 @@ export const SkillMomentPolicyRule = z
     if (rule.mode === 'mute') {
       if (rule.skills !== undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['skills'],
           message: 'mute Skill Moment policy must not declare skills',
         });
@@ -167,7 +167,7 @@ export const SkillMomentPolicyRule = z
 
     if (rule.skills === undefined || rule.skills.length === 0) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['skills'],
         message: `${rule.mode} Skill Moment policy requires at least one skill`,
       });
@@ -179,7 +179,7 @@ export const SkillMomentPolicyRule = z
       const key = skill as unknown as string;
       if (seen.has(key)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['skills', index],
           message: `duplicate Skill Moment skill '${key}'`,
         });
@@ -247,7 +247,7 @@ export const SkillMomentSkillRef = z
   .superRefine((skill, ctx) => {
     if (['observed', 'unplanned'].includes(skill.state) && skill.source !== 'host-observed') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['source'],
         message: `${skill.state} Skill Moment activity requires host-observed source`,
       });
@@ -278,7 +278,7 @@ export const RunSkillMomentEvent = z
       event.triggered_skills.length > 0
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['triggered_skills'],
         message: `${event.policy.mode} Skill Moment policy must not trigger skills`,
       });
@@ -287,7 +287,7 @@ export const RunSkillMomentEvent = z
     for (const [index, skill] of event.unavailable_skills?.entries() ?? []) {
       if (skill.state !== 'unavailable') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['unavailable_skills', index, 'state'],
           message: 'unavailable_skills entries must use unavailable state',
         });
@@ -297,7 +297,7 @@ export const RunSkillMomentEvent = z
     for (const [index, skill] of event.triggered_skills.entries()) {
       if (skill.state === 'unavailable') {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['triggered_skills', index, 'state'],
           message: 'unavailable skills belong in unavailable_skills, not triggered_skills',
         });

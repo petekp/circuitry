@@ -36,6 +36,7 @@ import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
 import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
+import { CLI_COMMAND_NAMES, type CliCommandName } from './command-vocabulary.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runHistoryCommand } from './history.js';
@@ -100,14 +101,13 @@ interface ParsedArgs {
   includeUntrackedContent: boolean;
 }
 
-type TopLevelInvocation =
-  | { readonly command: 'run'; readonly argv: readonly string[] }
-  | { readonly command: 'resume'; readonly argv: readonly string[] }
-  | { readonly command: 'handoff'; readonly argv: readonly string[] }
-  | { readonly command: 'history'; readonly argv: readonly string[] }
-  | { readonly command: 'create'; readonly argv: readonly string[] }
-  | { readonly command: 'runs'; readonly argv: readonly string[] }
-  | { readonly command: 'version'; readonly argv: readonly string[] };
+// The TopLevelInvocation union is keyed off the shared CLI_COMMAND_NAMES
+// tuple (src/cli/command-vocabulary.ts), so adding a command word there
+// is a type error here until it is handled in main()'s dispatch.
+type TopLevelInvocation = {
+  readonly command: CliCommandName;
+  readonly argv: readonly string[];
+};
 
 interface ResolvedCompiledFlowRoute {
   flowName: string;
@@ -250,7 +250,7 @@ function parseCommander(program: Command, argv: readonly string[]): void {
 function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   let invocation: TopLevelInvocation | undefined;
   const program = new Command('circuit').exitOverride().configureOutput({ writeErr: () => {} });
-  const addForwardingCommand = (name: TopLevelInvocation['command']) => {
+  const addForwardingCommand = (name: CliCommandName) => {
     program
       .command(name)
       .allowUnknownOption(true)
@@ -260,13 +260,7 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
         invocation = { command: name, argv: args };
       });
   };
-  addForwardingCommand('run');
-  addForwardingCommand('resume');
-  addForwardingCommand('handoff');
-  addForwardingCommand('history');
-  addForwardingCommand('create');
-  addForwardingCommand('runs');
-  addForwardingCommand('version');
+  for (const name of CLI_COMMAND_NAMES) addForwardingCommand(name);
 
   try {
     program.parse(argv, { from: 'user' });

@@ -20,7 +20,7 @@ import {
 const RunTraceBody = z.array(TraceEntry).min(1);
 
 const issueAt = (ctx: z.RefinementCtx, path: (string | number)[], message: string) => {
-  ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: 'custom', path, message });
 };
 
 type ParsedTraceEntry = z.infer<typeof TraceEntry>;

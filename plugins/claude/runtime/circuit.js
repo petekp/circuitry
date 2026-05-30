@@ -25451,26 +25451,26 @@ function commandBinaryName(argv0) {
 var ProjectRelativeCwd = external_exports.string().min(1).superRefine((cwd, ctx) => {
   if (cwd.startsWith("/") || cwd.startsWith("~") || /^[A-Za-z]:[\\/]/.test(cwd)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must be project-relative and cannot use absolute or home paths"
     });
   }
   if (cwd.startsWith("\\\\") || cwd.startsWith("//")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must not use UNC or network absolute paths"
     });
   }
   const parts = cwd.split("/");
   if (parts.some((part) => part === "..")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "cwd must not escape the project root"
     });
   }
   if (cwd !== "." && parts.some((part) => part.length === 0 || part === ".")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: 'cwd must be "." or a normalized project-relative path'
     });
   }
@@ -25489,7 +25489,7 @@ var VerificationCommand = external_exports.object({
   const binary = commandBinaryName(firstArg);
   if (SHELL_BINARIES.has(binary)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["argv"],
       message: "verification commands must use direct argv execution, not a shell executable"
     });
@@ -25508,7 +25508,7 @@ var VerificationCommandResult = external_exports.object({
   const expected = result.exit_code === 0 ? "passed" : "failed";
   if (result.status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status must be '${expected}' when exit_code is ${result.exit_code}`
     });
@@ -25521,7 +25521,7 @@ var VerificationResult = external_exports.object({
   const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
   if (verification.overall_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expected}' for command results`
     });
@@ -25590,7 +25590,7 @@ var FlowAxes = external_exports.object({
   for (const [index, rigor] of axes.allowed_rigors.entries()) {
     if (seenRigors.has(rigor)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["allowed_rigors", index],
         message: `duplicate allowed rigor: ${rigor}`
       });
@@ -25599,35 +25599,35 @@ var FlowAxes = external_exports.object({
   }
   if (!seenRigors.has(axes.default.rigor)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "rigor"],
       message: `default rigor '${axes.default.rigor}' is not in allowed_rigors`
     });
   }
   if (axes.default.tournament && !axes.supports_tournament) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "tournament"],
       message: "default tournament cannot be true when supports_tournament is false"
     });
   }
   if (axes.default.autonomous && !axes.supports_autonomous) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["default", "autonomous"],
       message: "default autonomous cannot be true when supports_autonomous is false"
     });
   }
   if (axes.supports_tournament && axes.tournament_fan_out_stage === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["tournament_fan_out_stage"],
       message: "tournament_fan_out_stage is required when supports_tournament is true"
     });
   }
   if (!axes.supports_tournament && axes.tournament_fan_out_stage !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["tournament_fan_out_stage"],
       message: "tournament_fan_out_stage is only allowed when supports_tournament is true"
     });
@@ -25830,7 +25830,7 @@ var FlowInputContractSet = external_exports.array(FlowContractRef).min(1).superR
   for (const [index, contract] of contracts.entries()) {
     if (seen.has(contract)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate input contract: ${contract}`
       });
@@ -25843,7 +25843,7 @@ var nonEmptyUniqueStrings = external_exports.array(external_exports.string().min
   for (const [index, value] of values.entries()) {
     if (seen.has(value)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate value: ${value}`
       });
@@ -25878,7 +25878,7 @@ var FlowBlock = external_exports.object({
   for (const [index, route] of block.allowed_routes.entries()) {
     if (routeSet.has(route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["allowed_routes", index],
         message: `duplicate route: ${route}`
       });
@@ -25888,28 +25888,28 @@ var FlowBlock = external_exports.object({
   if (block.id === "human-decision") {
     if (block.human_interaction !== "mode-dependent") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["human_interaction"],
         message: "human-decision must be mode-dependent"
       });
     }
     if (block.host_capabilities.claude.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "claude"],
         message: "human-decision must name a Claude host strategy"
       });
     }
     if (block.host_capabilities.codex.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "codex"],
         message: "human-decision must name a Codex host strategy"
       });
     }
     if (block.host_capabilities.non_interactive.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["host_capabilities", "non_interactive"],
         message: "human-decision must name a non-interactive host strategy"
       });
@@ -25917,7 +25917,7 @@ var FlowBlock = external_exports.object({
   }
   if (block.id === "close-with-evidence" && !routeSet.has("complete")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["allowed_routes"],
       message: "close-with-evidence must allow complete"
     });
@@ -25932,7 +25932,7 @@ var FlowBlockCatalog = external_exports.object({
     const prior = seen.get(block.id);
     if (prior !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocks", index, "id"],
         message: `duplicate block id: ${block.id} also appears at index ${prior}`
       });
@@ -25942,7 +25942,7 @@ var FlowBlockCatalog = external_exports.object({
   for (const requiredId of FLOW_BLOCK_IDS) {
     if (!seen.has(requiredId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocks"],
         message: `missing block id: ${requiredId}`
       });
@@ -25973,7 +25973,7 @@ var UniqueSkillArray = external_exports.array(SkillId).superRefine((arr, ctx) =>
   if (duplicates.length === 0)
     return;
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     message: `skills array contains duplicates: ${duplicates.join(", ")}`
   });
 });
@@ -26047,7 +26047,7 @@ var SelectionResolutionBody = external_exports.object({
   applied: external_exports.array(AppliedEntry)
 }).strict();
 var issueAt = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 function identityKey(entry) {
   switch (entry.source) {
@@ -26755,14 +26755,14 @@ var Ref = external_exports.object({
 }).strict().superRefine((ref, ctx) => {
   if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["sha256"],
       message: `${ref.kind} refs require sha256`
     });
   }
   if (ref.kind === "work_contract" && ref.flow_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["flow_id"],
       message: "work_contract refs require flow_id"
     });
@@ -26771,14 +26771,14 @@ var Ref = external_exports.object({
     return;
   if (ref.run_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["run_id"],
       message: "trace refs require run_id"
     });
   }
   if (ref.sequence === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["sequence"],
       message: "trace refs require sequence"
     });
@@ -26787,7 +26787,7 @@ var Ref = external_exports.object({
   const expected = `trace.ndjson#sequence=${ref.sequence}`;
   if (ref.ref !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["ref"],
       message: `trace refs must use ${expected}`
     });
@@ -26840,7 +26840,7 @@ var SkillSlotArray = external_exports.array(SkillSlot).superRefine((slots, ctx) 
     const key = slot.id;
     if (seen.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index, "id"],
         message: `duplicate skill slot '${key}'`
       });
@@ -26877,21 +26877,21 @@ var RubricDimResult = external_exports.object({
   const expectedRuntimeVetoed = dim.runtime_signal === "missing";
   if (dim.final_score !== expectedFinalScore) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["final_score"],
       message: dim.runtime_signal === "missing" ? "missing runtime evidence must force final_score to fail" : "final_score must match model_judgment when runtime_signal is met or n/a"
     });
   }
   if (dim.dim_score !== expectedDimScore) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["dim_score"],
       message: `dim_score must be ${expectedDimScore} for final_score '${expectedFinalScore}'`
     });
   }
   if (dim.runtime_vetoed !== expectedRuntimeVetoed) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["runtime_vetoed"],
       message: `runtime_vetoed must be ${String(expectedRuntimeVetoed)} when runtime_signal is '${dim.runtime_signal}'`
     });
@@ -26905,7 +26905,7 @@ var RubricTieBreak = external_exports.object({
   for (const [index, dimId] of tieBreak.ordered_dims.entries()) {
     if (seen.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `duplicate tie-break dim '${dimId}'`
       });
@@ -26922,7 +26922,7 @@ var RubricResult = external_exports.object({
   const dims = Object.entries(result.dims);
   if (dims.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["dims"],
       message: "rubric result must include at least one dim"
     });
@@ -26931,7 +26931,7 @@ var RubricResult = external_exports.object({
   const expectedAggregate = aggregateRubricScore(dims.map(([, dim]) => dim.dim_score));
   if (result.aggregate_score !== expectedAggregate) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["aggregate_score"],
       message: `aggregate_score must be the equal-weight rounded mean (${expectedAggregate})`
     });
@@ -26939,7 +26939,7 @@ var RubricResult = external_exports.object({
   const expectedRuntimeVetoCount = dims.filter(([, dim]) => dim.runtime_vetoed).length;
   if (result.runtime_veto_count !== expectedRuntimeVetoCount) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["runtime_veto_count"],
       message: `runtime_veto_count must be ${expectedRuntimeVetoCount}`
     });
@@ -26947,7 +26947,7 @@ var RubricResult = external_exports.object({
   for (const [index, dimId] of result.tie_break.ordered_dims.entries()) {
     if (result.dims[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["tie_break", "ordered_dims", index],
         message: `tie-break dim '${dimId}' must exist in dims`
       });
@@ -27087,21 +27087,21 @@ var SkillMomentName = external_exports.string().superRefine((value, ctx) => {
     return;
   if (SHIPPED_SHAPE_RE.test(value)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: `unknown shipped Skill Moment '${value}'`
     });
     return;
   }
   if (!CUSTOM_MOMENT_RE.test(value)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "custom Skill Moments must be namespaced as <namespace>/<before|after>:<name>"
     });
     return;
   }
   if (SHIPPED_MOMENTS.has(momentBody(value))) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       message: "custom Skill Moments must not reuse shipped moment names"
     });
   }
@@ -27111,7 +27111,7 @@ var SkillMomentNameArray = external_exports.array(SkillMomentName).superRefine((
   for (const [index, moment] of moments.entries()) {
     if (seen.has(moment)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate Skill Moment '${moment}'`
       });
@@ -27127,7 +27127,7 @@ var SkillMomentPolicyRule = external_exports.object({
   if (rule.mode === "mute") {
     if (rule.skills !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["skills"],
         message: "mute Skill Moment policy must not declare skills"
       });
@@ -27136,7 +27136,7 @@ var SkillMomentPolicyRule = external_exports.object({
   }
   if (rule.skills === void 0 || rule.skills.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["skills"],
       message: `${rule.mode} Skill Moment policy requires at least one skill`
     });
@@ -27147,7 +27147,7 @@ var SkillMomentPolicyRule = external_exports.object({
     const key = skill;
     if (seen.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["skills", index],
         message: `duplicate Skill Moment skill '${key}'`
       });
@@ -27194,7 +27194,7 @@ var SkillMomentSkillRef = external_exports.object({
 }).strict().superRefine((skill, ctx) => {
   if (["observed", "unplanned"].includes(skill.state) && skill.source !== "host-observed") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source"],
       message: `${skill.state} Skill Moment activity requires host-observed source`
     });
@@ -27217,7 +27217,7 @@ var RunSkillMomentEvent = external_exports.object({
 }).strict().superRefine((event, ctx) => {
   if ((event.policy.mode === "none" || event.policy.mode === "mute") && event.triggered_skills.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["triggered_skills"],
       message: `${event.policy.mode} Skill Moment policy must not trigger skills`
     });
@@ -27225,7 +27225,7 @@ var RunSkillMomentEvent = external_exports.object({
   for (const [index, skill] of event.unavailable_skills?.entries() ?? []) {
     if (skill.state !== "unavailable") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["unavailable_skills", index, "state"],
         message: "unavailable_skills entries must use unavailable state"
       });
@@ -27234,7 +27234,7 @@ var RunSkillMomentEvent = external_exports.object({
   for (const [index, skill] of event.triggered_skills.entries()) {
     if (skill.state === "unavailable") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["triggered_skills", index, "state"],
         message: "unavailable skills belong in unavailable_skills, not triggered_skills"
       });
@@ -27312,7 +27312,7 @@ var CheckpointPolicy = external_exports.object({
   const hasDynamicChoices = policy2.choices_from !== void 0;
   if (hasStaticChoices === hasDynamicChoices) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["choices"],
       message: "checkpoint policy must declare exactly one of choices or choices_from"
     });
@@ -27322,7 +27322,7 @@ var CheckpointPolicy = external_exports.object({
     for (const [index, choice] of policy2.choices.entries()) {
       if (choiceIds.has(choice.id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["choices", index, "id"],
           message: `duplicate checkpoint choice '${choice.id}'`
         });
@@ -27333,7 +27333,7 @@ var CheckpointPolicy = external_exports.object({
   for (const [field, value] of [["safe_default_choice", policy2.safe_default_choice]]) {
     if (value !== void 0 && policy2.choices !== void 0 && !choiceIds.has(value)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [field],
         message: `${field} must reference a declared checkpoint choice`
       });
@@ -27500,7 +27500,7 @@ var FanoutRubric = external_exports.object({
   for (const [index, dimId] of rubric.ordered_dims.entries()) {
     if (orderedDims.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `duplicate rubric dim '${dimId}'`
       });
@@ -27510,7 +27510,7 @@ var FanoutRubric = external_exports.object({
   for (const [dimId] of Object.entries(rubric.runtime_signals)) {
     if (!orderedDims.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["runtime_signals", dimId],
         message: `runtime signal dim '${dimId}' must appear in ordered_dims`
       });
@@ -27519,7 +27519,7 @@ var FanoutRubric = external_exports.object({
   for (const [index, dimId] of rubric.ordered_dims.entries()) {
     if (rubric.runtime_signals[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["ordered_dims", index],
         message: `ordered dim '${dimId}' must declare a runtime signal source`
       });
@@ -27559,7 +27559,7 @@ var Step = external_exports.discriminatedUnion("kind", [
   const writes = step.writes;
   if (!Object.hasOwn(writes, slot) || writes[slot] === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["check", "source", "ref"],
       message: `check.source.ref "${slot}" does not resolve to a usable slot in step.writes (available: ${Object.keys(writes).join(", ")})`
     });
@@ -27569,21 +27569,21 @@ var Step = external_exports.discriminatedUnion("kind", [
     const hasDynamicAllow = step.check.allow_from !== void 0;
     if (hasStaticAllow === hasDynamicAllow) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow"],
         message: "checkpoint check must declare exactly one of allow or allow_from"
       });
     }
     if (hasStaticAllow && step.policy.choices === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow"],
         message: "checkpoint check.allow requires static policy.choices"
       });
     }
     if (hasDynamicAllow && step.check.allow_from?.kind !== "policy_choices") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["check", "allow_from"],
         message: "checkpoint check.allow_from must reference policy_choices"
       });
@@ -27593,7 +27593,7 @@ var Step = external_exports.discriminatedUnion("kind", [
       const checkChoiceIds = [...step.check.allow].sort();
       if (policyChoiceIds.join("\0") !== checkChoiceIds.join("\0")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", "allow"],
           message: "checkpoint check.allow must exactly match policy.choices ids"
         });
@@ -27601,7 +27601,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     }
     if (hasDynamicAllow && step.policy.choices === void 0 && step.policy.choices_from === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["policy", "choices_from"],
         message: "checkpoint check.allow_from requires policy.choices or policy.choices_from"
       });
@@ -27609,7 +27609,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     if (step.writes.report !== void 0) {
       if (step.policy.report_template === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["policy", "report_template"],
           message: "checkpoint report writing requires policy.report_template"
         });
@@ -27625,7 +27625,7 @@ var Step = external_exports.discriminatedUnion("kind", [
           continue;
         if (seen.has(branch.branch_id)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["branches", "branches", i, "branch_id"],
             message: `duplicate branch_id '${branch.branch_id}'`
           });
@@ -27637,7 +27637,7 @@ var Step = external_exports.discriminatedUnion("kind", [
     if (step.branches.kind === "dynamic") {
       if (!step.branches.template.branch_id.includes("$item")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["branches", "template", "branch_id"],
           message: "dynamic fanout template.branch_id must contain `$item` placeholder so per-item expansion produces unique branch ids"
         });
@@ -27664,7 +27664,7 @@ var SchematicEvidenceRequirements = external_exports.array(SchematicEvidenceRequ
   for (const [index, requirement] of requirements.entries()) {
     if (seen.has(requirement)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [index],
         message: `duplicate evidence requirement: ${requirement}`
       });
@@ -27755,14 +27755,14 @@ var SchematicStep = external_exports.object({
   for (const route of Object.keys(item.routes)) {
     if (!FlowRoute.safeParse(route).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["routes", route],
         message: `unknown schematic route outcome: ${route}`
       });
     }
     if (seenRoutes.has(route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["routes", route],
         message: `duplicate route outcome: ${route}`
       });
@@ -27772,14 +27772,14 @@ var SchematicStep = external_exports.object({
   for (const route of Object.keys(item.route_overrides)) {
     if (!FlowRoute.safeParse(route).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_overrides", route],
         message: `unknown schematic route outcome: ${route}`
       });
     }
     if (!Object.hasOwn(item.routes, route)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_overrides", route],
         message: `route override must target a declared route outcome: ${route}`
       });
@@ -27795,7 +27795,7 @@ function validateExecutionShape(item, ctx) {
     const expectReport = () => {
       if (!has("report_path")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", "report_path"],
           message: `${kind} execution requires writes.report_path`
         });
@@ -27805,7 +27805,7 @@ function validateExecutionShape(item, ctx) {
       for (const key of ["request_path", "receipt_path", "result_path"]) {
         if (!has(key)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", key],
             message: `relay execution requires writes.${key}`
           });
@@ -27816,7 +27816,7 @@ function validateExecutionShape(item, ctx) {
       for (const key of ["checkpoint_request_path", "checkpoint_response_path"]) {
         if (!has(key)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", key],
             message: `checkpoint execution requires writes.${key}`
           });
@@ -27826,7 +27826,7 @@ function validateExecutionShape(item, ctx) {
     const expectSubRunSlots = () => {
       if (!has("result_path")) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", "result_path"],
           message: "sub-run execution requires writes.result_path"
         });
@@ -27835,7 +27835,7 @@ function validateExecutionShape(item, ctx) {
     const forbid = (key, allowedKinds) => {
       if (has(key)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["writes", key],
           message: `writes.${key} is only allowed for ${allowedKinds} execution`
         });
@@ -27878,7 +27878,7 @@ function validateExecutionShape(item, ctx) {
         expectReport();
         if (!has("branches_dir_path")) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["writes", "branches_dir_path"],
             message: "fanout execution requires writes.branches_dir_path"
           });
@@ -27896,7 +27896,7 @@ function validateExecutionShape(item, ctx) {
     const expectField = (field, forKinds) => {
       if (g[field] === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", field],
           message: `${forKinds} execution requires check.${field}`
         });
@@ -27905,7 +27905,7 @@ function validateExecutionShape(item, ctx) {
     const forbidField = (field, allowedKinds) => {
       if (g[field] !== void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["check", field],
           message: `check.${field} is only allowed for ${allowedKinds} execution`
         });
@@ -27922,14 +27922,14 @@ function validateExecutionShape(item, ctx) {
       case "checkpoint":
         if (g.allow === void 0 && g.allow_from === void 0) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["check", "allow"],
             message: "checkpoint execution requires check.allow or check.allow_from"
           });
         }
         if (g.allow !== void 0 && g.allow_from !== void 0) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["check", "allow"],
             message: "checkpoint execution cannot declare both check.allow and check.allow_from"
           });
@@ -27954,35 +27954,35 @@ function validateExecutionShape(item, ctx) {
   }
   if (item.checkpoint_policy !== void 0 && kind !== "checkpoint") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["checkpoint_policy"],
       message: "checkpoint_policy is only allowed for checkpoint execution"
     });
   }
   if (item.acceptance_criteria !== void 0 && kind !== "relay") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["acceptance_criteria"],
       message: "acceptance_criteria is only allowed for relay execution"
     });
   }
   if (item.route_from_report !== void 0 && kind !== "compose" && kind !== "relay") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["route_from_report"],
       message: "route_from_report is only allowed for compose or relay execution"
     });
   }
   if (kind === "fanout" && item.fanout === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["fanout"],
       message: "fanout execution requires fanout metadata"
     });
   }
   if (item.fanout !== void 0 && kind !== "fanout") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["fanout"],
       message: "fanout metadata is only allowed for fanout execution"
     });
@@ -28031,7 +28031,7 @@ var FlowSchematic = external_exports.object({
     const prior = itemIds.get(item.id);
     if (prior !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "id"],
         message: `duplicate schematic item id: ${item.id} also appears at index ${prior}`
       });
@@ -28040,7 +28040,7 @@ var FlowSchematic = external_exports.object({
   }
   if (!itemIds.has(schematic.starts_at)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["starts_at"],
       message: `starts_at references unknown item id: ${schematic.starts_at}`
     });
@@ -28051,7 +28051,7 @@ var FlowSchematic = external_exports.object({
         continue;
       if (!itemIds.has(target)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["items", index, "routes", route],
           message: `route target references unknown schematic item id: ${target}`
         });
@@ -28063,7 +28063,7 @@ var FlowSchematic = external_exports.object({
           continue;
         if (!itemIds.has(target)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["items", index, "route_overrides", route, depth],
             message: `route override target references unknown schematic item id: ${target}`
           });
@@ -28076,7 +28076,7 @@ var FlowSchematic = external_exports.object({
     const key = `${alias.generic}\0${alias.actual}`;
     if (aliases.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["contract_aliases", index],
         message: `duplicate contract alias: ${alias.generic} -> ${alias.actual}`
       });
@@ -28089,7 +28089,7 @@ var FlowSchematic = external_exports.object({
     for (const [index, stage] of schematic.stages.entries()) {
       if (seenCanonicals.has(stage.canonical)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages", index, "canonical"],
           message: `duplicate canonical stage mapping: ${stage.canonical}`
         });
@@ -28097,7 +28097,7 @@ var FlowSchematic = external_exports.object({
       seenCanonicals.add(stage.canonical);
       if (seenIds.has(stage.id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages", index, "id"],
           message: `duplicate stage id: ${stage.id}`
         });
@@ -28108,7 +28108,7 @@ var FlowSchematic = external_exports.object({
     for (const canonical of itemCanonicals) {
       if (!seenCanonicals.has(canonical)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stages"],
           message: `stages is missing an entry for canonical stage '${canonical}' which is used by at least one item`
         });
@@ -28121,7 +28121,7 @@ var FlowSchematic = external_exports.object({
     const stage = stageById.get(fanOutStage);
     if (stage === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["axes", "tournament_fan_out_stage"],
         message: `tournament_fan_out_stage references unknown stage id: ${fanOutStage}`
       });
@@ -28131,7 +28131,7 @@ var FlowSchematic = external_exports.object({
           continue;
         if (item.fanout?.on_child_failure !== "continue-others" || item.fanout.join.policy !== "aggregate-survivors") {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["items", index, "fanout"],
             message: TOURNAMENT_FANOUT_CONTRACT_MESSAGE
           });
@@ -28144,7 +28144,7 @@ var FlowSchematic = external_exports.object({
     for (const [index, omitted] of schematic.stage_path_policy.omits.entries()) {
       if (seenOmits.has(omitted)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stage_path_policy", "omits", index],
           message: `duplicate omitted stage: ${omitted}`
         });
@@ -28156,7 +28156,7 @@ var FlowSchematic = external_exports.object({
       for (const omitted of seenOmits) {
         if (declared.has(omitted)) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["stage_path_policy", "omits"],
             message: `canonical stage '${omitted}' is both declared in stages and listed in stage_path_policy.omits`
           });
@@ -28167,7 +28167,7 @@ var FlowSchematic = external_exports.object({
     for (const omitted of seenOmits) {
       if (itemCanonicals.has(omitted)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["stage_path_policy", "omits"],
           message: `canonical stage '${omitted}' is omitted but used by at least one item`
         });
@@ -28183,7 +28183,7 @@ function validateActiveSchematicCompleteness(schematic, ctx) {
     if (schematic[field] !== void 0)
       return;
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [field],
       message: `active schematic requires ${field}`
     });
@@ -28196,28 +28196,28 @@ function validateActiveSchematicCompleteness(schematic, ctx) {
   for (const [index, item] of schematic.items.entries()) {
     if (item.protocol === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "protocol"],
         message: "active schematic item requires protocol"
       });
     }
     if (item.writes === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "writes"],
         message: "active schematic item requires writes"
       });
     }
     if (item.check === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "check"],
         message: "active schematic item requires check"
       });
     }
     if (item.execution.kind === "checkpoint" && item.checkpoint_policy === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["items", index, "checkpoint_policy"],
         message: "active checkpoint schematic item requires checkpoint_policy"
       });
@@ -28753,7 +28753,7 @@ var BuildCheckpointPacket = external_exports.object({
   const choiceIds = new Set(packet.choices.map((choice) => choice.id));
   if (!choiceIds.has(packet.recommendation.choice_id)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recommendation", "choice_id"],
       message: "recommendation.choice_id must reference a declared checkpoint choice"
     });
@@ -28800,7 +28800,7 @@ var BuildReview = external_exports.object({
 }).strict().superRefine((review, ctx) => {
   if (review.verdict !== "accept" && review.findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: `findings must be non-empty when verdict is '${review.verdict}'`
     });
@@ -28821,7 +28821,7 @@ var BuildResultReportPointer = external_exports.object({
   const expectedSchema = BUILD_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
   if (pointer.schema !== expectedSchema) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
     });
@@ -28838,7 +28838,7 @@ var BuildResult = external_exports.object({
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -28848,7 +28848,7 @@ var BuildResult = external_exports.object({
   for (const reportId of BuildResultReportId.options) {
     if (!seen.has(reportId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: `missing report_id '${reportId}'`
       });
@@ -28857,14 +28857,14 @@ var BuildResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'complete'"
       });
     }
     if (result.review_verdict !== "accept") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'accept' when outcome is 'complete'"
       });
@@ -28873,14 +28873,14 @@ var BuildResult = external_exports.object({
   if (result.outcome === "needs_attention") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'needs_attention'"
       });
     }
     if (result.review_verdict !== "accept-with-fixes") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'accept-with-fixes' when outcome is 'needs_attention'"
       });
@@ -30527,7 +30527,7 @@ function refineExactExploreRubricDims(value, ctx) {
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `missing rubric dim '${dimId}'`
       });
@@ -30536,7 +30536,7 @@ function refineExactExploreRubricDims(value, ctx) {
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`
       });
@@ -30561,7 +30561,7 @@ var ExploreDecisionOptions = external_exports.object({
   for (const [index, option] of report.options.entries()) {
     if (seen.has(option.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["options", index, "id"],
         message: `duplicate option id '${option.id}'`
       });
@@ -30599,7 +30599,7 @@ var ExploreTournamentAggregate = external_exports.object({
 }).strict().superRefine((aggregate2, ctx) => {
   if (aggregate2.branch_count !== aggregate2.branches.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["branch_count"],
       message: "branch_count must match branches.length"
     });
@@ -30607,21 +30607,21 @@ var ExploreTournamentAggregate = external_exports.object({
   for (const [index, branch] of aggregate2.branches.entries()) {
     if (branch.child_outcome === "complete" && branch.result_body === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "result_body"],
         message: "complete tournament branches must include result_body provenance"
       });
     }
     if (branch.child_outcome === "complete" && branch.rubric_result === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "rubric_result"],
         message: "complete tournament branches must include rubric_result provenance"
       });
     }
     if (branch.child_outcome === "complete" && branch.result_body !== void 0 && branch.result_body.option_id !== branch.branch_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["branches", index, "result_body", "option_id"],
         message: `branch_id '${branch.branch_id}' must match result_body.option_id '${branch.result_body.option_id}'`
       });
@@ -30678,7 +30678,7 @@ var ExploreResultReportPointer = external_exports.object({
   const expectedSchema = EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
   if (pointer.schema !== expectedSchema) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
     });
@@ -30706,7 +30706,7 @@ function refineExploreEvidenceLinks(result, ctx, expectedReportIds) {
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -30716,7 +30716,7 @@ function refineExploreEvidenceLinks(result, ctx, expectedReportIds) {
   const matchesSet = result.evidence_links.length === expectedReportIds.length && expectedReportIds.every((reportId) => seen.has(reportId));
   if (!matchesSet) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["evidence_links"],
       message: `evidence_links must contain exactly: ${expectedReportIds.join(", ")}`
     });
@@ -30733,7 +30733,7 @@ var ExploreDefaultResult = external_exports.object({
   const requiresFoldIns = snapshot.review_verdict === "accept-with-fold-ins" || snapshot.objection_count > 0 || snapshot.missed_angle_count > 0;
   if (requiresFoldIns && result.review_fold_ins === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins"],
       message: "review_fold_ins is required when the default Explore review verdict or counts report fold-ins"
     });
@@ -30743,14 +30743,14 @@ var ExploreDefaultResult = external_exports.object({
     return;
   if (foldIns.objections.length !== snapshot.objection_count) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins", "objections"],
       message: "review_fold_ins.objections length must match verdict_snapshot.objection_count"
     });
   }
   if (foldIns.missed_angles.length !== snapshot.missed_angle_count) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_fold_ins", "missed_angles"],
       message: "review_fold_ins.missed_angles length must match verdict_snapshot.missed_angle_count"
     });
@@ -32207,7 +32207,7 @@ var FixRegressionContract = external_exports.object({
 }).strict().superRefine((contract, ctx) => {
   if (contract.repro.kind !== "not-reproducible" && contract.regression_test.status !== "failing-before-fix") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_test", "status"],
       message: "regression_test.status must be 'failing-before-fix' when repro evidence exists"
     });
@@ -32281,7 +32281,7 @@ var FixNoReproDecision = external_exports.object({
   const expected = NO_REPRO_DECISION_ROUTE[decision2.decision];
   if (decision2.selected_route !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected_route"],
       message: `selected_route must be '${expected}' for decision '${decision2.decision}'`
     });
@@ -32317,7 +32317,7 @@ var FixVerificationCommandResult = external_exports.object({
   });
   if (!commandParse.success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["argv"],
       message: `verification command result must include a safe command spec: ${commandParse.error.issues.map((issue2) => issue2.message).join("; ")}`
     });
@@ -32325,7 +32325,7 @@ var FixVerificationCommandResult = external_exports.object({
   const expected = result.exit_code === 0 ? "passed" : "failed";
   if (result.status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status must be '${expected}' when exit_code is ${result.exit_code}`
     });
@@ -32338,7 +32338,7 @@ var FixVerification = external_exports.object({
   const expected = verification.commands.some((command) => command.status === "failed") ? "failed" : "passed";
   if (verification.overall_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expected}' for command results`
     });
@@ -32360,7 +32360,7 @@ var FixRegressionProofObservation = external_exports.object({
   const expected = observation.exit_code === 0 ? "passed" : "failed";
   if (observation.command_status !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["command_status"],
       message: `command_status must be '${expected}' when exit_code is ${observation.exit_code}`
     });
@@ -32376,7 +32376,7 @@ var FixRegressionProof = external_exports.object({
   const expectedOverall = proof.status === "not-proved" ? "failed" : "passed";
   if (proof.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`
     });
@@ -32384,14 +32384,14 @@ var FixRegressionProof = external_exports.object({
   if (proof.status === "deferred") {
     if (proof.baseline !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline"],
         message: "baseline must be omitted when status is 'deferred'"
       });
     }
     if (proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'deferred'"
       });
@@ -32399,21 +32399,21 @@ var FixRegressionProof = external_exports.object({
   } else {
     if (proof.baseline === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline"],
         message: `baseline is required when status is '${proof.status}'`
       });
     }
     if (proof.status === "proved" && proof.baseline?.command_status !== "failed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'proved' requires baseline command_status 'failed'"
       });
     }
     if (proof.status === "not-proved" && proof.baseline?.command_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'not-proved' requires baseline command_status 'passed'"
       });
@@ -32472,7 +32472,7 @@ var FixChangeSet = external_exports.object({
   const expectedOverall = changeSet.status === "pass" ? "passed" : "failed";
   if (changeSet.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${changeSet.status}'`
     });
@@ -32482,7 +32482,7 @@ var FixChangeSet = external_exports.object({
   const expectedExtras = changeSet.observed.filter((path) => !declaredSet.has(path));
   if (expectedExtras.length !== changeSet.undeclared_extras.length || expectedExtras.some((p, i) => p !== changeSet.undeclared_extras[i])) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["undeclared_extras"],
       message: "undeclared_extras must equal observed minus declared (in observed order)"
     });
@@ -32490,7 +32490,7 @@ var FixChangeSet = external_exports.object({
   const expectedMissing = changeSet.declared.filter((path) => !observedSet.has(path));
   if (expectedMissing.length !== changeSet.missing_declared.length || expectedMissing.some((p, i) => p !== changeSet.missing_declared[i])) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_declared"],
       message: "missing_declared must equal declared minus observed (in declared order)"
     });
@@ -32498,7 +32498,7 @@ var FixChangeSet = external_exports.object({
   for (const [index, path] of changeSet.baseline_dirty_mutated.entries()) {
     if (!observedSet.has(path)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["baseline_dirty_mutated", index],
         message: `baseline_dirty_mutated path '${path}' must also appear in observed`
       });
@@ -32517,21 +32517,21 @@ var FixChangeSet = external_exports.object({
     if (hiddenFlagged)
       violations.push("non-empty hidden_index_flags");
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: `status 'pass' requires no failure conditions, but: ${violations.join("; ")}`
     });
   }
   if (changeSet.status === "fail" && isClean) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: "status 'fail' requires at least one of: undeclared_extras, missing_declared, HEAD divergence, or hidden_index_flags"
     });
   }
   if (changeSet.status === "fail" && changeSet.reason === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason"],
       message: "reason is required when status is 'fail'"
     });
@@ -32547,7 +32547,7 @@ var FixRegressionRerun = external_exports.object({
   const expectedOverall = proof.status === "still-failing" ? "failed" : "passed";
   if (proof.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' when status is '${proof.status}'`
     });
@@ -32555,14 +32555,14 @@ var FixRegressionRerun = external_exports.object({
   if (proof.status === "deferred") {
     if (proof.rerun !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rerun"],
         message: "rerun must be omitted when status is 'deferred'"
       });
     }
     if (proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'deferred'"
       });
@@ -32570,28 +32570,28 @@ var FixRegressionRerun = external_exports.object({
   } else {
     if (proof.rerun === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rerun"],
         message: `rerun is required when status is '${proof.status}'`
       });
     }
     if (proof.status === "cleared" && proof.rerun?.command_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'cleared' requires rerun command_status 'passed'"
       });
     }
     if (proof.status === "still-failing" && proof.rerun?.command_status !== "failed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: "status 'still-failing' requires rerun command_status 'failed'"
       });
     }
     if (proof.status === "still-failing" && proof.reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["reason"],
         message: "reason is required when status is 'still-failing'"
       });
@@ -32650,7 +32650,7 @@ var FixResultReportPointer = external_exports.object({
   const expectedSchema = FIX_RESULT_SCHEMA_BY_ARTIFACT_ID[pointer.report_id];
   if (pointer.schema !== expectedSchema) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
     });
@@ -32658,7 +32658,7 @@ var FixResultReportPointer = external_exports.object({
   const expectedPath = FIX_RESULT_PATH_BY_ARTIFACT_ID[pointer.report_id];
   if (pointer.path !== expectedPath) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["path"],
       message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
     });
@@ -32682,7 +32682,7 @@ var FixResult = external_exports.object({
   for (const [index, pointer] of result.evidence_links.entries()) {
     if (seen.has(pointer.report_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links", index, "report_id"],
         message: `duplicate report_id '${pointer.report_id}'`
       });
@@ -32692,7 +32692,7 @@ var FixResult = external_exports.object({
   for (const reportId of REQUIRED_FIX_RESULT_ARTIFACT_IDS) {
     if (!seen.has(reportId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: `missing report_id '${reportId}'`
       });
@@ -32700,56 +32700,56 @@ var FixResult = external_exports.object({
   }
   if (result.outcome === "fixed" && result.verification_status !== "passed") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verification_status"],
       message: "verification_status must be 'passed' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.regression_status !== "proved") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_status"],
       message: "regression_status must be 'proved' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.regression_rerun_status !== "cleared") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status must be 'cleared' when outcome is 'fixed'"
     });
   }
   if (result.regression_status === "deferred" && result.regression_rerun_status !== "deferred") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status must be 'deferred' when regression_status is 'deferred'"
     });
   }
   if (result.regression_status === "proved" && result.regression_rerun_status === "deferred") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["regression_rerun_status"],
       message: "regression_rerun_status cannot be 'deferred' when regression_status is 'proved'"
     });
   }
   if (result.outcome === "fixed" && result.change_set_status !== "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["change_set_status"],
       message: "change_set_status must be 'pass' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.review_verdict === "reject") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_verdict"],
       message: "review_verdict cannot be 'reject' when outcome is 'fixed'"
     });
   }
   if (result.outcome === "fixed" && result.review_status === "completed" && result.review_verdict !== "accept") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["review_verdict"],
       message: "review_verdict must be 'accept' when outcome is 'fixed' and review completed"
     });
@@ -32757,14 +32757,14 @@ var FixResult = external_exports.object({
   if (result.review_status === "completed") {
     if (result.review_verdict === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict is required when review_status is 'completed'"
       });
     }
     if (!seen.has("fix.review")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_links"],
         message: "review_status 'completed' must include the fix.review evidence link"
       });
@@ -32773,14 +32773,14 @@ var FixResult = external_exports.object({
   if (result.review_status === "skipped") {
     if (result.review_skip_reason === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_skip_reason"],
         message: "review_skip_reason is required when review_status is 'skipped'"
       });
     }
     if (result.review_verdict !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be omitted when review_status is 'skipped'"
       });
@@ -32788,7 +32788,7 @@ var FixResult = external_exports.object({
   }
   if (result.outcome === "not-reproduced" && !seen.has("fix.no-repro-decision")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["evidence_links"],
       message: "outcome 'not-reproduced' must include the fix.no-repro-decision evidence link"
     });
@@ -34295,7 +34295,7 @@ var CustomConnectorDescriptor = external_exports.object({
 }).strict().superRefine((descriptor, ctx) => {
   if (descriptor.capabilities.filesystem !== "read-only") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["capabilities", "filesystem"],
       message: "custom connectors are read-only in V1; writable custom workers require a later isolated mode"
     });
@@ -34403,35 +34403,35 @@ var RecoveryRouteBindingV0 = external_exports.object({
   if (binding.kind === "retry_same_step_with_feedback") {
     if (binding.route_target !== binding.step_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["route_target"],
         message: "retry_same_step_with_feedback must target the same step"
       });
     }
     if (!requiredRefs.has("acceptance_feedback")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["required_refs"],
         message: "retry_same_step_with_feedback requires acceptance_feedback refs"
       });
     }
     if (!binding.attempt_budget.consumes_step_attempt) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "consumes_step_attempt"],
         message: "retry_same_step_with_feedback consumes the step attempt budget"
       });
     }
     if (!binding.attempt_budget.must_respect_max_attempts) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "must_respect_max_attempts"],
         message: "retry_same_step_with_feedback must respect max_attempts"
       });
     }
     if (binding.attempt_budget.retry_target !== "same_step") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["attempt_budget", "retry_target"],
         message: "retry_same_step_with_feedback requires retry_target same_step"
       });
@@ -34439,35 +34439,35 @@ var RecoveryRouteBindingV0 = external_exports.object({
   }
   if (causes.has("unknown_failure") && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(binding.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["allowed_failure_causes"],
       message: "unknown_failure cannot route to retry, verification, or independent review"
     });
   }
   if (binding.kind === "safe_apply_reject" && !requiredRefs.has("safe_apply_result") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "safe_apply_reject requires safe_apply_result, runtime_diff, or change_packet refs"
     });
   }
   if (causes.has("generated_surface_drift") && !requiredRefs.has("generated_surface_evidence")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "generated_surface_drift requires generated_surface_evidence refs"
     });
   }
   if (causes.has("protected_file_touched") && !requiredRefs.has("runtime_diff") && !requiredRefs.has("change_packet")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_refs"],
       message: "protected_file_touched requires runtime_diff or change_packet refs"
     });
   }
   if (binding.source_ref.kind !== "work_contract") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source_ref", "kind"],
       message: "recovery route bindings must point back to WorkContract refs"
     });
@@ -34547,7 +34547,7 @@ var SafeApplySelected = external_exports.object({
 }).strict().superRefine((selected, ctx) => {
   if (selected.action === "apply" && selected.final_verification_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["final_verification_ref"],
       message: "safe_apply apply decisions require final verification refs"
     });
@@ -34562,14 +34562,14 @@ var RecoveryRouteSelected = external_exports.object({
 }).strict().superRefine((selected, ctx) => {
   if (["work_contract", "policy", "memory"].includes(selected.failure_ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["failure_ref", "kind"],
       message: "recovery failure refs must point at failure evidence, not authority or memory refs"
     });
   }
   if (selected.failure_cause === "unknown_failure" && ["retry_same_step_with_feedback", "run_verification", "run_independent_review"].includes(selected.recovery_kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery_kind"],
       message: "unknown_failure cannot route to retry, verification, or independent review"
     });
@@ -34590,28 +34590,28 @@ function isMemoryReasonCode(reasonCode) {
 function addScopedRefIssues(ctx, path, label, ref, entry) {
   if (ref.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "run_id"],
       message: `${label} run_id must match guidance run_id`
     });
   }
   if (ref.flow_id !== entry.scope.flow_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "flow_id"],
       message: `${label} flow_id must match guidance scope.flow_id`
     });
   }
   if (ref.step_id !== entry.scope.step_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "step_id"],
       message: `${label} step_id must match guidance scope.step_id`
     });
   }
   if (ref.attempt !== entry.scope.attempt) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: [...path, "attempt"],
       message: `${label} attempt must match guidance scope.attempt`
     });
@@ -34640,7 +34640,7 @@ var GuidanceDecisionTraceEntryBody = external_exports.object({
 function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.scope.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["scope", "run_id"],
       message: "scope.run_id must match run_id"
     });
@@ -34648,7 +34648,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.constraint_refs.entries()) {
     if (ref.kind !== "work_contract" && ref.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["constraint_refs", index, "kind"],
         message: "constraint_refs must use work_contract or policy refs in V0"
       });
@@ -34657,7 +34657,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.contract_refs.entries()) {
     if (ref.kind !== "work_contract") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["contract_refs", index, "kind"],
         message: "contract_refs must use work_contract refs"
       });
@@ -34666,7 +34666,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.policy_refs.entries()) {
     if (ref.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["policy_refs", index, "kind"],
         message: "policy_refs must use policy refs"
       });
@@ -34675,7 +34675,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.memory_refs?.entries() ?? []) {
     if (ref.kind !== "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["memory_refs", index, "kind"],
         message: "memory_refs must use memory refs"
       });
@@ -34684,7 +34684,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, ref] of entry.evidence_refs?.entries() ?? []) {
     if (ref.kind === "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "kind"],
         message: "memory refs cannot be evidence refs"
       });
@@ -34695,14 +34695,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   const hasMemoryRefs = (entry.memory_refs?.length ?? 0) > 0;
   if (hasMemoryReasonCode && !hasMemoryRefs) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_refs"],
       message: "memory reason codes require memory_refs"
     });
   }
   if (hasMemoryRefs && !hasMemoryReasonCode) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "memory_refs require a memory reason code"
     });
@@ -34710,21 +34710,21 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   for (const [index, option] of entry.rejected_options?.entries() ?? []) {
     if (option.blocked_by?.kind === "memory") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory refs cannot block guidance options"
       });
     }
     if (option.reason_code === "memory_conflicts_with_policy" && option.blocked_by?.kind !== "policy") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory policy conflicts must be blocked by policy refs"
       });
     }
     if (option.reason_code === "memory_conflicts_with_contract" && option.blocked_by?.kind !== "work_contract") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["rejected_options", index, "blocked_by", "kind"],
         message: "memory contract conflicts must be blocked by work_contract refs"
       });
@@ -34733,7 +34733,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.subject === "flow_selection") {
     if (!FlowSelectionSelected.safeParse(entry.selected).success) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["selected"],
         message: "flow_selection selected payload must name flow_id and work_contract_ref"
       });
@@ -34742,7 +34742,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.scope.flow_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["scope", "flow_id"],
       message: `${entry.subject} decisions require scope.flow_id`
     });
@@ -34750,7 +34750,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   if (entry.subject === "proof_policy") {
     if (entry.scope.step_id === void 0 !== (entry.scope.attempt === void 0)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "attempt"],
         message: "proof_policy decisions must include step_id and attempt together"
       });
@@ -34758,14 +34758,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   } else {
     if (entry.scope.step_id === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "step_id"],
         message: `${entry.subject} decisions require scope.step_id`
       });
     }
     if (entry.scope.attempt === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "attempt"],
         message: `${entry.subject} decisions require scope.attempt`
       });
@@ -34773,21 +34773,21 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.subject === "relay_execution" && !RelayExecutionSelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "relay_execution selected payload must name role, connector, skills, context ref, and request hash"
     });
   }
   if (entry.subject === "proof_policy" && !ProofPolicySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "proof_policy selected payload must name proof_profile, required claim kinds, required evidence kinds, and whether close requires proven claims"
     });
   }
   if (entry.subject === "safe_apply" && !SafeApplySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "safe_apply selected payload must name action, change_packet_ref, base_ref, and final verification refs when applying"
     });
@@ -34800,14 +34800,14 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       addScopedRefIssues(ctx, ["selected", "base_ref"], "safe_apply base_ref", base_ref, entry);
       if (!entry.input_refs.some((ref) => sameRef(ref, change_packet_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "safe_apply input_refs must include selected.change_packet_ref"
         });
       }
       if (!entry.input_refs.some((ref) => sameRef(ref, base_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "safe_apply input_refs must include selected.base_ref"
         });
@@ -34816,7 +34816,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
         addScopedRefIssues(ctx, ["selected", "final_verification_ref"], "safe_apply final_verification_ref", final_verification_ref, entry);
         if (!entry.evidence_refs?.some((ref) => sameRef(ref, final_verification_ref))) {
           ctx.addIssue({
-            code: external_exports.ZodIssueCode.custom,
+            code: "custom",
             path: ["evidence_refs"],
             message: "safe_apply evidence_refs must include selected.final_verification_ref"
           });
@@ -34826,7 +34826,7 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
   }
   if (entry.subject === "recovery_route" && !RecoveryRouteSelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected"],
       message: "recovery_route selected payload must name route_id, recovery_kind, failure_cause, failure_ref, and binding_ref"
     });
@@ -34837,63 +34837,63 @@ function refineGuidanceDecisionTraceEntry(entry, ctx) {
       const { binding_ref, failure_ref } = recoverySelected.data;
       if (!entry.input_refs.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["input_refs"],
           message: "recovery_route input_refs must include selected.failure_ref"
         });
       }
       if (!entry.evidence_refs?.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence_refs"],
           message: "recovery_route evidence_refs must include selected.failure_ref"
         });
       }
       if (failure_ref.kind === "trace" && failure_ref.sequence !== void 0 && failure_ref.sequence >= entry.sequence) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "sequence"],
           message: "recovery trace failure_ref must point to an earlier trace entry"
         });
       }
       if (binding_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "binding_ref", "flow_id"],
           message: "recovery binding_ref flow_id must match guidance scope.flow_id"
         });
       }
       if (failure_ref.run_id !== void 0 && failure_ref.run_id !== entry.run_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "run_id"],
           message: "recovery failure_ref run_id must match guidance run_id"
         });
       }
       if (failure_ref.flow_id !== void 0 && failure_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "flow_id"],
           message: "recovery failure_ref flow_id must match guidance scope.flow_id"
         });
       }
       if (failure_ref.step_id === void 0 !== (failure_ref.attempt === void 0)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "attempt"],
           message: "recovery failure_ref must include step_id and attempt together"
         });
       }
       if (failure_ref.step_id !== void 0 && failure_ref.step_id !== entry.scope.step_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "step_id"],
           message: "recovery failure_ref step_id must match guidance scope.step_id"
         });
       }
       if (failure_ref.attempt !== void 0 && failure_ref.attempt !== entry.scope.attempt) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["selected", "failure_ref", "attempt"],
           message: "recovery failure_ref attempt must match guidance scope.attempt"
         });
@@ -34980,35 +34980,35 @@ var Evidence = external_exports.object({
 }).strict().superRefine((evidence2, ctx) => {
   if (!EvidenceRefKinds[evidence2.kind].includes(evidence2.ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["ref", "kind"],
       message: `${evidence2.kind} evidence cannot use ${evidence2.ref.kind} refs`
     });
   }
   if (RuntimeOwnedEvidenceKinds.has(evidence2.kind) && evidence2.producer !== "runtime") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["producer"],
       message: `${evidence2.kind} evidence must be produced by the runtime`
     });
   }
   if (evidence2.producer === "worker" && evidence2.result === "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result"],
       message: "worker-produced evidence cannot be marked pass by itself"
     });
   }
   if (evidence2.independence === "self" && evidence2.result === "pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["independence"],
       message: "self evidence cannot prove a claim"
     });
   }
   if (evidence2.kind === "review" && evidence2.independence === "self") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["independence"],
       message: "review evidence must be independent or runtime-owned"
     });
@@ -35044,14 +35044,14 @@ var ProofAssessmentResult = external_exports.object({
 }).strict().superRefine((result, ctx) => {
   if (result.status === "proven" && result.recovery !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery"],
       message: "proven claims must not declare a recovery route"
     });
   }
   if (result.status !== "proven" && result.recovery === void 0 && result.missing.length === 0 && result.contradictions.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["recovery"],
       message: "non-proven claims without recovery must explain the missing or contradicted proof"
     });
@@ -35091,7 +35091,7 @@ var ProofAssessment = external_exports.object({
   for (const [index, claim] of assessment.claims.entries()) {
     if (claimIds.has(claim.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claims", index, "id"],
         message: `duplicate claim '${claim.id}'`
       });
@@ -35104,7 +35104,7 @@ var ProofAssessment = external_exports.object({
   for (const [index, evidence2] of assessment.evidence.entries()) {
     if (evidenceById.has(evidence2.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence", index, "id"],
         message: `duplicate evidence '${evidence2.id}'`
       });
@@ -35113,7 +35113,7 @@ var ProofAssessment = external_exports.object({
     for (const [claimIndex, claimId] of evidence2.covers_claims.entries()) {
       if (!claimIds.has(claimId)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence", index, "covers_claims", claimIndex],
           message: `evidence covers undeclared claim '${claimId}'`
         });
@@ -35124,14 +35124,14 @@ var ProofAssessment = external_exports.object({
   for (const [index, result] of assessment.results.entries()) {
     if (!claimIds.has(result.claim_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results", index, "claim_id"],
         message: `result references undeclared claim '${result.claim_id}'`
       });
     }
     if (resultsByClaim.has(result.claim_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results", index, "claim_id"],
         message: `duplicate proof result for claim '${result.claim_id}'`
       });
@@ -35141,7 +35141,7 @@ var ProofAssessment = external_exports.object({
       const evidence2 = evidenceById.get(id);
       if (evidence2 === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "evidence_refs", evidenceIndex],
           message: `result references undeclared evidence '${id}'`
         });
@@ -35151,14 +35151,14 @@ var ProofAssessment = external_exports.object({
     if (result.status === "proven") {
       if (result.missing.length > 0 || result.contradictions.length > 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "status"],
           message: "proven claims cannot list missing evidence or contradictions"
         });
       }
       if (!referencedEvidence.some((evidence2) => evidence2 !== void 0 && canProveClaim(evidence2, result.claim_id))) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["results", index, "evidence_refs"],
           message: "proven claims require passing runtime or independent evidence beyond report shape"
         });
@@ -35168,7 +35168,7 @@ var ProofAssessment = external_exports.object({
   for (const requiredClaimId of requiredClaimIds) {
     if (!resultsByClaim.has(requiredClaimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["results"],
         message: `missing proof result for required claim '${requiredClaimId}'`
       });
@@ -35182,14 +35182,14 @@ var ProofAssessment = external_exports.object({
   const expectedOverall = worstStatus(relevantResults.map((result) => result.status));
   if (assessment.overall_status !== expectedOverall) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["overall_status"],
       message: `overall_status must be '${expectedOverall}' for the required claim results`
     });
   }
   if (assessment.close_allowed && relevantResults.some((result) => result.status !== "proven")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["close_allowed"],
       message: "close_allowed requires every required claim to be proven"
     });
@@ -35285,7 +35285,7 @@ var ProofScope2 = external_exports.object({
 }).strict().superRefine((scope, ctx) => {
   if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["attempt"],
       message: "proof assessment scope must include step_id and attempt together"
     });
@@ -35308,7 +35308,7 @@ var SafeApplyScope = external_exports.object({
 }).strict().superRefine((scope, ctx) => {
   if (scope.step_id === void 0 !== (scope.attempt === void 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["attempt"],
       message: "safe apply scope must include step_id and attempt together"
     });
@@ -35340,20 +35340,20 @@ var CheckpointRequestedTraceEntry = TraceEntryBase.extend({
 }).strict().superRefine((entry, ctx) => {
   if (entry.boundary_ref.sha256 !== entry.boundary_hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_hash"],
       message: "checkpoint boundary_hash must match boundary_ref.sha256"
     });
   }
   if (entry.boundary_ref.step_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary_ref.step_id is required"
     });
   } else if (entry.boundary_ref.step_id !== entry.step_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary_ref.step_id must match step_id"
     });
@@ -35477,7 +35477,7 @@ var FanoutExecutionPolicy = external_exports.object({
 }).strict().superRefine((policy2, ctx) => {
   if (policy2.writable_relay_branches_serialized && policy2.reason === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason"],
       message: "serialized writable relay fanouts require a reason"
     });
@@ -35577,7 +35577,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     const expected = ev.exit_code === 0 ? "passed" : "failed";
     if (ev.status !== expected) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["status"],
         message: `status must be '${expected}' when exit_code is ${ev.exit_code}`
       });
@@ -35587,14 +35587,14 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   if (ev.kind === "proof.assessed") {
     if (ev.scope.run_id !== ev.run_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "run_id"],
         message: "proof assessment scope.run_id must match run_id"
       });
     }
     if (ev.close_allowed && ev.overall_status !== "proven") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["close_allowed"],
         message: "proof assessment close_allowed requires overall_status proven"
       });
@@ -35604,7 +35604,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
   if (ev.kind === "safe_apply.result") {
     if (ev.scope.run_id !== ev.run_id) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["scope", "run_id"],
         message: "safe apply scope.run_id must match run_id"
       });
@@ -35627,28 +35627,28 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     ]) {
       if (ref.run_id !== ev.run_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "run_id"],
           message: `${label} run_id must match run_id`
         });
       }
       if (ref.flow_id !== ev.scope.flow_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "flow_id"],
           message: `${label} flow_id must match scope.flow_id`
         });
       }
       if (ref.step_id !== ev.scope.step_id) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "step_id"],
           message: `${label} step_id must match scope.step_id`
         });
       }
       if (ref.attempt !== ev.scope.attempt) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [...path, "attempt"],
           message: `${label} attempt must match scope.attempt`
         });
@@ -35656,7 +35656,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     }
     if (ev.action === "rejected" && ev.outcome !== "fail") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "rejected safe apply trace results require fail outcome"
       });
@@ -35664,14 +35664,14 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     if (ev.action === "applied") {
       if (ev.outcome !== "pass") {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["outcome"],
           message: "applied safe apply trace results require pass outcome"
         });
       }
       if (ev.final_verification_ref === void 0) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["final_verification_ref"],
           message: "applied safe apply trace results require final verification refs"
         });
@@ -35683,7 +35683,7 @@ var TraceEntry = external_exports.discriminatedUnion("kind", [
     return;
   if (ev.resolved_from.source === "role" && ev.resolved_from.role !== ev.role) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["resolved_from", "role"],
       message: `resolved_from.role '${ev.resolved_from.role}' does not agree with trace_entry role '${ev.role}'`
     });
@@ -35823,21 +35823,21 @@ var GoalClarifiedTask = external_exports.object({
 }).strict().superRefine((task, ctx) => {
   if (!task.proof_needed.some((proof) => proof.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["proof_needed"],
       message: "Goal Clarify requires at least one required proof entry"
     });
   }
   if (task.verdict === "ask" && task.missing_information.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_information"],
       message: "Goal Clarify ask verdict requires missing information"
     });
   }
   if (task.verdict === "stop" && task.stop_conditions.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["stop_conditions"],
       message: "Goal Clarify stop verdict requires a stop condition"
     });
@@ -35867,7 +35867,7 @@ var GoalClarifiedTask = external_exports.object({
   const forbiddenReviewText = /before completion[\s\S]{0,120}adversarially review|two consecutive(?:\s+\w+){0,3}\s+(?:reviews?|passes?)|two[-\s]+clean[-\s]+reviews?|medium-or-above\s+(?:gate|completion|finding ceremony|gate finding)/i;
   if (clarifyAuthoredText.some((text) => forbiddenReviewText.test(text))) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clarified_prompt"],
       message: "Goal Clarify must not include the adversarial review loop"
     });
@@ -35885,7 +35885,7 @@ var GoalDoneClaim = external_exports.object({
 }).strict().superRefine((claim, ctx) => {
   if (!claim.required_evidence.some((entry) => entry.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_evidence"],
       message: "each done_when item must include at least one required evidence entry"
     });
@@ -35918,7 +35918,7 @@ var GoalContract = external_exports.object({
 }).strict().superRefine((contract, ctx) => {
   if (!contract.allowed_flow_targets.includes(contract.selected_flow_target)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["selected_flow_target"],
       message: "selected_flow_target must be present in allowed_flow_targets"
     });
@@ -35948,21 +35948,21 @@ var GoalEvidenceEvaluation = external_exports.object({
   const allProved = evaluation.claim_results.every((claim) => claim.status === "proved");
   if (evaluation.verdict === "satisfied" && !allProved) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["claim_results"],
       message: "verdict 'satisfied' requires every claim result to be proved"
     });
   }
   if (evaluation.next_route === "completion-gate" && evaluation.verdict !== "satisfied") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "next_route 'completion-gate' is allowed only when verdict is satisfied"
     });
   }
   if (evaluation.verdict === "satisfied" && evaluation.next_route !== "completion-gate") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "verdict 'satisfied' must route to completion-gate"
     });
@@ -35971,7 +35971,7 @@ var GoalEvidenceEvaluation = external_exports.object({
     const hasGap = evaluation.claim_results.some((claim) => claim.status === "missing" && claim.gap !== null);
     if (!hasGap) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claim_results"],
         message: "missing-evidence must name at least one missing claim gap"
       });
@@ -35979,7 +35979,7 @@ var GoalEvidenceEvaluation = external_exports.object({
   }
   if ((evaluation.verdict === "contradicted" || evaluation.verdict === "blocked") && evaluation.next_route === "completion-gate") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: `${evaluation.verdict} must not route directly to completion-gate`
     });
@@ -36035,7 +36035,7 @@ var GoalGate = external_exports.object({
   for (const [index, pass] of gate.passes.entries()) {
     if (attackLenses.has(pass.attack_lens)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["passes", index, "attack_lens"],
         message: "gate passes in the same report must use distinct attack lenses"
       });
@@ -36044,77 +36044,77 @@ var GoalGate = external_exports.object({
   }
   if (gate.clean_streak > cleanPassCount) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "clean_streak must not exceed the number of recorded gate-pass passes"
     });
   }
   if (gate.blocking_findings.length > 0 && gate.clean_streak !== 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "any blocking finding resets clean_streak to 0"
     });
   }
   if (gate.verdict === "gate-pass" && gate.blocking_findings.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocking_findings"],
       message: "gate-pass requires no blocking findings"
     });
   }
   if (gate.verdict === "blocked" && gate.blocking_findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocking_findings"],
       message: "blocked requires at least one blocking finding"
     });
   }
   if (gate.verdict === "blocked" && gate.next_route !== "recover") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "blocked gate verdict must route to 'recover'"
     });
   }
   if (gate.verdict === "gate-pass" && gate.next_route === "recover") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "gate-pass must not route to recover"
     });
   }
   if (gate.next_route === "close" && gate.clean_streak < gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["clean_streak"],
       message: "close requires clean_streak >= required_passes"
     });
   }
   if (gate.next_route === "close" && cleanPassCount < gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["passes"],
       message: "close requires recorded gate-pass passes to meet required_passes"
     });
   }
   if (gate.next_route === "close" && gate.verdict !== "gate-pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "close requires final gate verdict 'gate-pass'"
     });
   }
   if (gate.next_route === "run-next-gate-pass" && gate.verdict !== "gate-pass") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "run-next-gate-pass requires a gate-pass verdict"
     });
   }
   if (gate.next_route === "run-next-gate-pass" && gate.clean_streak >= gate.required_passes) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["next_route"],
       message: "run-next-gate-pass is allowed only before the required pass streak is met"
     });
@@ -36142,7 +36142,7 @@ var GoalResultEvidenceLink = external_exports.object({
   const expected = GOAL_RESULT_SCHEMA_BY_REPORT_ID[link.report_id];
   if (link.schema !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expected}' for report_id '${link.report_id}'`
     });
@@ -36167,21 +36167,21 @@ var GoalResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.missing_or_weak_claims.length > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["missing_or_weak_claims"],
         message: "complete requires no missing or weak claims"
       });
     }
     if (result.gate.clean_streak < result.gate.required_passes) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate", "clean_streak"],
         message: "complete requires gate.clean_streak >= 2"
       });
     }
     if (result.gate.final_verdict !== "gate-pass") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate", "final_verdict"],
         message: "complete requires final gate verdict 'gate-pass'"
       });
@@ -36191,7 +36191,7 @@ var GoalResult = external_exports.object({
     const hasUsefulAction = result.summary.toLowerCase().includes(result.outcome) || result.rerun_commands.length > 0;
     if (!hasUsefulAction) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["summary"],
         message: `${result.outcome} must include a reason or next useful operator action`
       });
@@ -37271,7 +37271,7 @@ var RelayConfigBody = external_exports.object({
   connectors: external_exports.record(ConnectorName, CustomConnectorDescriptor).default({})
 }).strict();
 var issueAt2 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 var RelayConfig = RelayConfigBody.superRefine((cfg, ctx) => {
   const ownConnectorKeys = Object.keys(cfg.connectors);
@@ -37392,7 +37392,7 @@ var PrototypeCheckpointSelectionOrMissing = external_exports.union([
 ]);
 function addPathIssue(ctx, path, message) {
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     path: [...path],
     message
   });
@@ -37534,7 +37534,7 @@ function refineExactPrototypeRubricDims(value, ctx) {
   for (const dimId of THREE_AXIS_RUBRIC_TIE_BREAK_ORDER) {
     if (value[dimId] === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `missing rubric dim '${dimId}'`
       });
@@ -37543,7 +37543,7 @@ function refineExactPrototypeRubricDims(value, ctx) {
   for (const dimId of Object.keys(value)) {
     if (!expected.has(dimId)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: [dimId],
         message: `unknown rubric dim '${dimId}'`
       });
@@ -37858,7 +37858,7 @@ var PrototypeResultReportPointer = external_exports.object({
   const expectedSchema = PROTOTYPE_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
   if (pointer.schema !== expectedSchema) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
     });
@@ -40314,7 +40314,7 @@ var PursuitContract = external_exports.object({
   for (const [index, pursuit] of contract.pursuits.entries()) {
     if (seen.has(pursuit.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["pursuits", index, "id"],
         message: `duplicate pursuit id: ${pursuit.id}`
       });
@@ -40356,7 +40356,7 @@ var PursuitGraph = external_exports.object({
   for (const [index, node] of graph.nodes.entries()) {
     if (nodeIds.has(node.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["nodes", index, "id"],
         message: `duplicate node id: ${node.id}`
       });
@@ -40366,14 +40366,14 @@ var PursuitGraph = external_exports.object({
   for (const [index, edge] of graph.edges.entries()) {
     if (!nodeIds.has(edge.from)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["edges", index, "from"],
         message: `edge references unknown pursuit id: ${edge.from}`
       });
     }
     if (!nodeIds.has(edge.to)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["edges", index, "to"],
         message: `edge references unknown pursuit id: ${edge.to}`
       });
@@ -40386,7 +40386,7 @@ var PursuitGraph = external_exports.object({
     for (const [index, id] of group.pursuit_ids.entries()) {
       if (!nodeIds.has(id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["groups", groupIndex, "pursuit_ids", index],
           message: `group references unknown pursuit id: ${id}`
         });
@@ -40396,7 +40396,7 @@ var PursuitGraph = external_exports.object({
   for (const [index, item] of graph.blocked.entries()) {
     if (!nodeIds.has(item.pursuit_id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["blocked", index, "pursuit_id"],
         message: `blocked item references unknown pursuit id: ${item.pursuit_id}`
       });
@@ -40419,7 +40419,7 @@ var PursuitWavePlan = external_exports.object({
   for (const [index, wave] of plan.waves.entries()) {
     if (wave.kind === "code-change" && wave.execution !== "serial") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["waves", index, "execution"],
         message: "code-change waves must execute serially in Pursuits V1"
       });
@@ -40452,7 +40452,7 @@ var PursuitBatch = external_exports.object({
     for (const [index, item] of batch[field].entries()) {
       if (item.status !== expectedStatus) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [field, index, "status"],
           message: `status must be '${expectedStatus}' for ${field} items`
         });
@@ -40461,21 +40461,21 @@ var PursuitBatch = external_exports.object({
   }
   if (batch.verdict === "accept" && (batch.blocked.length > 0 || batch.failed.length > 0)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must not be 'accept' when blocked or failed items exist"
     });
   }
   if (batch.verdict === "accept" && batch.skipped.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must not be 'accept' when skipped items exist"
     });
   }
   if (batch.verdict === "blocked" && batch.blocked.length === 0 && batch.failed.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must be backed by blocked or failed items when it is 'blocked'"
     });
@@ -40490,7 +40490,7 @@ var PursuitBatch = external_exports.object({
     for (const [index, item] of items.entries()) {
       if (seen.has(item.pursuit_id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: [field, index, "pursuit_id"],
           message: `duplicate pursuit id in batch: ${item.pursuit_id}`
         });
@@ -40514,21 +40514,21 @@ var PursuitReview = external_exports.object({
   const mediumOrHigher = review.findings.filter((finding) => ["critical", "high", "medium"].includes(finding.severity));
   if (review.verdict === "clean" && review.findings.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: "findings must be empty when verdict is 'clean'"
     });
   }
   if (review.verdict !== "clean" && review.findings.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["findings"],
       message: `findings must be non-empty when verdict is '${review.verdict}'`
     });
   }
   if (review.verdict === "needs-followup" && mediumOrHigher.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: "verdict must be 'blocked' when review findings include medium, high, or critical severity"
     });
@@ -40550,7 +40550,7 @@ var PursuitResultReportPointer = external_exports.object({
   const expectedSchema = PURSUIT_RESULT_SCHEMA_BY_REPORT_ID[pointer.report_id];
   if (pointer.schema !== expectedSchema) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["schema"],
       message: `schema must be '${expectedSchema}' for report_id '${pointer.report_id}'`
     });
@@ -40558,7 +40558,7 @@ var PursuitResultReportPointer = external_exports.object({
   const expectedPath = PURSUIT_RESULT_PATH_BY_REPORT_ID[pointer.report_id];
   if (pointer.path !== expectedPath) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["path"],
       message: `path must be '${expectedPath}' for report_id '${pointer.report_id}'`
     });
@@ -40580,7 +40580,7 @@ var PursuitResult = external_exports.object({
   const accounted = result.completed_count + result.skipped_count + result.blocked_count + result.failed_count;
   if (accounted !== result.total_pursuits) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["total_pursuits"],
       message: "total_pursuits must equal completed + skipped + blocked + failed counts"
     });
@@ -40588,28 +40588,28 @@ var PursuitResult = external_exports.object({
   if (result.outcome === "complete") {
     if (result.verification_status !== "passed") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["verification_status"],
         message: "verification_status must be 'passed' when outcome is 'complete'"
       });
     }
     if (result.review_verdict !== "clean") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["review_verdict"],
         message: "review_verdict must be 'clean' when outcome is 'complete'"
       });
     }
     if (result.blocked_count > 0 || result.failed_count > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "outcome must not be 'complete' when pursuits are blocked or failed"
       });
     }
     if (result.skipped_count > 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "outcome must not be 'complete' when pursuits are skipped"
       });
@@ -41455,7 +41455,7 @@ var ReviewResult = external_exports.object({
   const expected = computeReviewVerdict(report.findings);
   if (report.verdict !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`
     });
@@ -41482,7 +41482,7 @@ var ReviewRelayResult = external_exports.object({
   const expected = report.findings.length === 0 ? "NO_ISSUES_FOUND" : "ISSUES_FOUND";
   if (report.verdict !== expected) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["verdict"],
       message: `review relay verdict must be ${expected} for findings.length=${report.findings.length}`
     });
@@ -42194,6 +42194,7 @@ var flowDefinitions = [
   goalFlowDefinition
 ];
 var flowPackages = compileFlowDefinitions(flowDefinitions);
+var catalogFlowIds = flowPackages.map((pkg) => pkg.id);
 var PACKAGES_BY_ID = (() => {
   const map2 = /* @__PURE__ */ new Map();
   for (const pkg of flowPackages) {
@@ -42267,7 +42268,7 @@ var PolicySelectionRequest = SelectionOverride.superRefine((selection, ctx) => {
   if (forbidden === void 0)
     return;
   ctx.addIssue({
-    code: external_exports.ZodIssueCode.custom,
+    code: "custom",
     path: ["invocation_options", forbidden],
     message: `invocation_options cannot carry authority key '${forbidden}'`
   });
@@ -42282,14 +42283,14 @@ var ConnectorRules = external_exports.object({
   for (const [name, descriptor] of Object.entries(rules.registry)) {
     if (reserved.has(name)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["registry", name],
         message: `connector name '${name}' is reserved and cannot be used as a custom connector key`
       });
     }
     if (descriptor.name !== name) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["registry", name, "name"],
         message: `connector registry key '${name}' does not match descriptor name '${descriptor.name}'`
       });
@@ -42400,7 +42401,7 @@ var PolicyEnvelopeV2 = external_exports.object({
     if (builtinConnectors.has(name) || registeredConnectors.has(name))
       return;
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path,
       message: `connector '${name}' is not registered`
     });
@@ -42410,7 +42411,7 @@ var PolicyEnvelopeV2 = external_exports.object({
       return;
     if (!registeredConnectors.has(ref.name)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path,
         message: `connector '${ref.name}' is not registered`
       });
@@ -42499,7 +42500,7 @@ var CheckpointRouteTarget = external_exports.union([
 var PolicyRef = Ref.superRefine((ref, ctx) => {
   if (ref.kind !== "policy") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["kind"],
       message: "checkpoint declared defaults require policy refs"
     });
@@ -42525,7 +42526,7 @@ var CheckpointBoundaryChoices = external_exports.discriminatedUnion("kind", [
     for (const [index, choice] of choices.items.entries()) {
       if (ids.has(choice.id)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["items", index, "id"],
           message: `duplicate checkpoint choice '${choice.id}'`
         });
@@ -42565,7 +42566,7 @@ var CheckpointBoundaryV0 = external_exports.object({
     return;
   if (boundary.choices.kind === "dynamic") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["declared_default"],
       message: "declared defaults require static checkpoint choices in V0"
     });
@@ -42574,7 +42575,7 @@ var CheckpointBoundaryV0 = external_exports.object({
   const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
   if (!choiceIds.has(boundary.declared_default.choice_id)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["declared_default", "choice_id"],
       message: "declared_default.choice_id must name a declared checkpoint choice"
     });
@@ -42587,21 +42588,21 @@ var CheckpointBoundaryRequestTraceLinkV0 = external_exports.object({
 }).strict().superRefine((request, ctx) => {
   if (request.boundary_ref.kind !== "work_contract") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "kind"],
       message: "checkpoint boundary refs must be work_contract refs"
     });
   }
   if (request.boundary_ref.step_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary refs must include step_id"
     });
   }
   if (request.boundary_ref.sha256 !== request.boundary_hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_hash"],
       message: "checkpoint boundary_hash must match boundary_ref.sha256"
     });
@@ -42619,27 +42620,27 @@ var CheckpointBoundaryRequestedTraceV0 = external_exports.object({
 }).strict().superRefine((request, ctx) => {
   if (request.boundary_ref.kind !== "work_contract") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "kind"],
       message: "checkpoint boundary refs must be work_contract refs"
     });
   }
   if (request.boundary_ref.step_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary refs must include step_id"
     });
   } else if (request.boundary_ref.step_id !== request.step_id) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_ref", "step_id"],
       message: "checkpoint boundary ref step_id must match the requested checkpoint step_id"
     });
   }
   if (request.boundary_ref.sha256 !== request.boundary_hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["boundary_hash"],
       message: "checkpoint boundary_hash must match boundary_ref.sha256"
     });
@@ -42658,7 +42659,7 @@ var CheckpointBoundaryResolutionV0 = external_exports.object({
 }).strict().superRefine((resolution, ctx) => {
   if (resolution.resolution_source === "operator" && resolution.auto_resolved) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["auto_resolved"],
       message: "operator checkpoint resolutions cannot be auto-resolved"
     });
@@ -43281,7 +43282,7 @@ var WorkContractProjectionV0 = external_exports.object({
     const key = `${binding.step_id}:${binding.route_id}`;
     if (seenRecovery.has(key)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_id"],
         message: `duplicate recovery binding for ${key}`
       });
@@ -43290,7 +43291,7 @@ var WorkContractProjectionV0 = external_exports.object({
     const declaredTarget = routeTargets.get(key);
     if (declaredTarget === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_id"],
         message: "recovery route binding must name a declared route"
       });
@@ -43298,7 +43299,7 @@ var WorkContractProjectionV0 = external_exports.object({
     }
     if (declaredTarget !== binding.route_target) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["work_contract", "recovery", index, "route_target"],
         message: "recovery route target must match the declared route target"
       });
@@ -44311,7 +44312,7 @@ var CompiledFlowBody = external_exports.object({
   default_selection: SelectionOverride.optional()
 }).strict();
 var issueAt3 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 var TOURNAMENT_FANOUT_CONTRACT_MESSAGE2 = "tournament fanout requires on_child_failure: continue-others and join.policy: aggregate-survivors";
 var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
@@ -44547,7 +44548,7 @@ var ManifestSnapshot = external_exports.object({
     decoded = Buffer.from(snap.bytes_base64, "base64");
   } catch {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["bytes_base64"],
       message: "bytes_base64 failed to decode as base64"
     });
@@ -44556,7 +44557,7 @@ var ManifestSnapshot = external_exports.object({
   const computed = createHash3("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["hash"],
       message: `manifest hash mismatch: declared=${snap.hash} computed=${computed} (sha256 over decoded bytes_base64)`
     });
@@ -47227,42 +47228,42 @@ var MemoryInputV0 = external_exports.object({
 }).strict().superRefine((memory, ctx) => {
   if (memory.source.sha256 !== void 0 && memory.source.ref.sha256 !== void 0 && memory.source.sha256 !== memory.source.ref.sha256) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "sha256"],
       message: "source.sha256 must match source.ref.sha256 when both are present"
     });
   }
   if (memory.kind === "continuity" && memory.source.ref.kind !== "report") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "kind"],
       message: "continuity memory must point at a continuity report ref"
     });
   }
   if (memory.kind === "continuity" && !CONTINUITY_RECORD_REF_PATTERN.test(memory.source.ref.ref)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "ref"],
       message: "continuity memory must point at continuity/records/<record>.json"
     });
   }
   if (memory.kind === "handoff_brief" && memory.source.ref.kind !== "report" && memory.source.ref.kind !== "context_packet") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["source", "ref", "kind"],
       message: "handoff brief memory must point at report or context_packet refs"
     });
   }
   if (memory.staleness.status === "unknown" && !memory.staleness.reason_codes.includes("memory_unverified")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["staleness", "reason_codes"],
       message: "unknown memory staleness requires memory_unverified reason code"
     });
   }
   if (memory.staleness.status === "stale" && !memory.staleness.reason_codes.includes("memory_stale")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["staleness", "reason_codes"],
       message: "stale memory requires memory_stale reason code"
     });
@@ -47271,7 +47272,7 @@ var MemoryInputV0 = external_exports.object({
   for (const [index, hint] of memory.hints.entries()) {
     if (seenHints.has(hint.id)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["hints", index, "id"],
         message: `duplicate memory hint id: ${hint.id}`
       });
@@ -47298,14 +47299,14 @@ var ProgressPresentation = external_exports.object({
 }).strict().superRefine((presentation, ctx) => {
   if (presentation.line_mode === "replace_slot" && presentation.slot_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["slot_id"],
       message: "slot_id is required when line_mode is replace_slot"
     });
   }
   if (presentation.line_mode !== "suppress" && presentation.status_text === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status_text"],
       message: "status_text is required unless line_mode is suppress"
     });
@@ -47601,14 +47602,14 @@ var ProcessEvidenceProjection = external_exports.object({
 }).strict().superRefine((projection, ctx) => {
   if (projection.child_run_ref.kind !== "trace") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["child_run_ref", "kind"],
       message: "child_run_ref must point to the child run trace"
     });
   }
   if (projection.result_ref !== void 0 && projection.result_ref.kind !== "report") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result_ref", "kind"],
       message: "result_ref must point to a report"
     });
@@ -47616,7 +47617,7 @@ var ProcessEvidenceProjection = external_exports.object({
   for (const [index, ref] of projection.evidence_refs.entries()) {
     if (ref.ref.startsWith("/")) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "ref"],
         message: "process evidence refs must be run-relative"
       });
@@ -47625,7 +47626,7 @@ var ProcessEvidenceProjection = external_exports.object({
       const allowed = new Set([projection.result_ref?.ref, ...projection.declared_report_paths].filter((path) => path !== void 0));
       if (!allowed.has(ref.ref)) {
         ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
+          code: "custom",
           path: ["evidence_refs", index, "ref"],
           message: "process report refs must use declared process evidence paths"
         });
@@ -47633,14 +47634,14 @@ var ProcessEvidenceProjection = external_exports.object({
     }
     if (ref.kind === "request" && ref.ref !== projection.checkpoint?.request_ref.ref) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "ref"],
         message: "request refs are only allowed for the active checkpoint request"
       });
     }
     if (!["report", "request", "operator_input", "evidence"].includes(ref.kind)) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["evidence_refs", index, "kind"],
         message: `process evidence cannot use ${ref.kind} refs`
       });
@@ -47649,14 +47650,14 @@ var ProcessEvidenceProjection = external_exports.object({
   if (projection.outcome === "checkpoint_waiting") {
     if (projection.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["result_ref"],
         message: "checkpoint_waiting projections must not have a result ref"
       });
     }
     if (projection.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["checkpoint"],
         message: "checkpoint_waiting projections require checkpoint metadata"
       });
@@ -47665,28 +47666,28 @@ var ProcessEvidenceProjection = external_exports.object({
   }
   if (projection.result_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["result_ref"],
       message: "closed process projections require a result ref"
     });
   }
   if (projection.checkpoint !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["checkpoint"],
       message: "closed process projections must not carry checkpoint metadata"
     });
   }
   if (projection.outcome === "complete" && projection.missing_evidence.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["missing_evidence"],
       message: "complete process projections cannot have missing evidence"
     });
   }
   if (["blocked", "failed"].includes(projection.outcome) && projection.blocked_reason === void 0 && projection.next_action === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["blocked_reason"],
       message: "blocked or failed process projections require a reason or next action"
     });
@@ -47696,7 +47697,7 @@ var ProcessEvidenceProjection = external_exports.object({
 // dist/schemas/run.js
 var RunTraceBody = external_exports.array(TraceEntry).min(1);
 var issueAt4 = (ctx, path, message) => {
-  ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path, message });
+  ctx.addIssue({ code: "custom", path, message });
 };
 function isGuidanceDecision(entry) {
   return entry.kind === "guidance.decision";
@@ -48235,7 +48236,7 @@ var RunEvidenceRef = external_exports.object({
   const allowed = EvidenceSourceRefKind[evidence2.source];
   if (!allowed.includes(evidence2.ref.kind)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["ref", "kind"],
       message: `${evidence2.source} evidence cannot use ${evidence2.ref.kind} refs`
     });
@@ -48260,7 +48261,7 @@ var RunDoneClaim = external_exports.object({
 }).strict().superRefine((claim, ctx) => {
   if (!claim.required_evidence.some((evidence2) => evidence2.required)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["required_evidence"],
       message: "each done_when item must include at least one required evidence entry"
     });
@@ -48353,14 +48354,14 @@ var RunProcessAttempt = external_exports.object({
   if (attempt.outcome === "checkpoint_waiting") {
     if (attempt.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["checkpoint"],
         message: "checkpoint_waiting attempts require checkpoint metadata"
       });
     }
     if (attempt.child_run.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "result_ref"],
         message: "checkpoint_waiting attempts must not have a child result ref"
       });
@@ -48397,7 +48398,7 @@ var RunCompletionGate = external_exports.object({
   const lenses = new Set(gate.gate_passes.map((pass) => pass.attack_lens));
   if (lenses.size !== gate.gate_passes.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["gate_passes"],
       message: "gate passes must use distinct attack lenses"
     });
@@ -48406,21 +48407,21 @@ var RunCompletionGate = external_exports.object({
   if (gate.verdict === "complete") {
     if (!allClaimsProved) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["claim_results"],
         message: "complete gate verdict requires every claim result to be proved"
       });
     }
     if (gate.clean_streak < gate.required_passes || gate.gate_passes.filter((pass) => pass.verdict === "gate-pass").length < gate.required_passes) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["gate_passes"],
         message: "complete gate verdict requires two clean gate passes"
       });
     }
     if (gate.next_action !== "close") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["next_action"],
         message: "complete gate verdict requires close next_action"
       });
@@ -48475,14 +48476,14 @@ var RunMemoryUpdateEvent = external_exports.object({
 }).strict().superRefine((event, ctx) => {
   if ((event.action === "proposed" || event.action === "recorded") && event.operator_indicator === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["operator_indicator"],
       message: "proposed and recorded memory updates require an operator indicator"
     });
   }
   if (event.scope === "flow" && event.flow_id === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["flow_id"],
       message: "flow-scoped memory updates require flow_id"
     });
@@ -48529,14 +48530,14 @@ var RunEnvelopeShadowRecord = external_exports.object({
   if (record2.child_run.outcome === "checkpoint_waiting") {
     if (record2.child_run.result_ref !== void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "result_ref"],
         message: "checkpoint_waiting shadow records must not include a result ref"
       });
     }
     if (record2.child_run.checkpoint === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["child_run", "checkpoint"],
         message: "checkpoint_waiting shadow records require checkpoint metadata"
       });
@@ -48545,7 +48546,7 @@ var RunEnvelopeShadowRecord = external_exports.object({
   }
   if (record2.child_run.result_ref === void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["child_run", "result_ref"],
       message: "closed child runs require a result ref"
     });
@@ -48573,7 +48574,7 @@ var RunEnvelopeRecord = external_exports.object({
 }).strict().superRefine((record2, ctx) => {
   if (record2.surface_output.outcome !== record2.outcome) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["surface_output", "outcome"],
       message: "surface output outcome must match record outcome"
     });
@@ -48583,14 +48584,14 @@ var RunEnvelopeRecord = external_exports.object({
   const requiredClaimsProved = requiredClaimIds.every((claimId) => claimResults.get(claimId)?.status === "proved");
   if (record2.outcome === "complete" && record2.completion_gate.verdict !== "complete") {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["completion_gate", "verdict"],
       message: "complete record outcome requires complete gate verdict"
     });
   }
   if (record2.outcome === "complete" && !requiredClaimsProved) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["completion_gate", "claim_results"],
       message: "complete record outcome requires all required claims to be proved"
     });
@@ -48600,14 +48601,14 @@ var RunEnvelopeRecord = external_exports.object({
     const hasFollowupAttempt = record2.process_plan.planned_attempts.some((attempt) => !executedAttemptIds.has(attempt.attempt_id) && attempt.followup_for !== void 0 && executedAttemptIds.has(attempt.followup_for.prior_attempt_id) && (attempt.depends_on_attempt_ids.includes(attempt.followup_for.prior_attempt_id) || record2.process_attempts.length === 0));
     if (!hasFollowupAttempt && record2.decision_packets.length === 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["process_plan", "planned_attempts"],
         message: "needs_followup requires a planned follow-up attempt with missing claim provenance or a decision packet"
       });
     }
     if (record2.outcome === "complete") {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["outcome"],
         message: "needs_followup gate must not close the record complete"
       });
@@ -48617,14 +48618,14 @@ var RunEnvelopeRecord = external_exports.object({
   if (record2.outcome === "blocked") {
     if (record2.completion_gate.verdict !== "blocked" && !hasBlockedOrFailedAttempt) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["completion_gate", "verdict"],
         message: "blocked record outcome requires a blocked gate or blocked process attempt"
       });
     }
     if (record2.surface_output.next_action === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["surface_output", "next_action"],
         message: "blocked record outcome requires a next operator action"
       });
@@ -48632,7 +48633,7 @@ var RunEnvelopeRecord = external_exports.object({
   }
   if (record2.outcome !== "complete" && /\b(?:done|complete|completed)\b/i.test(record2.surface_output.status_text)) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["surface_output", "status_text"],
       message: "non-complete surface output must not claim completion"
     });
@@ -48644,7 +48645,7 @@ var RunEnvelopeRecord = external_exports.object({
     const matchingAttempt = record2.process_attempts.find((attempt) => attempt.outcome === "checkpoint_waiting" && attempt.child_run.run_id === target.run_id && attempt.checkpoint !== void 0 && attempt.checkpoint.step_id === target.step_id && attempt.checkpoint.request_ref.ref === target.request_ref.ref);
     if (matchingAttempt === void 0) {
       ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
+        code: "custom",
         path: ["decision_packets"],
         message: "process-checkpoint decision packets require a matching waiting attempt"
       });
@@ -48841,14 +48842,14 @@ var HistoryStalenessV1 = external_exports.object({
 }).strict().superRefine((staleness, ctx) => {
   if (staleness.status === "unknown" && !staleness.reason_codes.includes("memory_unverified")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "unknown history staleness requires memory_unverified reason code"
     });
   }
   if (staleness.status === "stale" && !staleness.reason_codes.includes("memory_stale")) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["reason_codes"],
       message: "stale history staleness requires memory_stale reason code"
     });
@@ -48910,28 +48911,28 @@ var HistoryRecallReportV1 = external_exports.object({
 }).strict().superRefine((report, ctx) => {
   if (report.memory_input_count !== report.memory_inputs.length) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_input_count"],
       message: "memory_input_count must equal memory_inputs.length"
     });
   }
   if (report.status === "used" && report.memory_inputs.length === 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["status"],
       message: "status 'used' requires at least one memory input"
     });
   }
   if (report.status !== "used" && report.memory_inputs.length > 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["memory_inputs"],
       message: "only status 'used' may include memory inputs"
     });
   }
   if (report.status === "unavailable" && report.index_state !== void 0) {
     ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
+      code: "custom",
       path: ["index_state"],
       message: "status 'unavailable' must not claim an index_state"
     });
@@ -57578,6 +57579,17 @@ function writeOperatorSummary(input) {
   };
 }
 
+// dist/cli/command-vocabulary.js
+var CLI_COMMAND_NAMES = [
+  "run",
+  "resume",
+  "handoff",
+  "history",
+  "create",
+  "runs",
+  "version"
+];
+
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { existsSync as existsSync20, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
@@ -57693,7 +57705,7 @@ function utilityProgress(input) {
 }
 
 // dist/cli/create.js
-var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set(["build", "explore", "fix", "handoff", "review", "run"]);
+var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set([...catalogFlowIds, ...CLI_COMMAND_NAMES]);
 function parseCommander(program2, argv) {
   try {
     program2.exitOverride().configureOutput({ writeErr: () => {
@@ -60227,13 +60239,8 @@ function parseTopLevelInvocation(argv) {
       invocation = { command: name, argv: args };
     });
   };
-  addForwardingCommand("run");
-  addForwardingCommand("resume");
-  addForwardingCommand("handoff");
-  addForwardingCommand("history");
-  addForwardingCommand("create");
-  addForwardingCommand("runs");
-  addForwardingCommand("version");
+  for (const name of CLI_COMMAND_NAMES)
+    addForwardingCommand(name);
   try {
     program2.parse(argv, { from: "user" });
   } catch (err) {

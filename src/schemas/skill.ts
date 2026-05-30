@@ -80,7 +80,7 @@ export const SkillSlotArray = z.array(SkillSlot).superRefine((slots, ctx) => {
     const key = slot.id as unknown as string;
     if (seen.has(key)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: [index, 'id'],
         message: `duplicate skill slot '${key}'`,
       });

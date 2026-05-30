@@ -113,7 +113,7 @@ const SafeApplySelected = z
   .superRefine((selected, ctx) => {
     if (selected.action === 'apply' && selected.final_verification_ref === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['final_verification_ref'],
         message: 'safe_apply apply decisions require final verification refs',
       });
@@ -132,7 +132,7 @@ const RecoveryRouteSelected = z
   .superRefine((selected, ctx) => {
     if (['work_contract', 'policy', 'memory'].includes(selected.failure_ref.kind)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['failure_ref', 'kind'],
         message:
           'recovery failure refs must point at failure evidence, not authority or memory refs',
@@ -145,7 +145,7 @@ const RecoveryRouteSelected = z
       )
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['recovery_kind'],
         message: 'unknown_failure cannot route to retry, verification, or independent review',
       });
@@ -189,28 +189,28 @@ function addScopedRefIssues(
 ): void {
   if (ref.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: [...path, 'run_id'],
       message: `${label} run_id must match guidance run_id`,
     });
   }
   if (ref.flow_id !== entry.scope.flow_id) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: [...path, 'flow_id'],
       message: `${label} flow_id must match guidance scope.flow_id`,
     });
   }
   if (ref.step_id !== entry.scope.step_id) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: [...path, 'step_id'],
       message: `${label} step_id must match guidance scope.step_id`,
     });
   }
   if (ref.attempt !== entry.scope.attempt) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: [...path, 'attempt'],
       message: `${label} attempt must match guidance scope.attempt`,
     });
@@ -247,7 +247,7 @@ export function refineGuidanceDecisionTraceEntry(
 ): void {
   if (entry.scope.run_id !== entry.run_id) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['scope', 'run_id'],
       message: 'scope.run_id must match run_id',
     });
@@ -256,7 +256,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, ref] of entry.constraint_refs.entries()) {
     if (ref.kind !== 'work_contract' && ref.kind !== 'policy') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['constraint_refs', index, 'kind'],
         message: 'constraint_refs must use work_contract or policy refs in V0',
       });
@@ -265,7 +265,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, ref] of entry.contract_refs.entries()) {
     if (ref.kind !== 'work_contract') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['contract_refs', index, 'kind'],
         message: 'contract_refs must use work_contract refs',
       });
@@ -274,7 +274,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, ref] of entry.policy_refs.entries()) {
     if (ref.kind !== 'policy') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['policy_refs', index, 'kind'],
         message: 'policy_refs must use policy refs',
       });
@@ -283,7 +283,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, ref] of entry.memory_refs?.entries() ?? []) {
     if (ref.kind !== 'memory') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['memory_refs', index, 'kind'],
         message: 'memory_refs must use memory refs',
       });
@@ -292,7 +292,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, ref] of entry.evidence_refs?.entries() ?? []) {
     if (ref.kind === 'memory') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['evidence_refs', index, 'kind'],
         message: 'memory refs cannot be evidence refs',
       });
@@ -305,14 +305,14 @@ export function refineGuidanceDecisionTraceEntry(
   const hasMemoryRefs = (entry.memory_refs?.length ?? 0) > 0;
   if (hasMemoryReasonCode && !hasMemoryRefs) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['memory_refs'],
       message: 'memory reason codes require memory_refs',
     });
   }
   if (hasMemoryRefs && !hasMemoryReasonCode) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['reason_codes'],
       message: 'memory_refs require a memory reason code',
     });
@@ -320,7 +320,7 @@ export function refineGuidanceDecisionTraceEntry(
   for (const [index, option] of entry.rejected_options?.entries() ?? []) {
     if (option.blocked_by?.kind === 'memory') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['rejected_options', index, 'blocked_by', 'kind'],
         message: 'memory refs cannot block guidance options',
       });
@@ -330,7 +330,7 @@ export function refineGuidanceDecisionTraceEntry(
       option.blocked_by?.kind !== 'policy'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['rejected_options', index, 'blocked_by', 'kind'],
         message: 'memory policy conflicts must be blocked by policy refs',
       });
@@ -340,7 +340,7 @@ export function refineGuidanceDecisionTraceEntry(
       option.blocked_by?.kind !== 'work_contract'
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['rejected_options', index, 'blocked_by', 'kind'],
         message: 'memory contract conflicts must be blocked by work_contract refs',
       });
@@ -350,7 +350,7 @@ export function refineGuidanceDecisionTraceEntry(
   if (entry.subject === 'flow_selection') {
     if (!FlowSelectionSelected.safeParse(entry.selected).success) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['selected'],
         message: 'flow_selection selected payload must name flow_id and work_contract_ref',
       });
@@ -360,7 +360,7 @@ export function refineGuidanceDecisionTraceEntry(
 
   if (entry.scope.flow_id === undefined) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['scope', 'flow_id'],
       message: `${entry.subject} decisions require scope.flow_id`,
     });
@@ -368,7 +368,7 @@ export function refineGuidanceDecisionTraceEntry(
   if (entry.subject === 'proof_policy') {
     if ((entry.scope.step_id === undefined) !== (entry.scope.attempt === undefined)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['scope', 'attempt'],
         message: 'proof_policy decisions must include step_id and attempt together',
       });
@@ -376,14 +376,14 @@ export function refineGuidanceDecisionTraceEntry(
   } else {
     if (entry.scope.step_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['scope', 'step_id'],
         message: `${entry.subject} decisions require scope.step_id`,
       });
     }
     if (entry.scope.attempt === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['scope', 'attempt'],
         message: `${entry.subject} decisions require scope.attempt`,
       });
@@ -395,7 +395,7 @@ export function refineGuidanceDecisionTraceEntry(
     !RelayExecutionSelected.safeParse(entry.selected).success
   ) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['selected'],
       message:
         'relay_execution selected payload must name role, connector, skills, context ref, and request hash',
@@ -404,7 +404,7 @@ export function refineGuidanceDecisionTraceEntry(
 
   if (entry.subject === 'proof_policy' && !ProofPolicySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['selected'],
       message:
         'proof_policy selected payload must name proof_profile, required claim kinds, required evidence kinds, and whether close requires proven claims',
@@ -413,7 +413,7 @@ export function refineGuidanceDecisionTraceEntry(
 
   if (entry.subject === 'safe_apply' && !SafeApplySelected.safeParse(entry.selected).success) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['selected'],
       message:
         'safe_apply selected payload must name action, change_packet_ref, base_ref, and final verification refs when applying',
@@ -435,14 +435,14 @@ export function refineGuidanceDecisionTraceEntry(
 
       if (!entry.input_refs.some((ref) => sameRef(ref, change_packet_ref))) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['input_refs'],
           message: 'safe_apply input_refs must include selected.change_packet_ref',
         });
       }
       if (!entry.input_refs.some((ref) => sameRef(ref, base_ref))) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['input_refs'],
           message: 'safe_apply input_refs must include selected.base_ref',
         });
@@ -458,7 +458,7 @@ export function refineGuidanceDecisionTraceEntry(
         );
         if (!entry.evidence_refs?.some((ref) => sameRef(ref, final_verification_ref))) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['evidence_refs'],
             message: 'safe_apply evidence_refs must include selected.final_verification_ref',
           });
@@ -472,7 +472,7 @@ export function refineGuidanceDecisionTraceEntry(
     !RecoveryRouteSelected.safeParse(entry.selected).success
   ) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['selected'],
       message:
         'recovery_route selected payload must name route_id, recovery_kind, failure_cause, failure_ref, and binding_ref',
@@ -485,14 +485,14 @@ export function refineGuidanceDecisionTraceEntry(
 
       if (!entry.input_refs.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['input_refs'],
           message: 'recovery_route input_refs must include selected.failure_ref',
         });
       }
       if (!entry.evidence_refs?.some((ref) => sameRef(ref, failure_ref))) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['evidence_refs'],
           message: 'recovery_route evidence_refs must include selected.failure_ref',
         });
@@ -503,49 +503,49 @@ export function refineGuidanceDecisionTraceEntry(
         failure_ref.sequence >= entry.sequence
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'sequence'],
           message: 'recovery trace failure_ref must point to an earlier trace entry',
         });
       }
       if (binding_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'binding_ref', 'flow_id'],
           message: 'recovery binding_ref flow_id must match guidance scope.flow_id',
         });
       }
       if (failure_ref.run_id !== undefined && failure_ref.run_id !== entry.run_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'run_id'],
           message: 'recovery failure_ref run_id must match guidance run_id',
         });
       }
       if (failure_ref.flow_id !== undefined && failure_ref.flow_id !== entry.scope.flow_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'flow_id'],
           message: 'recovery failure_ref flow_id must match guidance scope.flow_id',
         });
       }
       if ((failure_ref.step_id === undefined) !== (failure_ref.attempt === undefined)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'attempt'],
           message: 'recovery failure_ref must include step_id and attempt together',
         });
       }
       if (failure_ref.step_id !== undefined && failure_ref.step_id !== entry.scope.step_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'step_id'],
           message: 'recovery failure_ref step_id must match guidance scope.step_id',
         });
       }
       if (failure_ref.attempt !== undefined && failure_ref.attempt !== entry.scope.attempt) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: 'custom',
           path: ['selected', 'failure_ref', 'attempt'],
           message: 'recovery failure_ref attempt must match guidance scope.attempt',
         });

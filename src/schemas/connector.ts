@@ -111,7 +111,7 @@ export const CustomConnectorDescriptor = z
   .superRefine((descriptor, ctx) => {
     if (descriptor.capabilities.filesystem !== 'read-only') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['capabilities', 'filesystem'],
         message:
           'custom connectors are read-only in V1; writable custom workers require a later isolated mode',

@@ -148,7 +148,7 @@ export const ReviewResult = z
     const expected = computeReviewVerdict(report.findings);
     if (report.verdict !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: `verdict must be ${expected} for the report findings (CLEAN iff every finding is severity low)`,
       });
@@ -180,7 +180,7 @@ export const ReviewRelayResult = z
     const expected = report.findings.length === 0 ? 'NO_ISSUES_FOUND' : 'ISSUES_FOUND';
     if (report.verdict !== expected) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['verdict'],
         message: `review relay verdict must be ${expected} for findings.length=${report.findings.length}`,
       });

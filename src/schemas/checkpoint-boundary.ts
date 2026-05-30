@@ -28,7 +28,7 @@ export type CheckpointRouteTarget = z.infer<typeof CheckpointRouteTarget>;
 export const PolicyRef = Ref.superRefine((ref, ctx) => {
   if (ref.kind !== 'policy') {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       path: ['kind'],
       message: 'checkpoint declared defaults require policy refs',
     });
@@ -67,7 +67,7 @@ export const CheckpointBoundaryChoices = z.discriminatedUnion('kind', [
       for (const [index, choice] of choices.items.entries()) {
         if (ids.has(choice.id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
             path: ['items', index, 'id'],
             message: `duplicate checkpoint choice '${choice.id}'`,
           });
@@ -119,7 +119,7 @@ export const CheckpointBoundaryV0 = z
     if (boundary.declared_default === undefined) return;
     if (boundary.choices.kind === 'dynamic') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['declared_default'],
         message: 'declared defaults require static checkpoint choices in V0',
       });
@@ -128,7 +128,7 @@ export const CheckpointBoundaryV0 = z
     const choiceIds = new Set(boundary.choices.items.map((choice) => choice.id));
     if (!choiceIds.has(boundary.declared_default.choice_id)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['declared_default', 'choice_id'],
         message: 'declared_default.choice_id must name a declared checkpoint choice',
       });
@@ -146,21 +146,21 @@ export const CheckpointBoundaryRequestTraceLinkV0 = z
   .superRefine((request, ctx) => {
     if (request.boundary_ref.kind !== 'work_contract') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'kind'],
         message: 'checkpoint boundary refs must be work_contract refs',
       });
     }
     if (request.boundary_ref.step_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'step_id'],
         message: 'checkpoint boundary refs must include step_id',
       });
     }
     if (request.boundary_ref.sha256 !== request.boundary_hash) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_hash'],
         message: 'checkpoint boundary_hash must match boundary_ref.sha256',
       });
@@ -185,27 +185,27 @@ export const CheckpointBoundaryRequestedTraceV0 = z
   .superRefine((request, ctx) => {
     if (request.boundary_ref.kind !== 'work_contract') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'kind'],
         message: 'checkpoint boundary refs must be work_contract refs',
       });
     }
     if (request.boundary_ref.step_id === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'step_id'],
         message: 'checkpoint boundary refs must include step_id',
       });
     } else if (request.boundary_ref.step_id !== request.step_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_ref', 'step_id'],
         message: 'checkpoint boundary ref step_id must match the requested checkpoint step_id',
       });
     }
     if (request.boundary_ref.sha256 !== request.boundary_hash) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['boundary_hash'],
         message: 'checkpoint boundary_hash must match boundary_ref.sha256',
       });
@@ -231,7 +231,7 @@ export const CheckpointBoundaryResolutionV0 = z
   .superRefine((resolution, ctx) => {
     if (resolution.resolution_source === 'operator' && resolution.auto_resolved) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['auto_resolved'],
         message: 'operator checkpoint resolutions cannot be auto-resolved',
       });
