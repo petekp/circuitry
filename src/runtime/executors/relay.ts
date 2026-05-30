@@ -8,7 +8,6 @@ import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.
 import type { EnabledConnector, ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
-import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import {
   ProofAssessment,
   type Evidence as ProofEvidence,
@@ -16,7 +15,6 @@ import {
   type ProofRecovery,
   type ProofStatus,
 } from '../../schemas/proof-assessment.js';
-import type { Ref } from '../../schemas/ref.js';
 import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
 import { CheckEvaluatedTraceEntry } from '../../schemas/trace-entry.js';
@@ -48,6 +46,13 @@ import {
   stepExecutionOutcome,
   unwrapStepExecutionResult,
 } from './result.js';
+import {
+  proofAssessmentReportRef,
+  proofIdPart,
+  readRouteFromReport,
+  stepCanCloseRun,
+  uniqueValues,
+} from './shared.js';
 
 export interface RelayRequest {
   readonly runId: string;
@@ -112,14 +117,6 @@ function timeoutMs(step: RelayStep): number | undefined {
   return typeof wallClock === 'number' ? wallClock : undefined;
 }
 
-function proofIdPart(value: string): string {
-  return value.replace(/[^a-z0-9._-]/g, '-').toLowerCase();
-}
-
-function uniqueValues(values: readonly string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-
 function acceptanceProofStatus(evidence: readonly ProofEvidence[]): ProofStatus {
   if (evidence.some((item) => item.result === 'fail')) return 'contradicted';
   if (evidence.some((item) => item.result === 'pass' && item.kind === 'command')) return 'proven';
@@ -172,30 +169,6 @@ function declaredRecoveryForAcceptanceProof(input: {
     route_id: binding.route_id,
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status),
-  };
-}
-
-function stepCanCloseRun(step: RelayStep): boolean {
-  return Object.values(step.routes).some(
-    (target) => target.kind === 'terminal' && target.target === '@complete',
-  );
-}
-
-function proofAssessmentReportRef(input: {
-  readonly context: RunContext;
-  readonly stepId: string;
-  readonly attempt: number;
-  readonly path: string;
-  readonly body: unknown;
-}): Ref {
-  return {
-    kind: 'report',
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}\n`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt,
   };
 }
 
@@ -295,24 +268,6 @@ async function writeAcceptanceProofAssessment(input: {
     overall_status: status,
     close_allowed: closeAllowed,
   });
-}
-
-function readRouteFromReportBody(body: unknown, path: readonly string[]): string {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) {
-      throw new Error(
-        `route_from_report path '${path.join('.')}' descended into a non-object at '${segment}'`,
-      );
-    }
-    cursor = (cursor as Record<string, unknown>)[segment];
-  }
-  if (typeof cursor !== 'string' || cursor.length === 0) {
-    throw new Error(
-      `route_from_report path '${path.join('.')}' must resolve to a non-empty string`,
-    );
-  }
-  return cursor;
 }
 
 function stableJson(value: unknown): string {
@@ -863,7 +818,7 @@ async function executeProductionRelay(step: RelayStep, context: RunContext): Pro
   const { evaluation } = relayAttempt;
   if (evaluation.kind === 'pass') {
     if (step.routeFromReport !== undefined) {
-      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      const route = readRouteFromReport(relayAttempt.parsed_body, step.routeFromReport.path);
       if (!Object.hasOwn(step.routes, route)) {
         throw new Error(
           `relay step '${step.id}' route_from_report selected undeclared route '${route}'`,

@@ -8,7 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import { findCompiledFlowPackageById } from '../../flows/catalog.js';
 import type { Axes } from '../../schemas/axes.js';
-import type { ChangeKindDeclaration } from '../../schemas/change-kind.js';
+import type { ChangeKindDeclaration, StandardChangeKind } from '../../schemas/change-kind.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import { computeManifestHash } from '../../schemas/manifest.js';
@@ -320,6 +320,17 @@ function maxAttemptsForRoute(step: ExecutableStep, recoveryRoute: boolean): numb
   return configuredMaxAttempts(step) ?? (recoveryRoute ? 2 : 1);
 }
 
+function standardChangeKindDeclaration(
+  changeKind: StandardChangeKind['change_kind'],
+): ChangeKindDeclaration {
+  return {
+    change_kind: changeKind,
+    failure_mode: 'runtime execution cannot produce required reports',
+    acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
+    alternate_framing: 'start a fresh flow with a narrower goal',
+  };
+}
+
 function bootstrapChangeKind(input: {
   readonly flow: ExecutableFlow;
   readonly entryModeName?: string;
@@ -333,19 +344,9 @@ function bootstrapChangeKind(input: {
     defaultKind !== 'discovery' &&
     defaultKind !== 'disposable'
   ) {
-    return {
-      change_kind: 'ratchet-advance',
-      failure_mode: 'runtime execution cannot produce required reports',
-      acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
-      alternate_framing: 'start a fresh flow with a narrower goal',
-    };
+    return standardChangeKindDeclaration('ratchet-advance');
   }
-  return {
-    change_kind: defaultKind,
-    failure_mode: 'runtime execution cannot produce required reports',
-    acceptance_evidence: 'trace entries, reports, and result files satisfy their schemas',
-    alternate_framing: 'start a fresh flow with a narrower goal',
-  };
+  return standardChangeKindDeclaration(defaultKind);
 }
 
 function completedStepCountsFromTrace(entries: readonly TraceEntry[]): Map<string, number> {

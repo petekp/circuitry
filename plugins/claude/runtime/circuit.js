@@ -44631,6 +44631,42 @@ function stepExecutionContextFromContext(context, stepId, kind) {
   };
 }
 
+// dist/runtime/executors/shared.js
+function proofIdPart(value) {
+  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
+}
+function uniqueValues(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function proofAssessmentReportRef(input) {
+  return {
+    kind: "report",
+    ref: input.path,
+    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
+`),
+    run_id: RunId.parse(input.context.runId),
+    flow_id: CompiledFlowId.parse(input.context.flow.id),
+    step_id: StepId.parse(input.stepId),
+    attempt: input.attempt
+  };
+}
+function stepCanCloseRun(step) {
+  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
+}
+function readRouteFromReport(body, path) {
+  let cursor = body;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
+      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
+    }
+    cursor = cursor[segment];
+  }
+  if (typeof cursor !== "string" || cursor.length === 0) {
+    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
+  }
+  return cursor;
+}
+
 // dist/runtime/executors/compose.js
 async function readJsonReport(context, path) {
   return await context.ports.runFiles.readJson(path);
@@ -44691,19 +44727,6 @@ async function writeRegisteredComposeReport(step, context) {
     return body;
   }
   throw new Error(`no compose report writer registered for schema '${report.schema}' at compose step '${step.id}'`);
-}
-function readRouteFromReport(body, path) {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
-      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
-    }
-    cursor = cursor[segment];
-  }
-  if (typeof cursor !== "string" || cursor.length === 0) {
-    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
-  }
-  return cursor;
 }
 async function executeComposeResult(step, context) {
   return executeComposeWithPorts(step, stepExecutionContextFromContext(context, step.id, "compose"));
@@ -48803,12 +48826,6 @@ function timeoutMs(step) {
   const wallClock = step.budgets?.wall_clock_ms;
   return typeof wallClock === "number" ? wallClock : void 0;
 }
-function proofIdPart(value) {
-  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
-}
-function uniqueValues(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
 function acceptanceProofStatus(evidence2) {
   if (evidence2.some((item) => item.result === "fail"))
     return "contradicted";
@@ -48854,21 +48871,6 @@ function declaredRecoveryForAcceptanceProof(input) {
     route_id: binding.route_id,
     kind: binding.kind,
     reason_code: proofRecoveryReasonCode(input.status)
-  };
-}
-function stepCanCloseRun(step) {
-  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
-}
-function proofAssessmentReportRef(input) {
-  return {
-    kind: "report",
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
-`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt
   };
 }
 async function writeAcceptanceProofAssessment(input) {
@@ -48960,19 +48962,6 @@ async function writeAcceptanceProofAssessment(input) {
     overall_status: status,
     close_allowed: closeAllowed
   });
-}
-function readRouteFromReportBody(body, path) {
-  let cursor = body;
-  for (const segment of path) {
-    if (cursor === null || typeof cursor !== "object" || Array.isArray(cursor)) {
-      throw new Error(`route_from_report path '${path.join(".")}' descended into a non-object at '${segment}'`);
-    }
-    cursor = cursor[segment];
-  }
-  if (typeof cursor !== "string" || cursor.length === 0) {
-    throw new Error(`route_from_report path '${path.join(".")}' must resolve to a non-empty string`);
-  }
-  return cursor;
 }
 function stableJson6(value) {
   return JSON.stringify(value, (_key, item) => {
@@ -49375,7 +49364,7 @@ async function executeProductionRelay(step, context) {
   const { evaluation } = relayAttempt;
   if (evaluation.kind === "pass") {
     if (step.routeFromReport !== void 0) {
-      const route = readRouteFromReportBody(relayAttempt.parsed_body, step.routeFromReport.path);
+      const route = readRouteFromReport(relayAttempt.parsed_body, step.routeFromReport.path);
       if (!Object.hasOwn(step.routes, route)) {
         throw new Error(`relay step '${step.id}' route_from_report selected undeclared route '${route}'`);
       }
@@ -50389,24 +50378,6 @@ function verificationFailureReason(stepId, error51) {
   const message = error51 instanceof Error ? error51.message : String(error51);
   return `verification step '${stepId}': report writer failed (${message})`;
 }
-function proofIdPart2(value) {
-  return value.replace(/[^a-z0-9._-]/g, "-").toLowerCase();
-}
-function uniqueValues2(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-function proofAssessmentReportRef2(input) {
-  return {
-    kind: "report",
-    ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
-`),
-    run_id: RunId.parse(input.context.runId),
-    flow_id: CompiledFlowId.parse(input.context.flow.id),
-    step_id: StepId.parse(input.stepId),
-    attempt: input.attempt
-  };
-}
 function commandEvidenceRef(input) {
   const { observation } = input;
   return {
@@ -50449,13 +50420,10 @@ function verificationProofMissing(input) {
     return ["no runtime verification commands ran"];
   return ["verification report did not prove required commands passed"];
 }
-function stepCanCloseRun2(step) {
-  return Object.values(step.routes).some((target) => target.kind === "terminal" && target.target === "@complete");
-}
 async function writeVerificationProofAssessment(input) {
   if (input.context.workContractRef === void 0)
     return;
-  const claimId = `claim.verification:${proofIdPart2(input.step.id)}:${input.attempt}`;
+  const claimId = `claim.verification:${proofIdPart(input.step.id)}:${input.attempt}`;
   const evidence2 = input.observations.map((observation, index) => {
     const ref = commandEvidenceRef({
       context: input.context,
@@ -50465,7 +50433,7 @@ async function writeVerificationProofAssessment(input) {
     });
     return Evidence.parse({
       schema_version: 1,
-      id: `evidence.verification:${proofIdPart2(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart2(observation.command.id)}`,
+      id: `evidence.verification:${proofIdPart(input.step.id)}:${input.attempt}:${index + 1}:${proofIdPart(observation.command.id)}`,
       kind: "command",
       producer: "runtime",
       independence: "runtime",
@@ -50485,8 +50453,8 @@ async function writeVerificationProofAssessment(input) {
     stepId: input.step.id,
     attempt: input.attempt,
     requiredClaimKinds: ["verification_passed"],
-    requiredEvidenceKinds: uniqueValues2(evidence2.map((item) => item.kind)),
-    closeRequiresProven: closeAllowed || stepCanCloseRun2(input.step),
+    requiredEvidenceKinds: uniqueValues(evidence2.map((item) => item.kind)),
+    closeRequiresProven: closeAllowed || stepCanCloseRun(input.step),
     inputRefs: evidence2.flatMap((item) => [item.ref, ...item.input_refs])
   });
   if (proofPolicy === void 0)
@@ -50494,7 +50462,7 @@ async function writeVerificationProofAssessment(input) {
   const path = `reports/proof/${input.step.id}-attempt-${input.attempt}.assessment.json`;
   const assessment = ProofAssessment.parse({
     schema_version: 1,
-    assessment_id: `proof.verification:${proofIdPart2(input.step.id)}:${input.attempt}`,
+    assessment_id: `proof.verification:${proofIdPart(input.step.id)}:${input.attempt}`,
     scope: {
       run_id: input.context.runId,
       flow_id: input.context.flow.id,
@@ -50528,7 +50496,7 @@ async function writeVerificationProofAssessment(input) {
     close_allowed: closeAllowed
   });
   await input.context.files.writeJson(path, assessment);
-  const assessmentRef = proofAssessmentReportRef2({
+  const assessmentRef = proofAssessmentReportRef({
     context: input.context,
     stepId: input.step.id,
     attempt: input.attempt,
@@ -50672,39 +50640,22 @@ async function executeVerification(step, context) {
 function unsupportedStep(step) {
   throw new Error(`step kind '${step.kind}' is not implemented in runtime baseline`);
 }
+function bindExecutor(kind, execute) {
+  return async (step, context) => {
+    if (step.kind !== kind)
+      return unsupportedStep(step);
+    return execute(step, context);
+  };
+}
 function createDefaultExecutors(options = {}) {
   const relayConnector = options.relayConnector;
   return {
-    compose: async (step, context) => {
-      if (step.kind !== "compose")
-        return unsupportedStep(step);
-      return executeCompose(step, context);
-    },
-    relay: async (step, context) => {
-      if (step.kind !== "relay")
-        return unsupportedStep(step);
-      return executeRelay(step, context, relayConnector);
-    },
-    verification: async (step, context) => {
-      if (step.kind !== "verification")
-        return unsupportedStep(step);
-      return executeVerification(step, context);
-    },
-    checkpoint: async (step, context) => {
-      if (step.kind !== "checkpoint")
-        return unsupportedStep(step);
-      return executeCheckpoint(step, context);
-    },
-    "sub-run": async (step, context) => {
-      if (step.kind !== "sub-run")
-        return unsupportedStep(step);
-      return executeSubRun(step, context);
-    },
-    fanout: async (step, context) => {
-      if (step.kind !== "fanout")
-        return unsupportedStep(step);
-      return executeFanout(step, context, relayConnector);
-    }
+    compose: bindExecutor("compose", (step, context) => executeCompose(step, context)),
+    relay: bindExecutor("relay", (step, context) => executeRelay(step, context, relayConnector)),
+    verification: bindExecutor("verification", (step, context) => executeVerification(step, context)),
+    checkpoint: bindExecutor("checkpoint", (step, context) => executeCheckpoint(step, context)),
+    "sub-run": bindExecutor("sub-run", (step, context) => executeSubRun(step, context)),
+    fanout: bindExecutor("fanout", (step, context) => executeFanout(step, context, relayConnector))
   };
 }
 
@@ -52139,22 +52090,20 @@ function configuredMaxAttempts(step) {
 function maxAttemptsForRoute(step, recoveryRoute) {
   return configuredMaxAttempts(step) ?? (recoveryRoute ? 2 : 1);
 }
-function bootstrapChangeKind(input) {
-  const defaultKind = input.flow.entryModes?.find((mode) => mode.name === input.entryModeName)?.defaultChangeKind ?? "ratchet-advance";
-  if (defaultKind !== "ratchet-advance" && defaultKind !== "equivalence-refactor" && defaultKind !== "discovery" && defaultKind !== "disposable") {
-    return {
-      change_kind: "ratchet-advance",
-      failure_mode: "runtime execution cannot produce required reports",
-      acceptance_evidence: "trace entries, reports, and result files satisfy their schemas",
-      alternate_framing: "start a fresh flow with a narrower goal"
-    };
-  }
+function standardChangeKindDeclaration(changeKind) {
   return {
-    change_kind: defaultKind,
+    change_kind: changeKind,
     failure_mode: "runtime execution cannot produce required reports",
     acceptance_evidence: "trace entries, reports, and result files satisfy their schemas",
     alternate_framing: "start a fresh flow with a narrower goal"
   };
+}
+function bootstrapChangeKind(input) {
+  const defaultKind = input.flow.entryModes?.find((mode) => mode.name === input.entryModeName)?.defaultChangeKind ?? "ratchet-advance";
+  if (defaultKind !== "ratchet-advance" && defaultKind !== "equivalence-refactor" && defaultKind !== "discovery" && defaultKind !== "disposable") {
+    return standardChangeKindDeclaration("ratchet-advance");
+  }
+  return standardChangeKindDeclaration(defaultKind);
 }
 function completedStepCountsFromTrace(entries) {
   const counts = /* @__PURE__ */ new Map();
