@@ -129,7 +129,10 @@ function runOutcomeForPrimaryResultOutcome(outcome: string): RunClosedOutcome | 
   return 'stopped';
 }
 
-async function terminalOutcomeBoundToPrimaryResult(
+// Exported for characterization (terminal-outcome-bound-primary-result.test.ts):
+// the close-time bound read must fail open (return undefined, never throw) so a
+// missing or corrupt primary result falls through to the proof-derived outcome.
+export async function terminalOutcomeBoundToPrimaryResult(
   context: RunContext,
   outcome: RunClosedOutcome,
 ): Promise<{ readonly outcome: RunClosedOutcome; readonly reason: string } | undefined> {
