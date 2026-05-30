@@ -1,7 +1,7 @@
+import { rankRubricCandidates } from '../policy/rubric.js';
 import type { OperatorAutoResolution } from '../schemas/operator-summary.js';
 import { RubricResult } from '../schemas/rubric.js';
 import { resolveDottedPath } from './fanout-branch-template.js';
-import { rankRubricCandidates } from './rubric.js';
 
 interface HighestScoreAutoResolutionInput {
   readonly checkpointId: string;

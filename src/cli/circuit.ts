@@ -31,8 +31,8 @@ import {
 import { runAutonomousContinuation } from '../app/run-envelope/autonomous-run.js';
 import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import { classifyCompiledFlowTask } from '../flows/router.js';
+import { validateCompiledFlowKindPolicy } from '../policy/flow-kind-policy.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
-import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';
 import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';

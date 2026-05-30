@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { deriveTerminalVerdict } from '../../src/policy/terminal-verdict.js';
 import { TraceEntry, type TraceEntry as TraceEntryValue } from '../../src/schemas/trace-entry.js';
-import { deriveTerminalVerdict } from '../../src/shared/terminal-verdict.js';
 
 const RUN_ID = '81000000-0000-0000-0000-000000000001';
 const CHILD_RUN_ID = '81000000-0000-0000-0000-000000000002';

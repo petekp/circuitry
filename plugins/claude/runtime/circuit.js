@@ -30303,7 +30303,7 @@ ${choiceCards}
   });
 };
 
-// dist/shared/rubric.js
+// dist/policy/rubric.js
 var THREE_AXIS_RUBRIC_TIE_BREAK_ORDER = [
   "evidence_rigor",
   "actionability",
@@ -42476,6 +42476,278 @@ var ComposedPolicyHardConstraints = external_exports.object({
   limits: PolicyLimits
 }).strict();
 
+// dist/policy/policy-envelope.js
+var PolicyEnvelopeCompositionError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PolicyEnvelopeCompositionError";
+  }
+};
+var RUNTIME_CONFIG_V1_POLICY_REF = {
+  kind: "policy",
+  ref: "policy.runtime.config_v1"
+};
+var RUNTIME_POLICY_V2_REF = {
+  kind: "policy",
+  ref: "policy.runtime.policy_v2"
+};
+var EFFORT_ORDER = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max"
+];
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+function unionInto(target, values) {
+  for (const value of values)
+    target.add(value);
+}
+function intersectConnectorAllow(current, next) {
+  if (next === void 0)
+    return current;
+  const nextSet = new Set(next);
+  if (current === void 0)
+    return nextSet;
+  return new Set([...current].filter((value) => nextSet.has(value)));
+}
+function minNumber(current, next) {
+  if (next === void 0)
+    return current;
+  return current === void 0 ? next : Math.min(current, next);
+}
+function minEffort(current, next) {
+  if (next === void 0)
+    return current;
+  if (current === void 0)
+    return next;
+  return EFFORT_ORDER.indexOf(next) < EFFORT_ORDER.indexOf(current) ? next : current;
+}
+function composeAutoApply(current, next) {
+  if (next === void 0)
+    return current;
+  if (next === false || current === false)
+    return false;
+  return true;
+}
+function composeRequireKnown(current, next) {
+  if (next === void 0)
+    return current;
+  return current === true || next === true;
+}
+function connectorRefFromDefault(value) {
+  if (value === "auto")
+    return "auto";
+  if (EnabledConnector.options.includes(value)) {
+    return { kind: "builtin", name: value };
+  }
+  return { kind: "named", name: value };
+}
+function connectorRefFromConfig(ref) {
+  return ref;
+}
+function rejectOldAuthority(path, field, reason) {
+  return { path, field, reason };
+}
+function sha256Json(value) {
+  return sha256OfJson(value);
+}
+function policyLayerSourceForConfigLayer(layer) {
+  if (layer === "default")
+    return "built-in";
+  return layer;
+}
+function composePolicyHardConstraints(envelopes) {
+  let allow;
+  const deny = /* @__PURE__ */ new Set();
+  const denyForWrite = /* @__PURE__ */ new Set();
+  const denyProviders = /* @__PURE__ */ new Set();
+  const requireProviderForConnector = {};
+  let autoApply;
+  const checkpointGlobs = /* @__PURE__ */ new Set();
+  const deniedSkills = /* @__PURE__ */ new Set();
+  let requireKnown;
+  const independentReviewFor = /* @__PURE__ */ new Set();
+  let maxAttempts;
+  let maxWallClockMs;
+  let maxEffortCap;
+  let maxTournamentN;
+  for (const envelope of envelopes) {
+    const parsed = PolicyEnvelopeV2.parse(envelope);
+    const { rules, limits } = parsed.policy;
+    allow = intersectConnectorAllow(allow, rules.connectors.allow);
+    unionInto(deny, rules.connectors.deny);
+    unionInto(denyForWrite, rules.connectors.deny_for_write);
+    unionInto(denyProviders, rules.models.deny_providers);
+    for (const [connector, provider] of Object.entries(rules.models.require_provider_for_connector)) {
+      const previous = requireProviderForConnector[connector];
+      if (previous !== void 0 && previous !== provider) {
+        throw new PolicyEnvelopeCompositionError(`conflicting provider requirements for connector '${connector}': '${previous}' and '${provider}'`);
+      }
+      requireProviderForConnector[connector] = provider;
+    }
+    autoApply = composeAutoApply(autoApply, rules.writes.auto_apply);
+    unionInto(checkpointGlobs, rules.writes.require_checkpoint_globs);
+    unionInto(deniedSkills, rules.skills.deny);
+    requireKnown = composeRequireKnown(requireKnown, rules.skills.require_known);
+    unionInto(independentReviewFor, rules.proof.require_independent_review_for);
+    maxAttempts = minNumber(maxAttempts, limits.max_attempts_per_step);
+    maxWallClockMs = minNumber(maxWallClockMs, limits.max_wall_clock_ms);
+    maxEffortCap = minEffort(maxEffortCap, limits.max_effort);
+    maxTournamentN = minNumber(maxTournamentN, limits.max_tournament_n);
+  }
+  return ComposedPolicyHardConstraints.parse({
+    connectors: {
+      ...allow !== void 0 ? { allow: uniqueSorted(allow) } : {},
+      deny: uniqueSorted(deny),
+      deny_for_write: uniqueSorted(denyForWrite)
+    },
+    models: {
+      deny_providers: uniqueSorted(denyProviders),
+      require_provider_for_connector: Object.fromEntries(Object.entries(requireProviderForConnector).sort(([a], [b]) => a.localeCompare(b)))
+    },
+    writes: {
+      ...autoApply !== void 0 ? { auto_apply: autoApply } : {},
+      require_checkpoint_globs: uniqueSorted(checkpointGlobs)
+    },
+    skills: {
+      deny: uniqueSorted(deniedSkills),
+      ...requireKnown !== void 0 ? { require_known: requireKnown } : {}
+    },
+    proof: {
+      require_independent_review_for: uniqueSorted(independentReviewFor)
+    },
+    limits: {
+      ...maxAttempts !== void 0 ? { max_attempts_per_step: maxAttempts } : {},
+      ...maxWallClockMs !== void 0 ? { max_wall_clock_ms: maxWallClockMs } : {},
+      ...maxEffortCap !== void 0 ? { max_effort: maxEffortCap } : {},
+      ...maxTournamentN !== void 0 ? { max_tournament_n: maxTournamentN } : {}
+    }
+  });
+}
+function projectConfigV1ToPolicyEnvelopeV2(input) {
+  const { config: config2, source } = input;
+  const rejectedOldAuthority = [];
+  const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
+    rejectedOldAuthority.push(rejectOldAuthority(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
+    return {
+      flow_id: flowId,
+      prefer_connector: connectorRefFromConfig(ref)
+    };
+  });
+  const flowSelectionHints = [];
+  const flowSlotBindings = [];
+  const variantModelHints = [];
+  for (const [flowId, override] of Object.entries(config2.circuits)) {
+    if (override.selection !== void 0) {
+      flowSelectionHints.push({
+        flow_id: flowId,
+        selection: override.selection
+      });
+    }
+    if (Object.keys(override.skill_bindings).length > 0) {
+      flowSlotBindings.push({
+        flow_id: flowId,
+        bindings: override.skill_bindings
+      });
+    }
+    if (override.variant_models !== void 0) {
+      rejectedOldAuthority.push(rejectOldAuthority(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
+      for (const variant of override.variant_models) {
+        variantModelHints.push({
+          flow_id: flowId,
+          id: variant.id,
+          label: variant.label,
+          ...variant.connector !== void 0 ? { connector: connectorRefFromConfig(variant.connector) } : {},
+          selection: variant.selection
+        });
+      }
+    }
+  }
+  return PolicyEnvelopeProjectionV0.parse({
+    schema_version: 0,
+    source,
+    policy_envelope: {
+      schema_version: 2,
+      policy: {
+        rules: {
+          connectors: {
+            registry: config2.relay.connectors
+          }
+        },
+        preferences: {
+          relay: {
+            roles: Object.fromEntries(Object.entries(config2.relay.roles).filter((entry) => entry[1] !== void 0).map(([role, ref]) => [role, { prefer_connector: connectorRefFromConfig(ref) }])),
+            flow_connector_hints: flowConnectorHints
+          },
+          selection: {
+            flow_hints: flowSelectionHints
+          },
+          skills: {
+            slot_bindings: config2.skills.bindings,
+            flow_slot_bindings: flowSlotBindings
+          },
+          prototype: {
+            variant_model_hints: variantModelHints
+          }
+        },
+        defaults: {
+          connector: connectorRefFromDefault(config2.relay.default),
+          ...config2.defaults.selection !== void 0 ? { selection: config2.defaults.selection } : {}
+        }
+      }
+    },
+    rejected_old_authority: rejectedOldAuthority
+  });
+}
+function policyRefsForConfigLayers(layers) {
+  const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
+    let sha2564;
+    try {
+      const projection = projectConfigV1ToPolicyEnvelopeV2({
+        config: layer.config,
+        source: policyLayerSourceForConfigLayer(layer.layer)
+      });
+      sha2564 = sha256Json(projection.policy_envelope);
+    } catch {
+      sha2564 = sha256Json({ schema_version: 1, config: layer.config });
+    }
+    refs.push({
+      kind: "policy",
+      ref,
+      sha256: sha2564
+    });
+  }
+  return refs;
+}
+function policyRefsForPolicyLayers(layers) {
+  const refs = [];
+  for (const [index, layer] of (layers ?? []).entries()) {
+    refs.push({
+      kind: "policy",
+      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
+      sha256: sha256Json(layer.envelope)
+    });
+  }
+  return refs;
+}
+function policyRefsForRuntimeInputs(input) {
+  const refs = [];
+  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
+    refs.push(...policyRefsForConfigLayers(input.configLayers));
+  }
+  if ((input.policyLayers?.length ?? 0) > 0) {
+    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
+  }
+  return refs;
+}
+
 // dist/schemas/checkpoint-boundary.js
 var CheckpointReasonCode = external_exports.enum([
   "scope_expansion",
@@ -42691,7 +42963,7 @@ var CheckpointBoundaryProjectionError = class extends Error {
 function sha256(value) {
   return sha256OfJson(value);
 }
-function rejectOldAuthority(path, field, reason) {
+function rejectOldAuthority2(path, field, reason) {
   return { path, field, reason };
 }
 function routeForChoice2(step, choiceId) {
@@ -42733,7 +43005,7 @@ function projectCheckpointBoundaryV0(input) {
   const rejectedOldAuthority = [];
   const declaredDefaultPolicyRefs = input.declaredDefaultPolicyRefs ?? [];
   if (step.policy.auto_resolution !== void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
+    rejectedOldAuthority.push(rejectOldAuthority2(`compiled-flow/steps/${step.id}/policy/auto_resolution`, `auto_resolution.${step.policy.auto_resolution.policy}`, "checkpoint auto-resolution must become declared default or traced guidance, not a direct resolver"));
   }
   const choices = step.policy.choices !== void 0 ? {
     kind: "static",
@@ -42753,7 +43025,7 @@ function projectCheckpointBoundaryV0(input) {
     reason_code: "safe_default_choice"
   } : void 0;
   if (step.policy.safe_default_choice !== void 0 && declaredDefault === void 0) {
-    rejectedOldAuthority.push(rejectOldAuthority(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
+    rejectedOldAuthority.push(rejectOldAuthority2(`compiled-flow/steps/${step.id}/policy/safe_default_choice`, "safe_default_choice", "safe default choices require static choices and explicit policy refs before they become declared defaults"));
   }
   const boundary = {
     schema_version: 0,
@@ -42794,278 +43066,6 @@ function projectCheckpointBoundaryV0(input) {
     },
     rejected_old_authority: rejectedOldAuthority
   });
-}
-
-// dist/shared/policy-envelope.js
-var PolicyEnvelopeCompositionError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "PolicyEnvelopeCompositionError";
-  }
-};
-var RUNTIME_CONFIG_V1_POLICY_REF = {
-  kind: "policy",
-  ref: "policy.runtime.config_v1"
-};
-var RUNTIME_POLICY_V2_REF = {
-  kind: "policy",
-  ref: "policy.runtime.policy_v2"
-};
-var EFFORT_ORDER = [
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max"
-];
-function uniqueSorted(values) {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-function unionInto(target, values) {
-  for (const value of values)
-    target.add(value);
-}
-function intersectConnectorAllow(current, next) {
-  if (next === void 0)
-    return current;
-  const nextSet = new Set(next);
-  if (current === void 0)
-    return nextSet;
-  return new Set([...current].filter((value) => nextSet.has(value)));
-}
-function minNumber(current, next) {
-  if (next === void 0)
-    return current;
-  return current === void 0 ? next : Math.min(current, next);
-}
-function minEffort(current, next) {
-  if (next === void 0)
-    return current;
-  if (current === void 0)
-    return next;
-  return EFFORT_ORDER.indexOf(next) < EFFORT_ORDER.indexOf(current) ? next : current;
-}
-function composeAutoApply(current, next) {
-  if (next === void 0)
-    return current;
-  if (next === false || current === false)
-    return false;
-  return true;
-}
-function composeRequireKnown(current, next) {
-  if (next === void 0)
-    return current;
-  return current === true || next === true;
-}
-function connectorRefFromDefault(value) {
-  if (value === "auto")
-    return "auto";
-  if (EnabledConnector.options.includes(value)) {
-    return { kind: "builtin", name: value };
-  }
-  return { kind: "named", name: value };
-}
-function connectorRefFromConfig(ref) {
-  return ref;
-}
-function rejectOldAuthority2(path, field, reason) {
-  return { path, field, reason };
-}
-function sha256Json(value) {
-  return sha256OfJson(value);
-}
-function policyLayerSourceForConfigLayer(layer) {
-  if (layer === "default")
-    return "built-in";
-  return layer;
-}
-function composePolicyHardConstraints(envelopes) {
-  let allow;
-  const deny = /* @__PURE__ */ new Set();
-  const denyForWrite = /* @__PURE__ */ new Set();
-  const denyProviders = /* @__PURE__ */ new Set();
-  const requireProviderForConnector = {};
-  let autoApply;
-  const checkpointGlobs = /* @__PURE__ */ new Set();
-  const deniedSkills = /* @__PURE__ */ new Set();
-  let requireKnown;
-  const independentReviewFor = /* @__PURE__ */ new Set();
-  let maxAttempts;
-  let maxWallClockMs;
-  let maxEffortCap;
-  let maxTournamentN;
-  for (const envelope of envelopes) {
-    const parsed = PolicyEnvelopeV2.parse(envelope);
-    const { rules, limits } = parsed.policy;
-    allow = intersectConnectorAllow(allow, rules.connectors.allow);
-    unionInto(deny, rules.connectors.deny);
-    unionInto(denyForWrite, rules.connectors.deny_for_write);
-    unionInto(denyProviders, rules.models.deny_providers);
-    for (const [connector, provider] of Object.entries(rules.models.require_provider_for_connector)) {
-      const previous = requireProviderForConnector[connector];
-      if (previous !== void 0 && previous !== provider) {
-        throw new PolicyEnvelopeCompositionError(`conflicting provider requirements for connector '${connector}': '${previous}' and '${provider}'`);
-      }
-      requireProviderForConnector[connector] = provider;
-    }
-    autoApply = composeAutoApply(autoApply, rules.writes.auto_apply);
-    unionInto(checkpointGlobs, rules.writes.require_checkpoint_globs);
-    unionInto(deniedSkills, rules.skills.deny);
-    requireKnown = composeRequireKnown(requireKnown, rules.skills.require_known);
-    unionInto(independentReviewFor, rules.proof.require_independent_review_for);
-    maxAttempts = minNumber(maxAttempts, limits.max_attempts_per_step);
-    maxWallClockMs = minNumber(maxWallClockMs, limits.max_wall_clock_ms);
-    maxEffortCap = minEffort(maxEffortCap, limits.max_effort);
-    maxTournamentN = minNumber(maxTournamentN, limits.max_tournament_n);
-  }
-  return ComposedPolicyHardConstraints.parse({
-    connectors: {
-      ...allow !== void 0 ? { allow: uniqueSorted(allow) } : {},
-      deny: uniqueSorted(deny),
-      deny_for_write: uniqueSorted(denyForWrite)
-    },
-    models: {
-      deny_providers: uniqueSorted(denyProviders),
-      require_provider_for_connector: Object.fromEntries(Object.entries(requireProviderForConnector).sort(([a], [b]) => a.localeCompare(b)))
-    },
-    writes: {
-      ...autoApply !== void 0 ? { auto_apply: autoApply } : {},
-      require_checkpoint_globs: uniqueSorted(checkpointGlobs)
-    },
-    skills: {
-      deny: uniqueSorted(deniedSkills),
-      ...requireKnown !== void 0 ? { require_known: requireKnown } : {}
-    },
-    proof: {
-      require_independent_review_for: uniqueSorted(independentReviewFor)
-    },
-    limits: {
-      ...maxAttempts !== void 0 ? { max_attempts_per_step: maxAttempts } : {},
-      ...maxWallClockMs !== void 0 ? { max_wall_clock_ms: maxWallClockMs } : {},
-      ...maxEffortCap !== void 0 ? { max_effort: maxEffortCap } : {},
-      ...maxTournamentN !== void 0 ? { max_tournament_n: maxTournamentN } : {}
-    }
-  });
-}
-function projectConfigV1ToPolicyEnvelopeV2(input) {
-  const { config: config2, source } = input;
-  const rejectedOldAuthority = [];
-  const flowConnectorHints = Object.entries(config2.relay.circuits).map(([flowId, ref]) => {
-    rejectedOldAuthority.push(rejectOldAuthority2(`relay.circuits.${flowId}`, "relay.circuits", "flow-id connector routing is old authority; migrate it only as a guidance preference"));
-    return {
-      flow_id: flowId,
-      prefer_connector: connectorRefFromConfig(ref)
-    };
-  });
-  const flowSelectionHints = [];
-  const flowSlotBindings = [];
-  const variantModelHints = [];
-  for (const [flowId, override] of Object.entries(config2.circuits)) {
-    if (override.selection !== void 0) {
-      flowSelectionHints.push({
-        flow_id: flowId,
-        selection: override.selection
-      });
-    }
-    if (Object.keys(override.skill_bindings).length > 0) {
-      flowSlotBindings.push({
-        flow_id: flowId,
-        bindings: override.skill_bindings
-      });
-    }
-    if (override.variant_models !== void 0) {
-      rejectedOldAuthority.push(rejectOldAuthority2(`circuits.${flowId}.variant_models`, `circuits.${flowId}.variant_models`, "variant model matrices are branch-choice inputs only; they cannot directly choose relay execution"));
-      for (const variant of override.variant_models) {
-        variantModelHints.push({
-          flow_id: flowId,
-          id: variant.id,
-          label: variant.label,
-          ...variant.connector !== void 0 ? { connector: connectorRefFromConfig(variant.connector) } : {},
-          selection: variant.selection
-        });
-      }
-    }
-  }
-  return PolicyEnvelopeProjectionV0.parse({
-    schema_version: 0,
-    source,
-    policy_envelope: {
-      schema_version: 2,
-      policy: {
-        rules: {
-          connectors: {
-            registry: config2.relay.connectors
-          }
-        },
-        preferences: {
-          relay: {
-            roles: Object.fromEntries(Object.entries(config2.relay.roles).filter((entry) => entry[1] !== void 0).map(([role, ref]) => [role, { prefer_connector: connectorRefFromConfig(ref) }])),
-            flow_connector_hints: flowConnectorHints
-          },
-          selection: {
-            flow_hints: flowSelectionHints
-          },
-          skills: {
-            slot_bindings: config2.skills.bindings,
-            flow_slot_bindings: flowSlotBindings
-          },
-          prototype: {
-            variant_model_hints: variantModelHints
-          }
-        },
-        defaults: {
-          connector: connectorRefFromDefault(config2.relay.default),
-          ...config2.defaults.selection !== void 0 ? { selection: config2.defaults.selection } : {}
-        }
-      }
-    },
-    rejected_old_authority: rejectedOldAuthority
-  });
-}
-function policyRefsForConfigLayers(layers) {
-  const refs = [RUNTIME_CONFIG_V1_POLICY_REF];
-  for (const [index, layer] of (layers ?? []).entries()) {
-    const ref = layer.source_path ?? `policy.config_v1.${layer.layer}.${index}`;
-    let sha2564;
-    try {
-      const projection = projectConfigV1ToPolicyEnvelopeV2({
-        config: layer.config,
-        source: policyLayerSourceForConfigLayer(layer.layer)
-      });
-      sha2564 = sha256Json(projection.policy_envelope);
-    } catch {
-      sha2564 = sha256Json({ schema_version: 1, config: layer.config });
-    }
-    refs.push({
-      kind: "policy",
-      ref,
-      sha256: sha2564
-    });
-  }
-  return refs;
-}
-function policyRefsForPolicyLayers(layers) {
-  const refs = [];
-  for (const [index, layer] of (layers ?? []).entries()) {
-    refs.push({
-      kind: "policy",
-      ref: layer.source_path ?? `policy.policy_v2.${layer.source}.${index}`,
-      sha256: sha256Json(layer.envelope)
-    });
-  }
-  return refs;
-}
-function policyRefsForRuntimeInputs(input) {
-  const refs = [];
-  if ((input.configLayers?.length ?? 0) > 0 || (input.policyLayers?.length ?? 0) === 0) {
-    refs.push(...policyRefsForConfigLayers(input.configLayers));
-  }
-  if ((input.policyLayers?.length ?? 0) > 0) {
-    refs.push(RUNTIME_POLICY_V2_REF, ...policyRefsForPolicyLayers(input.policyLayers));
-  }
-  return refs;
 }
 
 // dist/shared/run-file-paths.js
@@ -45784,80 +45784,7 @@ async function executeCompose(step, context) {
 // dist/runtime/executors/fanout.js
 import { join as joinPath2 } from "node:path";
 
-// dist/shared/fanout-aggregate-report.js
-function buildFanoutAggregate(policy2, outcomes, winnerBranchId, rubric) {
-  return {
-    schema_version: 1,
-    join_policy: policy2,
-    branch_count: outcomes.length,
-    ...winnerBranchId === void 0 ? {} : { winner_branch_id: winnerBranchId },
-    branches: outcomes.map((outcome) => ({
-      branch_id: outcome.branch_id,
-      child_run_id: outcome.child_run_id,
-      child_outcome: outcome.child_outcome,
-      verdict: outcome.verdict,
-      admitted: outcome.admitted,
-      result_path: outcome.result_path,
-      duration_ms: outcome.duration_ms,
-      ...outcome.result_body === void 0 ? {} : { result_body: outcome.result_body },
-      ...rubricResultFields(rubric, outcome.result_body)
-    }))
-  };
-}
-function rubricResultFields(rubric, resultBody) {
-  if (rubric === void 0 || resultBody === void 0)
-    return {};
-  return { rubric_result: buildRubricResult(rubric, resultBody) };
-}
-function buildRubricResult(rubric, resultBody) {
-  const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
-  if (!isRecord(rawJudgments)) {
-    throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
-  }
-  const dims = {};
-  for (const dimId of rubric.ordered_dims) {
-    const judgment = rawJudgments[dimId];
-    if (!isRubricJudgment(judgment)) {
-      throw new Error(`fanout rubric dim '${dimId}' is missing a valid model judgment`);
-    }
-    const source = rubric.runtime_signals[dimId];
-    if (source === void 0) {
-      throw new Error(`fanout rubric dim '${dimId}' is missing a runtime signal source`);
-    }
-    dims[dimId] = {
-      runtime_signal: runtimeSignalForSource(resultBody, source),
-      model_judgment: judgment
-    };
-  }
-  return combineRubricResult({
-    dims,
-    orderedDims: rubric.ordered_dims
-  });
-}
-function runtimeSignalForSource(resultBody, source) {
-  if (source.kind === "constant")
-    return source.signal;
-  const value = readPath(resultBody, source.path);
-  if (source.kind === "non_empty_array") {
-    return Array.isArray(value) && value.length > 0 ? "met" : "missing";
-  }
-  return typeof value === "string" && value.trim().length > 0 ? "met" : "missing";
-}
-function readPath(source, path) {
-  return path.split(".").reduce((current, segment) => {
-    if (!isRecord(current))
-      return void 0;
-    return current[segment];
-  }, source);
-}
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isRubricJudgment(value) {
-  return value === "pass" || value === "concern" || value === "fail";
-}
-
-// dist/shared/fanout-join-policy.js
+// dist/policy/fanout-join-policy.js
 function evaluateFanoutJoinPolicy(input) {
   const { policy: policy2, stepId, admitOrder: admitOrder2, outcomes } = input;
   if (policy2 === "pick-winner") {
@@ -45932,6 +45859,79 @@ function evaluateFanoutJoinPolicy(input) {
     };
   }
   return { joinedSuccessfully: true };
+}
+
+// dist/shared/fanout-aggregate-report.js
+function buildFanoutAggregate(policy2, outcomes, winnerBranchId, rubric) {
+  return {
+    schema_version: 1,
+    join_policy: policy2,
+    branch_count: outcomes.length,
+    ...winnerBranchId === void 0 ? {} : { winner_branch_id: winnerBranchId },
+    branches: outcomes.map((outcome) => ({
+      branch_id: outcome.branch_id,
+      child_run_id: outcome.child_run_id,
+      child_outcome: outcome.child_outcome,
+      verdict: outcome.verdict,
+      admitted: outcome.admitted,
+      result_path: outcome.result_path,
+      duration_ms: outcome.duration_ms,
+      ...outcome.result_body === void 0 ? {} : { result_body: outcome.result_body },
+      ...rubricResultFields(rubric, outcome.result_body)
+    }))
+  };
+}
+function rubricResultFields(rubric, resultBody) {
+  if (rubric === void 0 || resultBody === void 0)
+    return {};
+  return { rubric_result: buildRubricResult(rubric, resultBody) };
+}
+function buildRubricResult(rubric, resultBody) {
+  const rawJudgments = readPath(resultBody, rubric.model_judgments_path);
+  if (!isRecord(rawJudgments)) {
+    throw new Error(`fanout rubric model_judgments_path '${rubric.model_judgments_path}' did not resolve to an object`);
+  }
+  const dims = {};
+  for (const dimId of rubric.ordered_dims) {
+    const judgment = rawJudgments[dimId];
+    if (!isRubricJudgment(judgment)) {
+      throw new Error(`fanout rubric dim '${dimId}' is missing a valid model judgment`);
+    }
+    const source = rubric.runtime_signals[dimId];
+    if (source === void 0) {
+      throw new Error(`fanout rubric dim '${dimId}' is missing a runtime signal source`);
+    }
+    dims[dimId] = {
+      runtime_signal: runtimeSignalForSource(resultBody, source),
+      model_judgment: judgment
+    };
+  }
+  return combineRubricResult({
+    dims,
+    orderedDims: rubric.ordered_dims
+  });
+}
+function runtimeSignalForSource(resultBody, source) {
+  if (source.kind === "constant")
+    return source.signal;
+  const value = readPath(resultBody, source.path);
+  if (source.kind === "non_empty_array") {
+    return Array.isArray(value) && value.length > 0 ? "met" : "missing";
+  }
+  return typeof value === "string" && value.trim().length > 0 ? "met" : "missing";
+}
+function readPath(source, path) {
+  return path.split(".").reduce((current, segment) => {
+    if (!isRecord(current))
+      return void 0;
+    return current[segment];
+  }, source);
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isRubricJudgment(value) {
+  return value === "pass" || value === "concern" || value === "fail";
 }
 
 // dist/runtime/fanout/branch-execution.js
@@ -56369,87 +56369,6 @@ function classifyCompiledFlowTask(taskText) {
   return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
 }
 
-// dist/shared/config-loader.js
-var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
-import { homedir as homedir2 } from "node:os";
-import { join as join15, resolve as resolve10 } from "node:path";
-var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
-var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
-function userGlobalConfigPath(homeDir = homedir2()) {
-  return join15(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
-}
-function projectConfigPath(cwd = process.cwd()) {
-  return join15(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
-}
-function parseConfigYaml(text, sourcePath) {
-  try {
-    return (0, import_yaml2.parse)(text);
-  } catch (err) {
-    throw new Error(`config YAML parse failed at ${sourcePath}: ${err.message}`);
-  }
-}
-function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve10(sourcePath);
-  if (!existsSync17(abs))
-    return void 0;
-  const raw = parseConfigYaml(readFileSync28(abs, "utf8"), abs);
-  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
-    const schemaVersion = raw.schema_version;
-    if (schemaVersion === 2) {
-      try {
-        return {
-          policy: PolicyLayer.parse({
-            source: layer,
-            source_path: abs,
-            envelope: PolicyEnvelopeV2.parse(raw)
-          })
-        };
-      } catch (err) {
-        throw new Error(`policy validation failed for ${layer} at ${abs}: ${err.message}`);
-      }
-    }
-  }
-  try {
-    return {
-      selection: LayeredConfig.parse({
-        layer,
-        source_path: abs,
-        config: Config.parse(raw)
-      })
-    };
-  } catch (err) {
-    throw new Error(`config validation failed for ${layer} at ${abs}: ${err.message}`);
-  }
-}
-function discoverRuntimeConfigLayers(options = {}) {
-  const selectionConfigLayers = [];
-  const policyLayers = [];
-  for (const [layer, path] of [
-    ["user-global", userGlobalConfigPath(options.homeDir)],
-    ["project", projectConfigPath(options.cwd)]
-  ]) {
-    const loaded = loadRuntimeConfigLayerFromPath(layer, path);
-    if (loaded?.selection !== void 0)
-      selectionConfigLayers.push(loaded.selection);
-    if (loaded?.policy !== void 0)
-      policyLayers.push(loaded.policy);
-  }
-  if (options.invocationConfig !== void 0) {
-    selectionConfigLayers.push(LayeredConfig.parse({
-      layer: "invocation",
-      config: options.invocationConfig
-    }));
-  }
-  if (options.invocationPolicy !== void 0) {
-    policyLayers.push(PolicyLayer.parse({
-      source: "invocation",
-      envelope: options.invocationPolicy
-    }));
-  }
-  return { selectionConfigLayers, policyLayers };
-}
-
 // dist/flows/canonical-stage-policy.js
 var canonicalStagePolicyById = {};
 var canonicalStagePolicyExemptIds = /* @__PURE__ */ new Set();
@@ -56467,7 +56386,7 @@ for (const definition of flowDefinitions) {
 var FLOW_CANONICAL_STAGE_POLICY_BY_ID = canonicalStagePolicyById;
 var FLOW_CANONICAL_STAGE_POLICY_EXEMPT_IDS = canonicalStagePolicyExemptIds;
 
-// dist/shared/flow-kind-policy-core.js
+// dist/policy/flow-kind-policy-core.js
 var FLOW_KIND_CANONICAL_SETS = FLOW_CANONICAL_STAGE_POLICY_BY_ID;
 var EXEMPT_FLOW_IDS = FLOW_CANONICAL_STAGE_POLICY_EXEMPT_IDS;
 function objectRecord(value) {
@@ -56657,7 +56576,7 @@ function checkCompiledFlowKindCanonicalPolicy(fixture) {
   };
 }
 
-// dist/shared/flow-kind-policy.js
+// dist/policy/flow-kind-policy.js
 function humanizeZodIssueMessage(message) {
   return message.replace(/, received undefined/g, " (missing)").replace(/\breceived undefined\b/g, "missing");
 }
@@ -56685,6 +56604,87 @@ ${issueSummary}${more}`
     kind: policyResult.kind,
     detail: policyResult.detail
   };
+}
+
+// dist/shared/config-loader.js
+var import_yaml2 = __toESM(require_dist(), 1);
+import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import { join as join15, resolve as resolve10 } from "node:path";
+var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
+var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
+function userGlobalConfigPath(homeDir = homedir2()) {
+  return join15(homeDir, ...USER_GLOBAL_CONFIG_RELATIVE_PATH);
+}
+function projectConfigPath(cwd = process.cwd()) {
+  return join15(cwd, ...PROJECT_CONFIG_RELATIVE_PATH);
+}
+function parseConfigYaml(text, sourcePath) {
+  try {
+    return (0, import_yaml2.parse)(text);
+  } catch (err) {
+    throw new Error(`config YAML parse failed at ${sourcePath}: ${err.message}`);
+  }
+}
+function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
+  const abs = resolve10(sourcePath);
+  if (!existsSync17(abs))
+    return void 0;
+  const raw = parseConfigYaml(readFileSync28(abs, "utf8"), abs);
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+    const schemaVersion = raw.schema_version;
+    if (schemaVersion === 2) {
+      try {
+        return {
+          policy: PolicyLayer.parse({
+            source: layer,
+            source_path: abs,
+            envelope: PolicyEnvelopeV2.parse(raw)
+          })
+        };
+      } catch (err) {
+        throw new Error(`policy validation failed for ${layer} at ${abs}: ${err.message}`);
+      }
+    }
+  }
+  try {
+    return {
+      selection: LayeredConfig.parse({
+        layer,
+        source_path: abs,
+        config: Config.parse(raw)
+      })
+    };
+  } catch (err) {
+    throw new Error(`config validation failed for ${layer} at ${abs}: ${err.message}`);
+  }
+}
+function discoverRuntimeConfigLayers(options = {}) {
+  const selectionConfigLayers = [];
+  const policyLayers = [];
+  for (const [layer, path] of [
+    ["user-global", userGlobalConfigPath(options.homeDir)],
+    ["project", projectConfigPath(options.cwd)]
+  ]) {
+    const loaded = loadRuntimeConfigLayerFromPath(layer, path);
+    if (loaded?.selection !== void 0)
+      selectionConfigLayers.push(loaded.selection);
+    if (loaded?.policy !== void 0)
+      policyLayers.push(loaded.policy);
+  }
+  if (options.invocationConfig !== void 0) {
+    selectionConfigLayers.push(LayeredConfig.parse({
+      layer: "invocation",
+      config: options.invocationConfig
+    }));
+  }
+  if (options.invocationPolicy !== void 0) {
+    policyLayers.push(PolicyLayer.parse({
+      source: "invocation",
+      envelope: options.invocationPolicy
+    }));
+  }
+  return { selectionConfigLayers, policyLayers };
 }
 
 // dist/shared/operator-summary-writer.js

@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { reviewCompiledFlowPackage } from '../../src/flows/review/index.js';
+import { checkCompiledFlowKindCanonicalPolicy } from '../../src/policy/flow-kind-policy-core.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { checkCompiledFlowKindCanonicalPolicy } from '../../src/shared/flow-kind-policy-core.js';
 
 const REVIEW_FIXTURE_PATH = join('generated', 'flows', 'review', 'circuit.json');
 

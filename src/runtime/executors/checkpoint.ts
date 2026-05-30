@@ -4,6 +4,7 @@
 import { ZodError } from 'zod';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.js';
+import { policyRefsForRuntimeInputs } from '../../policy/policy-envelope.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId } from '../../schemas/ids.js';
 import type { OperatorAutoResolution } from '../../schemas/operator-summary.js';
@@ -20,7 +21,6 @@ import {
 } from '../../shared/checkpoint-boundary.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
 import { resolveDottedPath } from '../../shared/fanout-branch-template.js';
-import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import {
   type CheckpointChoice,
   resolveCheckpointChoicesSource,

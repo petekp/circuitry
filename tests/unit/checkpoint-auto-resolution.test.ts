@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveHighestScoreAutoResolution } from '../../src/shared/checkpoint-auto-resolution.js';
 import {
   type RubricDimInput,
   THREE_AXIS_RUBRIC_TIE_BREAK_ORDER,
   combineRubricResult,
-} from '../../src/shared/rubric.js';
+} from '../../src/policy/rubric.js';
+import { resolveHighestScoreAutoResolution } from '../../src/shared/checkpoint-auto-resolution.js';
 
 const PASS = {
   runtime_signal: 'met',

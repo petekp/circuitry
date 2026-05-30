@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../policy/rubric.js';
 import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
-import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
 import { resultReportPointer } from '../report-schema-kit.js';
 
 const EXPLORE_RESULT_SCHEMA_BY_ARTIFACT_ID = {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../policy/rubric.js';
 import { ConnectorReference } from '../../schemas/config.js';
 import { RelayResolutionSource } from '../../schemas/connector.js';
 import { RubricJudgment, RubricResult } from '../../schemas/rubric.js';
@@ -8,7 +9,6 @@ import {
   VerificationCommandResult,
   VerificationResult,
 } from '../../schemas/verification.js';
-import { THREE_AXIS_RUBRIC_TIE_BREAK_ORDER } from '../../shared/rubric.js';
 import { resultReportPointer } from '../report-schema-kit.js';
 
 const NonEmptyStringArray = z.array(z.string().min(1)).min(1);

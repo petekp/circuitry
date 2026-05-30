@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { findCheckpointBriefBuilder } from '../../flows/registries/checkpoint-writers/registry.js';
 import type { CheckpointStep as IndexedCheckpointStep } from '../../flows/registries/checkpoint-writers/types.js';
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
+import { policyRefsForRuntimeInputs } from '../../policy/policy-envelope.js';
 import { Axes, type Axes as AxesValue } from '../../schemas/axes.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
@@ -24,7 +25,6 @@ import { CheckpointStep as SchemaCheckpointStep } from '../../schemas/step.js';
 import type { CheckpointRequestedTraceEntry } from '../../schemas/trace-entry.js';
 import { projectCheckpointBoundaryV0 } from '../../shared/checkpoint-boundary.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
-import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import type { ProgressReporter, RelayFn } from '../../shared/relay-runtime-types.js';
 import { resolveRunFilePath } from '../../shared/run-file-paths.js';
 import {

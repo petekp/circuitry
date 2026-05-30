@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   checkCompiledFlowKindCanonicalPolicy,
   checkReviewIdentitySeparationPolicy,
-} from '../../../src/shared/flow-kind-policy-core.js';
+} from '../../../src/policy/flow-kind-policy-core.js';
 
 type StepStub = Record<string, unknown>;
 

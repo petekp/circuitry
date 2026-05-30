@@ -34,6 +34,7 @@ import {
   FixVerification,
 } from '../../src/flows/fix/reports.js';
 import { ReviewIntake, ReviewRelayResult, ReviewResult } from '../../src/flows/review/reports.js';
+import { combineRubricResult } from '../../src/policy/rubric.js';
 import type { ExecutorRegistry } from '../../src/runtime/executors/index.js';
 import type { RelayConnector } from '../../src/runtime/executors/relay.js';
 import type { ExecutableStep } from '../../src/runtime/manifest/executable-flow.js';
@@ -51,7 +52,6 @@ import {
   CompiledFlow as CompiledFlowSchema,
 } from '../../src/schemas/compiled-flow.js';
 import { computeManifestHash } from '../../src/schemas/manifest.js';
-import { combineRubricResult } from '../../src/shared/rubric.js';
 
 export interface CompiledFlowFixture {
   readonly flow: CompiledFlow;

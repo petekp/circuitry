@@ -1,3 +1,4 @@
+import { policyRefsForRuntimeInputs } from '../../policy/policy-envelope.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
 import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
@@ -5,7 +6,6 @@ import type { RecoveryFailureCause, RecoveryRouteKind } from '../../schemas/reco
 import type { Ref } from '../../schemas/ref.js';
 import type { ResolvedSelection } from '../../schemas/selection-policy.js';
 import type { RelayRole } from '../../schemas/step.js';
-import { policyRefsForRuntimeInputs } from '../../shared/policy-envelope.js';
 import type { LoadedRelaySkill } from '../../shared/skill-loading.js';
 import type { RunContext } from './run-context.js';
 

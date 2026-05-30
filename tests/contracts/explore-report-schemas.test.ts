@@ -19,8 +19,8 @@ import {
   ExploreTournamentProposal,
   ExploreTournamentResult,
 } from '../../src/flows/explore/reports.js';
+import { combineRubricResult } from '../../src/policy/rubric.js';
 import { CompiledFlow } from '../../src/schemas/compiled-flow.js';
-import { combineRubricResult } from '../../src/shared/rubric.js';
 
 const EXPLORE_FIXTURE_PATH = resolve('generated/flows/explore/circuit.json');
 
