@@ -49446,7 +49446,7 @@ function pullAffordanceSection(runFolder, flowId) {
     `You may consult prior-run memory with \`circuit history pull --run-folder ${runFolder} --flow ${flow} --decision-point <label> <query>\`; results are hint-only and cannot satisfy any current proof, checkpoint, policy, route, recovery, verification, or write authority.`
   ].join("\n");
 }
-function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal, memoryInputs = [], flowId) {
+function composeRelayPrompt(step, runFolder, loadedSkills = [], acceptanceRetryFeedback, operatorGoal, memoryInputs = [], flowId, rigor) {
   const readsBody = step.reads.length === 0 ? "(no reads)" : step.reads.map((path) => {
     const abs = resolveRunRelative(runFolder, path);
     if (!existsSync10(abs))
@@ -49464,6 +49464,12 @@ ${readFileSync21(abs, "utf8")}`;
     `Title: ${step.title}`,
     `Role: ${step.role}`,
     `Accepted verdicts: ${step.check.pass.join(", ")}`,
+    // Thread the run's resolved rigor to the worker as an effort signal: it
+    // tunes how much thoroughness to spend, it does not change which steps run
+    // (F-M-1). Omitted when no rigor is supplied so direct callers are unchanged.
+    ...rigor === void 0 || rigor.length === 0 ? [] : [
+      `Rigor: ${rigor}. Tune your thoroughness and effort to this level; it does not change which steps run.`
+    ],
     "",
     ...operatorGoal === void 0 || operatorGoal.length === 0 ? [] : ["Operator Goal:", operatorGoal, ""],
     ...memorySection === void 0 ? [] : [memorySection, ""],
@@ -50447,7 +50453,9 @@ async function executeProductionRelayAttempt(input) {
     context.memoryInputs ?? [],
     // Slice 4 D4: thread the active flow into the always-on pull affordance so the
     // agent's copyable command already targets the correct flow for suppression.
-    context.flow.id
+    context.flow.id,
+    // F-M-1: thread the run's resolved rigor as a worker-effort signal.
+    context.axes?.rigor
   );
   const request = step.writes?.request;
   const receipt = step.writes?.receipt;
@@ -54451,7 +54459,10 @@ function readProjectFacts(options = {}) {
     }
     facts.push(parsed.data);
   }
-  return { facts, warnings };
+  const byId = /* @__PURE__ */ new Map();
+  for (const fact of facts)
+    byId.set(fact.memory_id, fact);
+  return { facts: [...byId.values()], warnings };
 }
 function rewriteProjectFacts(records, options = {}) {
   const paths = resolveProjectStorePaths(options);
@@ -54477,7 +54488,7 @@ function rewriteProjectFacts(records, options = {}) {
   return paths.factsPath;
 }
 function appendProjectFact(record2, options = {}) {
-  const existing = readProjectFacts(options).facts;
+  const existing = readProjectFacts(options).facts.filter((entry) => entry.memory_id !== record2.memory_id);
   return rewriteProjectFacts([...existing, record2], options);
 }
 function forgetProjectFact(memoryId, options = {}) {
@@ -61335,8 +61346,13 @@ function parseMemoryArgs(argv) {
   try {
     program2.parse(argv, { from: "user" });
   } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
+    if (err instanceof CommanderError) {
+      if (err.code === "commander.helpDisplayed")
+        process.exit(0);
+      if (err.code === "commander.help") {
+        return "memory requires a subcommand: note, list, or forget";
+      }
+    }
     return commanderErrorMessage2(err);
   }
   if (parsed === void 0)
@@ -62315,6 +62331,8 @@ async function runResumeCommand(args, options) {
         flow_id: runResult.flow_id,
         run_folder: runFolder,
         outcome: runResult.outcome,
+        // A resumed run can also abort; surface its reason the same way (F-H-2).
+        ...runResult.reason === void 0 ? {} : { reason: runResult.reason },
         trace_entries_observed: runResult.trace_entries_observed,
         result_path: runtimeResult.resultPath,
         ...resumeRuntimeFields,
@@ -62339,6 +62357,14 @@ async function runExecutionCommand(args, options) {
   const entryModeSelection = resolveEntryModeSelection(args, route);
   const fixtureSelectionName = fixtureSelectionNameForAxes(selectedAxes(args, route));
   const fixturePath = resolveFixturePath(route.flowName, fixtureSelectionName, args.fixturePath, args.flowRoot);
+  if (!existsSync30(fixturePath)) {
+    const pkg = findCompiledFlowPackageById(route.flowName);
+    if (pkg?.visibility === "internal") {
+      process.stderr.write(`error: ${route.flowName} is an internal flow and is not available through the host run surface.
+`);
+      return 2;
+    }
+  }
   const { flow, bytes } = loadFixture(fixturePath);
   assertFixtureMatchesRoute(flow, route);
   try {
@@ -62655,10 +62681,16 @@ async function runExecutionCommand(args, options) {
         autonomousLoop = void 0;
       }
     }
+    const resolvedAxes = selectedAxes(args, route);
     process.stdout.write(`${JSON.stringify({
       schema_version: 1,
       run_id: runResult.run_id,
       flow_id: runResult.flow_id,
+      resolved_axes: {
+        rigor: resolvedAxes.rigor,
+        tournament: resolvedAxes.tournament,
+        autonomous: resolvedAxes.autonomous
+      },
       ...routeOutputFields({
         selectedFlow: route.flowName,
         routedBy: route.source,
@@ -62669,6 +62701,10 @@ async function runExecutionCommand(args, options) {
       }),
       run_folder: runFolder,
       outcome: runResult.outcome,
+      // Copy the abort reason onto the final envelope so a non-streaming
+      // host (and the present no-blocks branch) renders the specific reason
+      // rather than a generic fallback (F-H-2). result.json carries it too.
+      ...runResult.reason === void 0 ? {} : { reason: runResult.reason },
       trace_entries_observed: runResult.trace_entries_observed,
       result_path: runtimeResult.resultPath,
       ...runtimeOutputFields({

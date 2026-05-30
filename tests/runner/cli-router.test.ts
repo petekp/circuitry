@@ -650,6 +650,7 @@ describe('CLI router', () => {
   });
 
   it('emits run.aborted progress when a run aborts', async () => {
+    const abortRunFolder = join(runFolderBase, 'review-progress-aborted');
     const { output, progress } = await runMainJsonWithProgress(
       [
         'run',
@@ -659,13 +660,23 @@ describe('CLI router', () => {
         '--progress',
         'jsonl',
         '--run-folder',
-        join(runFolderBase, 'review-progress-aborted'),
+        abortRunFolder,
       ],
       '{"verdict":"NO_ISSUES_FOUND","findings":"not-an-array"}',
     );
 
     expect(output.outcome).toBe('aborted');
     expect(typeof output.operator_summary_markdown_path).toBe('string');
+    // F-H-2: the aborted stdout envelope must carry the specific reason so a
+    // non-streaming host (and the present no-blocks branch) renders it instead
+    // of a generic fallback. The envelope reason must equal result.json's
+    // reason — the same source the present wrapper reads via result_path.
+    expect(typeof output.reason).toBe('string');
+    expect((output.reason as string).length).toBeGreaterThan(0);
+    const resultJson = JSON.parse(
+      readFileSync(join(abortRunFolder, 'reports', 'result.json'), 'utf8'),
+    ) as { reason?: string };
+    expect(output.reason).toBe(resultJson.reason);
     expect(progress.map((event) => event.type)).toContain('run.aborted');
     expect(progress.find((event) => event.type === 'run.aborted')?.display.tone).toBe('error');
     expect(progress.find((event) => event.type === 'run.aborted')?.presentation).toMatchObject({
@@ -1094,6 +1105,29 @@ describe('CLI router', () => {
     expect(existsSync(runFolder)).toBe(false);
   });
 
+  it('rejects an internal flow absent from the host with a clear message (F-L-3)', async () => {
+    // Simulate the host package: a flow root that ships only public flows, so
+    // the internal `goal` fixture is absent. The reject must name goal as an
+    // internal flow rather than leaking the generic fixture-not-found path.
+    const hostFlowRoot = mkdtempSync(join(tmpdir(), 'circuit-host-flows-'));
+    const runFolder = join(runFolderBase, 'goal-host-reject');
+    const result = await runMainExit([
+      'run',
+      'goal',
+      '--goal',
+      'achieve the objective',
+      '--flow-root',
+      hostFlowRoot,
+      '--run-folder',
+      runFolder,
+    ]);
+    rmSync(hostFlowRoot, { recursive: true, force: true });
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('goal is an internal flow');
+    expect(result.stderr).not.toContain('flow fixture not found');
+    expect(existsSync(runFolder)).toBe(false);
+  });
+
   it('accepts --rigor lite and threads lite depth into relay selection', async () => {
     const runFolder = join(runFolderBase, 'build-lite-entry-mode');
     const projectRoot = createProofProject('build-lite-entry-mode-project');
@@ -1122,6 +1156,56 @@ describe('CLI router', () => {
     expect(output.outcome).toBe('complete');
     expect(bootstrap).toMatchObject({ depth: 'lite' });
     expect(relayResolvedSelection).toMatchObject({ depth: 'lite' });
+  }, 30_000);
+
+  it('threads resolved rigor into the relay prompt and records resolved axes on the envelope (F-M-1)', async () => {
+    const litePrompts: string[] = [];
+    const liteOutput = await runMainJsonWithRelayer(
+      [
+        'run',
+        'build',
+        '--goal',
+        'Add a tiny Build feature from the CLI',
+        '--rigor',
+        'lite',
+        '--run-folder',
+        join(runFolderBase, 'build-rigor-lite-thread'),
+      ],
+      makeStubRelayer((input) => {
+        litePrompts.push(input.prompt);
+        return '{"verdict":"accept"}';
+      }),
+      { configCwd: createProofProject('build-rigor-lite-thread-project') },
+    );
+
+    const standardPrompts: string[] = [];
+    const standardOutput = await runMainJsonWithRelayer(
+      [
+        'run',
+        'build',
+        '--goal',
+        'Add a tiny Build feature from the CLI',
+        '--run-folder',
+        join(runFolderBase, 'build-rigor-standard-thread'),
+      ],
+      makeStubRelayer((input) => {
+        standardPrompts.push(input.prompt);
+        return '{"verdict":"accept"}';
+      }),
+      { configCwd: createProofProject('build-rigor-standard-thread-project') },
+    );
+
+    // Thread: the relay prompt now carries the resolved rigor, so build-lite and
+    // build-standard prompts differ — the F-M-1 "byte-identical relay payloads"
+    // defect. Every relay step in each run sees the run's resolved rigor.
+    expect(litePrompts.length).toBeGreaterThan(0);
+    expect(standardPrompts.length).toBeGreaterThan(0);
+    expect(litePrompts.every((prompt) => prompt.includes('Rigor: lite'))).toBe(true);
+    expect(standardPrompts.every((prompt) => prompt.includes('Rigor: standard'))).toBe(true);
+    // Record: the resolved axes are echoed on the stdout envelope so a reader
+    // can audit which rigor actually ran.
+    expect(liteOutput.resolved_axes).toMatchObject({ rigor: 'lite' });
+    expect(standardOutput.resolved_axes).toMatchObject({ rigor: 'standard' });
   }, 30_000);
 
   it('accepts --autonomous and threads autonomous depth into relay selection', async () => {

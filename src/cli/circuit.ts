@@ -29,7 +29,7 @@ import {
   projectClosedProcessEvidence,
 } from '../app/process-evidence/projection.js';
 import { runAutonomousContinuation } from '../app/run-envelope/autonomous-run.js';
-import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
+import { findCompiledFlowPackageById, findFlowRuntimeSurfaceById } from '../flows/catalog.js';
 import { classifyCompiledFlowTask } from '../flows/router.js';
 import { validateCompiledFlowKindPolicy } from '../policy/flow-kind-policy.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
@@ -802,6 +802,8 @@ async function runResumeCommand(args: ParsedArgs, options: CliMainOptions): Prom
             flow_id: runResult.flow_id,
             run_folder: runFolder,
             outcome: runResult.outcome,
+            // A resumed run can also abort; surface its reason the same way (F-H-2).
+            ...(runResult.reason === undefined ? {} : { reason: runResult.reason }),
             trace_entries_observed: runResult.trace_entries_observed,
             result_path: runtimeResult.resultPath,
             ...resumeRuntimeFields,
@@ -842,6 +844,21 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
     args.fixturePath,
     args.flowRoot,
   );
+  // An internal flow (e.g. the frozen `goal`) ships no host surface, so its
+  // fixture is absent from a host package's flow root. Reject with a clear
+  // message naming it as internal rather than leaking the generic
+  // fixture-not-found path (F-L-3). A source/dev checkout that DOES carry the
+  // fixture still runs the flow explicitly — the guard only fires when the
+  // fixture is missing here.
+  if (!existsSync(fixturePath)) {
+    const pkg = findCompiledFlowPackageById(route.flowName);
+    if (pkg?.visibility === 'internal') {
+      process.stderr.write(
+        `error: ${route.flowName} is an internal flow and is not available through the host run surface.\n`,
+      );
+      return 2;
+    }
+  }
   const { flow, bytes } = loadFixture(fixturePath);
   assertFixtureMatchesRoute(flow, route);
   try {
@@ -1233,12 +1250,21 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
         autonomousLoop = undefined;
       }
     }
+    // Record the resolved axes on the envelope so a reader can audit which
+    // rigor/tournament/autonomous selection actually ran (F-M-1). entry_mode
+    // collapses the three axes into one name; resolved_axes keeps them explicit.
+    const resolvedAxes = selectedAxes(args, route);
     process.stdout.write(
       `${JSON.stringify(
         {
           schema_version: 1,
           run_id: runResult.run_id,
           flow_id: runResult.flow_id,
+          resolved_axes: {
+            rigor: resolvedAxes.rigor,
+            tournament: resolvedAxes.tournament,
+            autonomous: resolvedAxes.autonomous,
+          },
           ...routeOutputFields({
             selectedFlow: route.flowName,
             routedBy: route.source,
@@ -1253,6 +1279,10 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
           }),
           run_folder: runFolder,
           outcome: runResult.outcome,
+          // Copy the abort reason onto the final envelope so a non-streaming
+          // host (and the present no-blocks branch) renders the specific reason
+          // rather than a generic fallback (F-H-2). result.json carries it too.
+          ...(runResult.reason === undefined ? {} : { reason: runResult.reason }),
           trace_entries_observed: runResult.trace_entries_observed,
           result_path: runtimeResult.resultPath,
           ...runtimeOutputFields({
