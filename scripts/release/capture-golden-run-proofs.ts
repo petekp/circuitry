@@ -292,7 +292,7 @@ const buildProofCheckpointExecutor: StepExecutor = async (step, context) => {
     schema_version: 1,
     step_id: step.id,
     selection: autoSelection,
-    resolution_source: effectiveDepth === 'autonomous' ? 'safe-autonomous' : 'safe-default',
+    resolution_source: 'declared-default',
   });
   await context.trace.append({
     run_id: context.runId,
@@ -301,7 +301,7 @@ const buildProofCheckpointExecutor: StepExecutor = async (step, context) => {
     attempt,
     selection: autoSelection,
     auto_resolved: true,
-    resolution_source: effectiveDepth === 'autonomous' ? 'safe-autonomous' : 'safe-default',
+    resolution_source: 'declared-default',
     response_path: response.path,
   });
   await context.trace.append({
