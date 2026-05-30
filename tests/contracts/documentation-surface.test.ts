@@ -40,7 +40,13 @@ describe('documentation surface', () => {
   it('documents the approved active how-to sources', () => {
     const docsMap = readRepoFile('docs/README.md');
 
-    expect(existsSync(resolve(REPO_ROOT, 'CLAUDE.md'))).toBe(false);
+    // AGENTS.md is the single canonical rules file. CLAUDE.md may exist only as
+    // an import-only pointer so Claude Code (which reads CLAUDE.md, not
+    // AGENTS.md) loads the same rules. It must never become a second rules file.
+    expect(existsSync(resolve(REPO_ROOT, 'CLAUDE.md'))).toBe(true);
+    const claudeMd = readRepoFile('CLAUDE.md');
+    expect(claudeMd).toContain('@AGENTS.md');
+    expect(claudeMd).not.toMatch(/^##\s/m);
     expect(docsMap).toContain('## Approved Active How-To Locations');
     for (const link of [
       '[AGENTS.md](../AGENTS.md)',

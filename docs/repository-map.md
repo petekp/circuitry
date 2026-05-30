@@ -31,49 +31,10 @@ rg -n "docs/literate-guide\\.md|docs/script-inventory\\.md|generated-surfaces\\.
 
 ## Before Map
 
-The verified pre-change shape had useful content, but too much of it sat at the
-same level:
-
-```text
-.
-+-- README.md                    product entry, install paths, host roles
-+-- AGENTS.md                    agent operating rules
-+-- UBIQUITOUS_LANGUAGE.md       canonical vocabulary
-+-- docs/
-|   +-- README.md                docs map
-|   +-- first-run.md             first manual proof
-|   +-- operator-guide.md        operator commands and troubleshooting
-|   +-- configuration.md         config and connector routing
-|   +-- generated-surfaces.md    generated ownership, emitted by the flow emitter
-|   +-- literate-guide.md        deep codebase walkthrough
-|   +-- script-inventory.md      script ownership and historical migration map
-|   +-- architecture/            runtime and architecture reference
-|   +-- contracts/               runtime and host contracts
-|   +-- flows/                   flow and block authoring reference
-|   +-- release/                 release truth and checked-in proof evidence
-|   +-- ideas/                   product ideas
-|   +-- learnings/               prior-art notes
-+-- plugins/
-|   +-- claude/                  Claude Code package, with its own README
-|   +-- codex/                   Codex package, no parent host-surface map
-+-- src/
-    +-- cli/                     command entrypoints
-    +-- commands/                direct command sources
-    +-- connectors/              worker connector implementations
-    +-- flows/                   flow packages plus compiler/catalog support
-    +-- runtime/                 engine mechanics
-    +-- schemas/                 Zod contracts
-    +-- shared/                  cross-layer helpers
-```
-
-Main pain points:
-
-- The codebase walkthrough and script ownership record looked like read-first
-  docs because they were peers of operator docs.
-- There was no parent map for host packages, even though most files under
-  `plugins/` are generated.
-- `src/`, `src/runtime/`, `src/schemas/`, and `src/flows/` required inference
-  from filenames before a contributor could choose the right layer.
+The pre-change tree placed read-first docs, host-package maps, and source-layer
+ownership at the same level, so readers had to infer ownership from filenames.
+The full pre-change tree and pain-point notes live in this file's git history;
+this doc tracks only the current map, not a stale one.
 
 ## After Map
 
@@ -130,14 +91,16 @@ Layer maps live at `src/runtime/README.md`, `src/schemas/README.md`,
 
 ## Migration Rationale
 
-| Change | Rationale | Behavior impact |
-| --- | --- | --- |
-| `docs/script-inventory.md` -> `docs/reference/script-inventory.md` | Script ownership is maintenance reference material. It should sit behind the docs map, not beside first-run and operator docs. | Docs-only path move. |
-| Added `plugins/README.md` | Generated host packages need a parent map before readers enter Claude Code or Codex-specific output. | Docs-only addition. |
-| Added `plugins/codex/README.md` | Codex needed the same package-level map Claude Code already had, especially because Codex has both generated skill instructions and command mirrors. | Docs-only addition. |
-| Added `src/README.md` and layer READMEs | Runtime, schema, flow, shared-helper, and type ownership can be learned locally without reading the long walkthrough first. | Docs-only addition. |
-| Kept `docs/generated-surfaces.md` in place | The flow emitter owns this generated file path, and tests plus release docs already use it as the generated ownership anchor. Moving it would add churn without improving the first navigation step. | No generated ownership change. |
-| Kept runtime, schema, and flow code paths in place | The source tree already separates engine mechanics, schemas, and flow packages. A code move would churn imports and generated references before there is evidence of a deeper ownership bug. | No runtime behavior change. |
+The reorganization moved `docs/script-inventory.md` to
+`docs/reference/script-inventory.md` (behind the docs map), added
+parent maps for host packages (`plugins/README.md`, `plugins/codex/README.md`),
+and added `src/README.md` plus per-layer READMEs (`src/runtime/README.md`,
+`src/schemas/README.md`, `src/flows/README.md`, `src/shared/README.md`,
+`src/types/README.md`) so layer ownership is learnable locally. Stable public
+paths and code layout were kept in place because release checks depend on them
+and a code move would churn imports without evidence of an ownership bug. All
+changes were docs-only; the full per-change rationale table is recoverable from
+this file's git history.
 
 ## Targeted Probes
 
