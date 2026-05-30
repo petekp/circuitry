@@ -3,7 +3,7 @@ import {
   type HistoryRecallReportV1 as HistoryRecallReport,
   HistoryRecallReportV1,
   type HistoryWarningV1,
-} from '../schemas/index.js';
+} from '../../schemas/index.js';
 import { HistoryCommandError } from './indexer.js';
 import { historyMemoryInputPreview } from './memory-preview.js';
 import { queryHistory } from './query.js';

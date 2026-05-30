@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import {
   RunStatusFolderError,
   projectRunStatusFromRunFolder,
-} from '../run-status/run-folder-projector.js';
+} from '../app/run-status/run-folder-projector.js';
 import { type EngineErrorCodeV1, EngineErrorV1 } from '../schemas/run-status.js';
 import { commanderErrorMessage, configureCommanderProgram } from './commander-support.js';
 

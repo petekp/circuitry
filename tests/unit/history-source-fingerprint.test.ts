@@ -6,8 +6,8 @@ import {
   type HistoryPathOptions,
   historyStatus,
   rebuildHistoryIndex,
-} from '../../src/history/indexer.js';
-import { collectRunSourceFiles } from '../../src/history/run-source-files.js';
+} from '../../src/app/history/indexer.js';
+import { collectRunSourceFiles } from '../../src/app/history/run-source-files.js';
 
 let workdir: string;
 let runsBase: string;

@@ -1,17 +1,17 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
-import { sha256OfFile } from '../schemas/hashing.js';
-import { CompiledFlowId, RunId, StepId } from '../schemas/ids.js';
+import { findFlowRuntimeSurfaceById } from '../../flows/catalog.js';
+import { sha256OfFile } from '../../schemas/hashing.js';
+import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import {
   PROCESS_EVIDENCE_RELATIVE_PATH,
   type ProcessEvidenceOutcome,
   ProcessEvidenceProjection,
   type ProcessEvidenceProjection as ProcessEvidenceProjectionValue,
-} from '../schemas/process-evidence.js';
-import type { Ref } from '../schemas/ref.js';
-import type { RunResult } from '../schemas/result.js';
-import { runRelativePath } from '../shared/run-artifact-io.js';
+} from '../../schemas/process-evidence.js';
+import type { Ref } from '../../schemas/ref.js';
+import type { RunResult } from '../../schemas/result.js';
+import { runRelativePath } from '../../shared/run-artifact-io.js';
 
 type ClosedProcessEvidenceInput = {
   readonly runFolder: string;

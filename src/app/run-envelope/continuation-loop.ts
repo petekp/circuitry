@@ -1,4 +1,4 @@
-import type { RunGoalContract, RunRequiredEvidenceKind } from '../schemas/run-envelope.js';
+import type { RunGoalContract, RunRequiredEvidenceKind } from '../../schemas/run-envelope.js';
 import { contractQualityReview } from './contract-quality.js';
 import { type AttemptProgress, detectNoProgress } from './no-progress.js';
 import { recoveryRouteForUnmetKinds, requiredEvidenceKindForProcess } from './source-record.js';

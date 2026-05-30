@@ -18,9 +18,9 @@ import {
   type HistoryStatusV1 as HistoryStatus,
   HistoryStatusV1,
   type HistoryWarningV1,
-} from '../schemas/index.js';
-import { sha256Hex } from '../shared/connector-relay.js';
-import { mtimeMs } from '../shared/run-artifact-io.js';
+} from '../../schemas/index.js';
+import { sha256Hex } from '../../shared/connector-relay.js';
+import { mtimeMs } from '../../shared/run-artifact-io.js';
 import { extractRunHistoryDocuments } from './extract.js';
 import { collectRunSourceFiles } from './run-source-files.js';
 

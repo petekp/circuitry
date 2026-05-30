@@ -1,5 +1,5 @@
-import type { ProcessEvidenceProjection } from '../schemas/process-evidence.js';
-import type { RunGoalContract } from '../schemas/run-envelope.js';
+import type { ProcessEvidenceProjection } from '../../schemas/process-evidence.js';
+import type { RunGoalContract } from '../../schemas/run-envelope.js';
 import {
   type AttemptOutcome,
   type AttemptResult,

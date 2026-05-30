@@ -1,13 +1,13 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { sha256OfFile, sha256OfString } from '../schemas/hashing.js';
-import { CompiledFlowId, RunId, StepId } from '../schemas/ids.js';
+import { sha256OfFile, sha256OfString } from '../../schemas/hashing.js';
+import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
 import {
   PROCESS_EVIDENCE_RELATIVE_PATH,
   type ProcessEvidenceProjection,
   ProcessEvidenceProjection as ProcessEvidenceProjectionSchema,
-} from '../schemas/process-evidence.js';
-import { type Ref, Sha256 } from '../schemas/ref.js';
+} from '../../schemas/process-evidence.js';
+import { type Ref, Sha256 } from '../../schemas/ref.js';
 import {
   type RunDecisionPacket,
   RunEnvelopeRecord,
@@ -15,8 +15,8 @@ import {
   type RunEvidenceRef,
   type RunRequiredEvidence,
   type RunRequiredEvidenceKind,
-} from '../schemas/run-envelope.js';
-import { runRelativePath } from '../shared/run-artifact-io.js';
+} from '../../schemas/run-envelope.js';
+import { runRelativePath } from '../../shared/run-artifact-io.js';
 
 export const RUN_ENVELOPE_RELATIVE_PATH = 'reports/run-envelope.json';
 export const RUN_SURFACE_RELATIVE_PATH = 'reports/run-surface.md';

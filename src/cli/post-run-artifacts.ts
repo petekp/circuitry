@@ -1,13 +1,13 @@
-import { writeProcessEvidenceProjection } from '../process-evidence/projection.js';
+import { writeProcessEvidenceProjection } from '../app/process-evidence/projection.js';
 import {
   type WriteRunEnvelopeShadowRecordInput,
   writeRunEnvelopeShadowRecord,
-} from '../run-envelope/shadow-record.js';
+} from '../app/run-envelope/shadow-record.js';
 import {
   type WriteRunEnvelopeRecordInput,
   type WriteRunEnvelopeRecordResult,
   writeRunEnvelopeRecord as writeSourceRunEnvelopeRecord,
-} from '../run-envelope/source-record.js';
+} from '../app/run-envelope/source-record.js';
 // Post-run artifact emission for the run/resume execution paths.
 //
 // The four post-run artifacts (operator-summary, run-envelope-shadow,

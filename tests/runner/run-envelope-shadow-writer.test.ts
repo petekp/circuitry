@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   RUN_ENVELOPE_SHADOW_RELATIVE_PATH,
   writeRunEnvelopeShadowRecord,
-} from '../../src/run-envelope/shadow-record.js';
+} from '../../src/app/run-envelope/shadow-record.js';
 import { CompiledFlowId, RunId } from '../../src/schemas/ids.js';
 import { RunEnvelopeShadowRecord } from '../../src/schemas/run-envelope.js';
 

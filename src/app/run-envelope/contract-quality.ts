@@ -1,4 +1,4 @@
-import type { RunGoalContract, RunRequiredEvidenceKind } from '../schemas/run-envelope.js';
+import type { RunGoalContract, RunRequiredEvidenceKind } from '../../schemas/run-envelope.js';
 
 // S4: contract-quality gate lens. Where the other gate passes check evidence
 // against the contract, this lens attacks the contract itself: is the required

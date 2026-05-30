@@ -12,7 +12,7 @@ then read that layer's local README if you need more detail.
 | `src/runtime/` | Engine mechanics for running compiled flows. |
 | `src/schemas/` | Zod contracts for config, traces, reports, flows, and host surfaces. |
 | `src/shared/` | Helpers used by more than one source layer. |
-| `src/run-status/` | Run status projections and run-folder lookup helpers. |
+| `src/app/` | Application services that compose the engine for the CLI (run envelope, run status, history, process evidence). |
 | `src/release/` | Release metadata helpers. |
 | `src/types/` | Hand-written TypeScript helpers that schemas cannot express cleanly. |
 | `src/index.ts` | Public package export surface. |

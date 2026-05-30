@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { contractQualityReview, objectiveKind } from '../../src/run-envelope/contract-quality.js';
+import {
+  contractQualityReview,
+  objectiveKind,
+} from '../../src/app/run-envelope/contract-quality.js';
 import { goalContract as contract } from './run-envelope-fixtures.js';
 
 describe('Run contract-quality lens (S4)', () => {

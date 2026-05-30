@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   contractLockDecision,
   detectContractWeakening,
-} from '../../src/run-envelope/contract-lock.js';
+} from '../../src/app/run-envelope/contract-lock.js';
 import { goalContract as contract } from './run-envelope-fixtures.js';
 
 describe('Run proof-contract lock (S3)', () => {

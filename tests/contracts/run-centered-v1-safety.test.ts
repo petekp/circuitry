@@ -37,8 +37,8 @@ function importPathsFrom(path: string): string[] {
 }
 
 const sourceEnvelopeFiles = [
-  'src/run-envelope/source-record.ts',
-  ...walk('src/run-envelope/source').filter((path) => path.endsWith('.ts')),
+  'src/app/run-envelope/source-record.ts',
+  ...walk('src/app/run-envelope/source').filter((path) => path.endsWith('.ts')),
 ];
 
 describe('Run-centered V1 safety ratchets', () => {
@@ -55,7 +55,7 @@ describe('Run-centered V1 safety ratchets', () => {
   });
 
   it('keeps future Run envelope code away from runtime executor internals', () => {
-    const futureEnvelopeFiles = [...walk('src/run-envelope'), ...walk('src/cli/run-envelope')];
+    const futureEnvelopeFiles = [...walk('src/app/run-envelope'), ...walk('src/cli/run-envelope')];
     const offenders = futureEnvelopeFiles.flatMap((path) =>
       importPathsFrom(path)
         .filter((importPath) => importPath.includes('/runtime/executors/'))
@@ -91,7 +91,7 @@ describe('Run-centered V1 safety ratchets', () => {
   });
 
   it('keeps future Run envelope code from hard-coding private report paths', () => {
-    const futureEnvelopeFiles = [...walk('src/run-envelope'), ...walk('src/cli/run-envelope')];
+    const futureEnvelopeFiles = [...walk('src/app/run-envelope'), ...walk('src/cli/run-envelope')];
 
     expect(matchingLines(futureEnvelopeFiles, /reports\/[^'"\s]+\/[^'"\s]+\.json/)).toEqual([]);
   });

@@ -20,17 +20,17 @@ import {
 import { RunResult } from '../schemas/result.js';
 import { Rigor, type Rigor as RigorValue } from '../schemas/rigor.js';
 
-import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
-import { classifyCompiledFlowTask } from '../flows/router.js';
 import {
   HISTORY_RECALL_REPORT_PATH,
   prepareRunStartHistoryRecall,
-} from '../history/run-start-recall.js';
+} from '../app/history/run-start-recall.js';
 import {
   projectCheckpointWaitingProcessEvidence,
   projectClosedProcessEvidence,
-} from '../process-evidence/projection.js';
-import { runAutonomousContinuation } from '../run-envelope/autonomous-run.js';
+} from '../app/process-evidence/projection.js';
+import { runAutonomousContinuation } from '../app/run-envelope/autonomous-run.js';
+import { findFlowRuntimeSurfaceById } from '../flows/catalog.js';
+import { classifyCompiledFlowTask } from '../flows/router.js';
 import { discoverRuntimeConfigLayers } from '../shared/config-loader.js';
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary-writer.js';

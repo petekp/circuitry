@@ -5,8 +5,8 @@ import {
   type HistoryQueryHitV1 as HistoryQueryHit,
   type HistoryWarningV1,
   MemoryInputV0,
-} from '../schemas/index.js';
-import { sha256Hex } from '../shared/connector-relay.js';
+} from '../../schemas/index.js';
+import { sha256Hex } from '../../shared/connector-relay.js';
 
 function fileStem(value: string): string {
   const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');

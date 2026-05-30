@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { captureStreams, deterministicNow, makeStubRelayer } from '../helpers/runtime-fixtures.js';
 
+import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/app/run-envelope/shadow-record.js';
+import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/app/run-envelope/source-record.js';
 import { main } from '../../src/cli/circuit.js';
-import { RUN_ENVELOPE_SHADOW_RELATIVE_PATH } from '../../src/run-envelope/shadow-record.js';
-import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord, RunEnvelopeShadowRecord } from '../../src/schemas/run-envelope.js';
 
 const REVIEW_RELAY_BODY = JSON.stringify({

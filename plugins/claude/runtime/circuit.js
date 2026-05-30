@@ -53991,103 +53991,7 @@ async function resumeCompiledFlow(options) {
   return result.result;
 }
 
-// dist/flows/router.js
-var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
-var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
-var ROUTABLE_WORKFLOWS = Object.freeze(ROUTABLE_PACKAGES.map((entry) => entry.pkg.id));
-var PLANNING_ARTIFACT_SIGNAL = /\b(?:proposal|plan|brief|matrix|evaluation\s+matrix|design\s+doc|design\s+document|spec|specification|rfc|memo|document|doc|guide|analysis|evaluation|selection|strategy|outline|report|comparison|recommendation|write-?up|options|approaches)\b/i;
-var PLAN_EXECUTION_SIGNAL = /^\s*(?:execute|run|start|begin|work\s+through|carry\s+out|tackle)\s+(?:this\s+|the\s+)?(?:[\w-]+\s+){0,3}(?:plan|backlog|checklist|roadmap|doc|document)(?::|\b)/i;
-function resolvePlanExecutionFlowName(flowId, routables, defaultPackage) {
-  if (defaultPackage.pkg.id === flowId)
-    return defaultPackage.pkg.id;
-  const match = routables.find((entry) => entry.pkg.id === flowId);
-  if (match === void 0) {
-    throw new Error(`plan-execution target '${flowId}' is not a routable flow`);
-  }
-  return match.pkg.id;
-}
-function classifyPlanExecutionRequest(taskText, routables, defaultPackage) {
-  if (!PLAN_EXECUTION_SIGNAL.test(taskText))
-    return void 0;
-  const lower = taskText.toLowerCase();
-  let target;
-  if (/\b(?:decide|decision|choose|choice|option|options|tradeoff|trade-off)\b/.test(lower)) {
-    target = {
-      flowId: "explore",
-      reason: "matched plan-execution request; selected Explore tournament for a blocking decision",
-      inferredEntryModeName: "tournament",
-      inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
-    };
-  } else if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
-    target = {
-      flowId: "fix",
-      reason: "matched plan-execution request; selected Fix for the first bug-fix slice",
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched bug-fix-oriented plan execution; selected deep thoroughness"
-    };
-  } else {
-    target = {
-      flowId: "build",
-      reason: "matched plan-execution request; selected Build to start the first executable slice",
-      inferredEntryModeName: "default",
-      inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
-    };
-  }
-  return {
-    flowName: resolvePlanExecutionFlowName(target.flowId, routables, defaultPackage),
-    source: "classifier",
-    matched_signal: "plan-execution",
-    reason: target.reason,
-    inferredEntryModeName: target.inferredEntryModeName,
-    inferredEntryModeReason: target.inferredEntryModeReason
-  };
-}
-function inferEntryMode(flowName, taskText, routables, defaultPackage) {
-  const entry = defaultPackage.pkg.id === flowName ? defaultPackage : routables.find((candidate) => candidate.pkg.id === flowName);
-  const inferred = entry?.routing.inferEntryMode?.(taskText);
-  if (inferred === void 0)
-    return {};
-  return {
-    inferredEntryModeName: inferred.name,
-    inferredEntryModeReason: inferred.reason
-  };
-}
-function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
-  const planExecution = classifyPlanExecutionRequest(taskText, routables, defaultPackage);
-  if (planExecution !== void 0)
-    return planExecution;
-  const hasPlanningReport = PLANNING_ARTIFACT_SIGNAL.test(taskText);
-  for (const { pkg, routing } of routables) {
-    if (routing.isDefault)
-      continue;
-    for (const signal of routing.signals) {
-      if (!signal.pattern.test(taskText))
-        continue;
-      if (routing.skipOnPlanningReport === true && hasPlanningReport) {
-        break;
-      }
-      return {
-        flowName: pkg.id,
-        source: "classifier",
-        matched_signal: signal.label,
-        reason: routing.reasonForMatch(signal),
-        ...inferEntryMode(pkg.id, taskText, routables, defaultPackage)
-      };
-    }
-  }
-  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText, routables, defaultPackage);
-  return {
-    flowName: defaultPackage.pkg.id,
-    source: "classifier",
-    reason: inferred.inferredEntryModeReason ?? defaultPackage.routing.defaultReason ?? `no signal matched; routed to ${defaultPackage.pkg.id} as the conservative default`,
-    ...inferred
-  };
-}
-function classifyCompiledFlowTask(taskText) {
-  return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
-}
-
-// dist/history/indexer.js
+// dist/app/history/indexer.js
 import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, readdirSync as readdirSync4, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
 import { basename as basename2, join as join12, resolve as resolve9 } from "node:path";
 
@@ -54101,11 +54005,11 @@ function mtimeMs(path) {
   return Math.trunc(statSync(path).mtimeMs);
 }
 
-// dist/history/extract.js
+// dist/app/history/extract.js
 import { existsSync as existsSync13, lstatSync as lstatSync6, readFileSync as readFileSync25, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
 import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve8 } from "node:path";
 
-// dist/history/run-source-files.js
+// dist/app/history/run-source-files.js
 import { existsSync as existsSync12, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
 import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve7 } from "node:path";
 function collectRunSourceFiles(runFolder) {
@@ -54162,7 +54066,7 @@ function walkReportJsonFiles(reportsRoot2) {
   return out;
 }
 
-// dist/history/extract.js
+// dist/app/history/extract.js
 var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
   "goal",
   "objective",
@@ -54812,7 +54716,7 @@ function extractRunHistoryDocuments(runFolder) {
   };
 }
 
-// dist/history/indexer.js
+// dist/app/history/indexer.js
 var DEFAULT_RUNS_BASE = ".circuit/runs";
 var DEFAULT_INDEX_DIR = ".circuit/history";
 var HISTORY_DOCUMENTS_FILE = "documents.v1.jsonl";
@@ -55063,7 +54967,7 @@ function historyStatus(options = {}) {
   }
 }
 
-// dist/history/memory-preview.js
+// dist/app/history/memory-preview.js
 function fileStem(value) {
   const normalized = value.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
   const trimmed = normalized.replace(/^[^a-z0-9]+/, "").slice(0, 96);
@@ -55144,7 +55048,7 @@ function historyMemoryInputPreview(input) {
   });
 }
 
-// dist/history/query.js
+// dist/app/history/query.js
 import { existsSync as existsSync15, readFileSync as readFileSync27 } from "node:fs";
 var STOPWORDS = /* @__PURE__ */ new Set([
   "the",
@@ -55431,7 +55335,7 @@ function queryHistory(options) {
   });
 }
 
-// dist/history/run-start-recall.js
+// dist/app/history/run-start-recall.js
 var HISTORY_RECALL_REPORT_PATH = "reports/history/recall.json";
 var DEFAULT_RECALL_LIMIT = 3;
 function unavailableWarning(error51) {
@@ -55504,7 +55408,7 @@ function prepareRunStartHistoryRecall(options) {
   }
 }
 
-// dist/process-evidence/projection.js
+// dist/app/process-evidence/projection.js
 import { existsSync as existsSync16, mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { dirname as dirname5, join as join13 } from "node:path";
 function traceRef2(runId) {
@@ -55634,7 +55538,7 @@ function writeProcessEvidenceProjection(input) {
   return { path: outPath, projection };
 }
 
-// dist/run-envelope/contract-quality.js
+// dist/app/run-envelope/contract-quality.js
 var IMPLEMENTATION_INTENT = /\b(build|fix|implement|add|change|create|refactor|ship|integrate|update|wire)\b/;
 var REVIEW_INTENT2 = /\b(review|audit|assess|inspect|findings?)\b/;
 var EXPLORE_INTENT2 = /\b(explore|compare|decide|decision|tradeoffs?|options?)\b/;
@@ -55673,7 +55577,7 @@ function contractQualityReview(contract) {
   };
 }
 
-// dist/run-envelope/no-progress.js
+// dist/app/run-envelope/no-progress.js
 function sameSet(a, b) {
   if (a.length !== b.length)
     return false;
@@ -55706,7 +55610,7 @@ function detectNoProgress(attempts) {
   return { escalate: false, reason: null };
 }
 
-// dist/run-envelope/source-record.js
+// dist/app/run-envelope/source-record.js
 import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync3 } from "node:fs";
 import { dirname as dirname6, join as join14 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
@@ -56266,7 +56170,7 @@ function writeRunEnvelopeRecord(input) {
   };
 }
 
-// dist/run-envelope/continuation-loop.js
+// dist/app/run-envelope/continuation-loop.js
 async function runContinuationLoop(input) {
   const quality = contractQualityReview(input.contract);
   if (quality.verdict === "blocked") {
@@ -56328,7 +56232,7 @@ async function runContinuationLoop(input) {
   };
 }
 
-// dist/run-envelope/autonomous-run.js
+// dist/app/run-envelope/autonomous-run.js
 function attemptOutcomeFromProjection(projection, missing) {
   switch (projection.outcome) {
     case "complete":
@@ -56367,6 +56271,102 @@ async function runAutonomousContinuation(input) {
       return attemptResultFromProjection(run.projection);
     }
   });
+}
+
+// dist/flows/router.js
+var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
+var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
+var ROUTABLE_WORKFLOWS = Object.freeze(ROUTABLE_PACKAGES.map((entry) => entry.pkg.id));
+var PLANNING_ARTIFACT_SIGNAL = /\b(?:proposal|plan|brief|matrix|evaluation\s+matrix|design\s+doc|design\s+document|spec|specification|rfc|memo|document|doc|guide|analysis|evaluation|selection|strategy|outline|report|comparison|recommendation|write-?up|options|approaches)\b/i;
+var PLAN_EXECUTION_SIGNAL = /^\s*(?:execute|run|start|begin|work\s+through|carry\s+out|tackle)\s+(?:this\s+|the\s+)?(?:[\w-]+\s+){0,3}(?:plan|backlog|checklist|roadmap|doc|document)(?::|\b)/i;
+function resolvePlanExecutionFlowName(flowId, routables, defaultPackage) {
+  if (defaultPackage.pkg.id === flowId)
+    return defaultPackage.pkg.id;
+  const match = routables.find((entry) => entry.pkg.id === flowId);
+  if (match === void 0) {
+    throw new Error(`plan-execution target '${flowId}' is not a routable flow`);
+  }
+  return match.pkg.id;
+}
+function classifyPlanExecutionRequest(taskText, routables, defaultPackage) {
+  if (!PLAN_EXECUTION_SIGNAL.test(taskText))
+    return void 0;
+  const lower = taskText.toLowerCase();
+  let target;
+  if (/\b(?:decide|decision|choose|choice|option|options|tradeoff|trade-off)\b/.test(lower)) {
+    target = {
+      flowId: "explore",
+      reason: "matched plan-execution request; selected Explore tournament for a blocking decision",
+      inferredEntryModeName: "tournament",
+      inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
+    };
+  } else if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
+    target = {
+      flowId: "fix",
+      reason: "matched plan-execution request; selected Fix for the first bug-fix slice",
+      inferredEntryModeName: "deep",
+      inferredEntryModeReason: "matched bug-fix-oriented plan execution; selected deep thoroughness"
+    };
+  } else {
+    target = {
+      flowId: "build",
+      reason: "matched plan-execution request; selected Build to start the first executable slice",
+      inferredEntryModeName: "default",
+      inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
+    };
+  }
+  return {
+    flowName: resolvePlanExecutionFlowName(target.flowId, routables, defaultPackage),
+    source: "classifier",
+    matched_signal: "plan-execution",
+    reason: target.reason,
+    inferredEntryModeName: target.inferredEntryModeName,
+    inferredEntryModeReason: target.inferredEntryModeReason
+  };
+}
+function inferEntryMode(flowName, taskText, routables, defaultPackage) {
+  const entry = defaultPackage.pkg.id === flowName ? defaultPackage : routables.find((candidate) => candidate.pkg.id === flowName);
+  const inferred = entry?.routing.inferEntryMode?.(taskText);
+  if (inferred === void 0)
+    return {};
+  return {
+    inferredEntryModeName: inferred.name,
+    inferredEntryModeReason: inferred.reason
+  };
+}
+function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
+  const planExecution = classifyPlanExecutionRequest(taskText, routables, defaultPackage);
+  if (planExecution !== void 0)
+    return planExecution;
+  const hasPlanningReport = PLANNING_ARTIFACT_SIGNAL.test(taskText);
+  for (const { pkg, routing } of routables) {
+    if (routing.isDefault)
+      continue;
+    for (const signal of routing.signals) {
+      if (!signal.pattern.test(taskText))
+        continue;
+      if (routing.skipOnPlanningReport === true && hasPlanningReport) {
+        break;
+      }
+      return {
+        flowName: pkg.id,
+        source: "classifier",
+        matched_signal: signal.label,
+        reason: routing.reasonForMatch(signal),
+        ...inferEntryMode(pkg.id, taskText, routables, defaultPackage)
+      };
+    }
+  }
+  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText, routables, defaultPackage);
+  return {
+    flowName: defaultPackage.pkg.id,
+    source: "classifier",
+    reason: inferred.inferredEntryModeReason ?? defaultPackage.routing.defaultReason ?? `no signal matched; routed to ${defaultPackage.pkg.id} as the conservative default`,
+    ...inferred
+  };
+}
+function classifyCompiledFlowTask(taskText) {
+  return classifyTaskAgainstRoutables(taskText, ROUTABLE_PACKAGES, DEFAULT_PACKAGE);
 }
 
 // dist/shared/config-loader.js
@@ -58085,7 +58085,7 @@ import { homedir as homedir4 } from "node:os";
 import { dirname as dirname10, join as join21, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
-// dist/run-status/run-folder-projector.js
+// dist/app/run-status/run-folder-projector.js
 import { constants, accessSync, statSync as statSync3 } from "node:fs";
 import { resolve as resolve14 } from "node:path";
 
@@ -58104,7 +58104,7 @@ function verifyManifestSnapshotBytes(runFolder) {
   return readManifestSnapshot(runFolder);
 }
 
-// dist/run-status/projection-common.js
+// dist/app/run-status/projection-common.js
 import { existsSync as existsSync21 } from "node:fs";
 import { join as join19 } from "node:path";
 function errorMessage3(err) {
@@ -58160,7 +58160,7 @@ function stepMetadata(flow, stepId) {
   };
 }
 
-// dist/run-status/runtime-run-folder.js
+// dist/app/run-status/runtime-run-folder.js
 import { readFileSync as readFileSync34 } from "node:fs";
 import { join as join20 } from "node:path";
 function isRecord6(value) {
@@ -58582,7 +58582,7 @@ function projectRuntimeRunStatusFromRunFolder(runFolder, manifest) {
   });
 }
 
-// dist/run-status/run-folder-projector.js
+// dist/app/run-status/run-folder-projector.js
 var RunStatusFolderError = class extends Error {
   code;
   runFolder;
@@ -59838,7 +59838,7 @@ async function runHistoryCommand(argv) {
   }
 }
 
-// dist/run-envelope/shadow-record.js
+// dist/app/run-envelope/shadow-record.js
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync8 } from "node:fs";
 import { dirname as dirname11, join as join22 } from "node:path";
 var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";

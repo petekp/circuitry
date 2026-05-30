@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
-import { projectRunStatusFromRunFolder } from '../run-status/run-folder-projector.js';
+import { projectRunStatusFromRunFolder } from '../app/run-status/run-folder-projector.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import {
   ContinuityIndex,

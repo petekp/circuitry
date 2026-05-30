@@ -1,4 +1,4 @@
-import type { RunGoalContract } from '../schemas/run-envelope.js';
+import type { RunGoalContract } from '../../schemas/run-envelope.js';
 
 // S3: lock the proof contract authored at intake. An autonomous continuation
 // loop must not be able to weaken its own done_when between attempts to declare

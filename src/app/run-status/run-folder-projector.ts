@@ -1,8 +1,8 @@
 import { constants, accessSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { EngineErrorCodeV1 } from '../schemas/run-status.js';
-import type { RunStatusProjectionV1 } from '../schemas/run-status.js';
-import { verifyManifestSnapshotBytes } from '../shared/manifest-snapshot.js';
+import type { EngineErrorCodeV1 } from '../../schemas/run-status.js';
+import type { RunStatusProjectionV1 } from '../../schemas/run-status.js';
+import { verifyManifestSnapshotBytes } from '../../shared/manifest-snapshot.js';
 import { errorMessage, invalidProjection } from './projection-common.js';
 import { projectRuntimeRunStatusFromRunFolder } from './runtime-run-folder.js';
 

@@ -9,9 +9,9 @@ import {
   HistoryQueryResultV1,
   type HistoryStalenessV1,
   type HistoryWarningV1,
-} from '../schemas/index.js';
-import { sha256Hex } from '../shared/connector-relay.js';
-import { resolveRunFilePath } from '../shared/run-file-paths.js';
+} from '../../schemas/index.js';
+import { sha256Hex } from '../../shared/connector-relay.js';
+import { resolveRunFilePath } from '../../shared/run-file-paths.js';
 import {
   HistoryCommandError,
   type HistoryIndex,

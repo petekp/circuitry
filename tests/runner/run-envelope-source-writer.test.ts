@@ -7,11 +7,11 @@ import {
   projectCheckpointWaitingProcessEvidence,
   projectClosedProcessEvidence,
   writeProcessEvidenceProjection,
-} from '../../src/process-evidence/projection.js';
+} from '../../src/app/process-evidence/projection.js';
 import {
   RUN_ENVELOPE_RELATIVE_PATH,
   writeRunEnvelopeRecord,
-} from '../../src/run-envelope/source-record.js';
+} from '../../src/app/run-envelope/source-record.js';
 import { RunId } from '../../src/schemas/ids.js';
 import { PROCESS_EVIDENCE_RELATIVE_PATH } from '../../src/schemas/process-evidence.js';
 import { RunResult } from '../../src/schemas/result.js';

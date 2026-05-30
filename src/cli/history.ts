@@ -7,9 +7,9 @@ import {
   readHistoryManifest,
   rebuildHistoryIndex,
   resolveHistoryPaths,
-} from '../history/indexer.js';
-import { historyMemoryInputPreview } from '../history/memory-preview.js';
-import { queryHistory } from '../history/query.js';
+} from '../app/history/indexer.js';
+import { historyMemoryInputPreview } from '../app/history/memory-preview.js';
+import { queryHistory } from '../app/history/query.js';
 import { HistoryDocumentKindV1 } from '../schemas/index.js';
 import { commanderErrorMessage, configureCommanderProgram } from './commander-support.js';
 

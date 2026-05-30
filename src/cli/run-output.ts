@@ -1,4 +1,4 @@
-import type { WriteRunEnvelopeRecordResult } from '../run-envelope/source-record.js';
+import type { WriteRunEnvelopeRecordResult } from '../app/run-envelope/source-record.js';
 import type { OperatorSummaryWriteResult } from '../shared/operator-summary-writer.js';
 
 export interface RouteOutputFieldsInput {

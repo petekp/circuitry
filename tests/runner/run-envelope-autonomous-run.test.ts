@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   attemptResultFromProjection,
   runAutonomousContinuation,
-} from '../../src/run-envelope/autonomous-run.js';
+} from '../../src/app/run-envelope/autonomous-run.js';
 import type { ProcessEvidenceProjection } from '../../src/schemas/process-evidence.js';
 import { goalContract as contract } from './run-envelope-fixtures.js';
 

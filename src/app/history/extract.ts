@@ -9,10 +9,10 @@ import {
   Ref,
   RunId,
   StepId,
-} from '../schemas/index.js';
-import { sha256Hex } from '../shared/connector-relay.js';
-import { mtimeMs } from '../shared/run-artifact-io.js';
-import { resolveRunFilePath, validateRunFilePath } from '../shared/run-file-paths.js';
+} from '../../schemas/index.js';
+import { sha256Hex } from '../../shared/connector-relay.js';
+import { mtimeMs } from '../../shared/run-artifact-io.js';
+import { resolveRunFilePath, validateRunFilePath } from '../../shared/run-file-paths.js';
 import { collectRunSourceFiles } from './run-source-files.js';
 
 const HIGH_VALUE_FIELDS = new Set([

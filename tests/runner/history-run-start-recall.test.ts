@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { HISTORY_RECALL_REPORT_PATH } from '../../src/app/history/run-start-recall.js';
+import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/app/run-envelope/source-record.js';
 import { main } from '../../src/cli/circuit.js';
-import { HISTORY_RECALL_REPORT_PATH } from '../../src/history/run-start-recall.js';
 import { HistoryRecallReportV1, MemoryInputV0 } from '../../src/index.js';
-import { RUN_ENVELOPE_RELATIVE_PATH } from '../../src/run-envelope/source-record.js';
 import { RunEnvelopeRecord } from '../../src/schemas/run-envelope.js';
 import type { RelayFn } from '../../src/shared/relay-runtime-types.js';
 import { captureStreams, makeStubRelayer } from '../helpers/runtime-fixtures.js';

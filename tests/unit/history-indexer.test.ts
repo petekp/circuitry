@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { rebuildHistoryIndex } from '../../src/history/indexer.js';
-import { historyMemoryInputPreview } from '../../src/history/memory-preview.js';
-import { queryHistory } from '../../src/history/query.js';
+import { rebuildHistoryIndex } from '../../src/app/history/indexer.js';
+import { historyMemoryInputPreview } from '../../src/app/history/memory-preview.js';
+import { queryHistory } from '../../src/app/history/query.js';
 import { MemoryInputV0 } from '../../src/index.js';
 
 const tempRoots: string[] = [];

@@ -1,10 +1,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { CompiledFlow } from '../schemas/compiled-flow.js';
-import type { RunStatusInvalidReason } from '../schemas/run-status.js';
-import { RunStatusProjectionV1 } from '../schemas/run-status.js';
-import type { TraceEntry } from '../schemas/trace-entry.js';
-import { runResultPath } from '../shared/result-path.js';
+import { CompiledFlow } from '../../schemas/compiled-flow.js';
+import type { RunStatusInvalidReason } from '../../schemas/run-status.js';
+import { RunStatusProjectionV1 } from '../../schemas/run-status.js';
+import type { TraceEntry } from '../../schemas/trace-entry.js';
+import { runResultPath } from '../../shared/result-path.js';
 
 export type BootstrapTraceEntry = Extract<TraceEntry, { kind: 'run.bootstrapped' }>;
 

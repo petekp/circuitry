@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { flowPackages } from '../../src/flows/catalog.js';
 import {
   projectCheckpointWaitingProcessEvidence,
   projectClosedProcessEvidence,
   writeProcessEvidenceProjection,
-} from '../../src/process-evidence/projection.js';
+} from '../../src/app/process-evidence/projection.js';
+import { flowPackages } from '../../src/flows/catalog.js';
 import { RunId } from '../../src/schemas/ids.js';
 import {
   PROCESS_EVIDENCE_RELATIVE_PATH,

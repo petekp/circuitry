@@ -1,15 +1,15 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { sha256OfFile } from '../schemas/hashing.js';
-import { CompiledFlowId, RunId, StepId } from '../schemas/ids.js';
-import type { Ref } from '../schemas/ref.js';
-import type { RunResult } from '../schemas/result.js';
+import { sha256OfFile } from '../../schemas/hashing.js';
+import { CompiledFlowId, RunId, StepId } from '../../schemas/ids.js';
+import type { Ref } from '../../schemas/ref.js';
+import type { RunResult } from '../../schemas/result.js';
 import {
   RunEnvelopeShadowRecord,
   type RunEnvelopeShadowRecord as RunEnvelopeShadowRecordValue,
   type RunEvidenceRef,
-} from '../schemas/run-envelope.js';
-import { runRelativePath } from '../shared/run-artifact-io.js';
+} from '../../schemas/run-envelope.js';
+import { runRelativePath } from '../../shared/run-artifact-io.js';
 
 export const RUN_ENVELOPE_SHADOW_RELATIVE_PATH = 'reports/run-envelope-shadow.json';
 
