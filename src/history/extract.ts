@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { basename, isAbsolute, relative, resolve } from 'node:path';
 import { resolveRunFilePath, validateRunFilePath } from '../runtime/run-files/paths.js';
 import {
@@ -12,6 +12,7 @@ import {
   StepId,
 } from '../schemas/index.js';
 import { sha256Hex } from '../shared/connector-relay.js';
+import { mtimeMs } from '../shared/run-artifact-io.js';
 
 const HIGH_VALUE_FIELDS = new Set([
   'goal',
@@ -101,10 +102,6 @@ function readJsonRecord(path: string): JsonRecord | undefined {
 
 function sha256File(path: string): string {
   return sha256Hex(readFileSync(path, 'utf8'));
-}
-
-function mtimeMs(path: string): number {
-  return Math.trunc(statSync(path).mtimeMs);
 }
 
 function isInside(root: string, target: string): boolean {

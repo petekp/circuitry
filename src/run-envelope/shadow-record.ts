@@ -1,14 +1,15 @@
-import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { sha256OfFile } from '../schemas/hashing.js';
 import { CompiledFlowId, RunId, StepId } from '../schemas/ids.js';
-import { type Ref, Sha256 } from '../schemas/ref.js';
+import type { Ref } from '../schemas/ref.js';
 import type { RunResult } from '../schemas/result.js';
 import {
   RunEnvelopeShadowRecord,
   type RunEnvelopeShadowRecord as RunEnvelopeShadowRecordValue,
   type RunEvidenceRef,
 } from '../schemas/run-envelope.js';
+import { runRelativePath } from '../shared/run-artifact-io.js';
 
 export const RUN_ENVELOPE_SHADOW_RELATIVE_PATH = 'reports/run-envelope-shadow.json';
 
@@ -54,14 +55,6 @@ export type WriteRunEnvelopeShadowRecordResult = {
   readonly record: RunEnvelopeShadowRecordValue;
 };
 
-function sha256File(path: string): string {
-  return Sha256.parse(createHash('sha256').update(readFileSync(path)).digest('hex'));
-}
-
-function runRelativePath(runFolder: string, path: string): string {
-  return isAbsolute(path) ? relative(runFolder, path) : path;
-}
-
 function reportRef(input: {
   readonly runFolder: string;
   readonly path: string;
@@ -71,7 +64,7 @@ function reportRef(input: {
   return {
     kind: 'report',
     ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256File(input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId),
   };
@@ -87,7 +80,7 @@ function requestRef(input: {
   return {
     kind: 'request',
     ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256File(input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId),
     step_id: StepId.parse(input.stepId),

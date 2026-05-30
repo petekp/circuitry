@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { sha256OfFile, sha256OfString } from '../schemas/hashing.js';
 import { CompiledFlowId, RunId, StepId } from '../schemas/ids.js';
 import {
   PROCESS_EVIDENCE_RELATIVE_PATH,
@@ -16,6 +16,7 @@ import {
   type RunRequiredEvidence,
   type RunRequiredEvidenceKind,
 } from '../schemas/run-envelope.js';
+import { runRelativePath } from '../shared/run-artifact-io.js';
 
 export const RUN_ENVELOPE_RELATIVE_PATH = 'reports/run-envelope.json';
 export const RUN_SURFACE_RELATIVE_PATH = 'reports/run-surface.md';
@@ -72,18 +73,6 @@ export type MissingRunEvidence = {
   readonly missing_refs: readonly string[];
 };
 
-function sha256File(path: string): string {
-  return Sha256.parse(createHash('sha256').update(readFileSync(path)).digest('hex'));
-}
-
-function sha256Text(text: string): string {
-  return Sha256.parse(createHash('sha256').update(text).digest('hex'));
-}
-
-function runRelativePath(runFolder: string, path: string): string {
-  return isAbsolute(path) ? relative(runFolder, path) : path;
-}
-
 function childRunIdFromProjection(projection: ProcessEvidenceProjection): RunId {
   return RunId.parse(projection.child_run_ref.run_id);
 }
@@ -97,7 +86,7 @@ function evidenceFileRef(input: {
   return {
     kind: 'evidence',
     ref: runRelativePath(input.runFolder, input.path),
-    sha256: sha256File(input.path),
+    sha256: sha256OfFile(input.path),
     run_id: RunId.parse(input.runId),
     flow_id: CompiledFlowId.parse(input.flowId),
   };
@@ -486,7 +475,7 @@ function decisionPacketArtifacts(input: {
       ref: {
         kind: 'report',
         ref: decisionPacketRelativePath(packet),
-        sha256: sha256Text(body),
+        sha256: Sha256.parse(sha256OfString(body)),
         run_id: input.runId,
       },
     };

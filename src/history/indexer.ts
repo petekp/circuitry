@@ -20,6 +20,7 @@ import {
   type HistoryWarningV1,
 } from '../schemas/index.js';
 import { sha256Hex } from '../shared/connector-relay.js';
+import { mtimeMs } from '../shared/run-artifact-io.js';
 import { extractRunHistoryDocuments } from './extract.js';
 
 export const DEFAULT_RUNS_BASE = '.circuit/runs';
@@ -130,7 +131,7 @@ export function computeLatestSourceMtime(sourceFiles: readonly string[]): number
   let latest = 0;
   for (const file of sourceFiles) {
     try {
-      latest = Math.max(latest, Math.trunc(statSync(file).mtimeMs));
+      latest = Math.max(latest, mtimeMs(file));
     } catch {
       // Missing files after rebuild make the existing index possibly stale at query time.
     }
