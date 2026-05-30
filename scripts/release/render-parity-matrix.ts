@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import type {
+  CapabilityAxes,
+  CurrentCapability,
+  CurrentCapabilitySnapshot,
+  FlowAxisSupportRecord,
+  OriginalCapability,
+  OriginalCapabilitySnapshot,
+  ParityException,
+} from '../../src/release/schemas.js';
 import {
   formatMarkdown,
   loadJsonWithSchema,
@@ -15,10 +24,14 @@ const program = new Command('render-parity-matrix').option('--check');
 program.parse(process.argv.slice(2), { from: 'user' });
 const check = program.opts<{ check?: boolean }>().check === true;
 
-// biome-ignore lint/suspicious/noExplicitAny: release schemas are loaded dynamically from built output.
-type AnyRecord = Record<string, any>;
-type CapabilityById = Map<string, AnyRecord>;
-type ExceptionByCapability = Map<string, AnyRecord>;
+type CapabilityById = Map<string, CurrentCapability>;
+type ExceptionByCapability = Map<string, ParityException>;
+// The behavioral-axis comparator (from the typed checks module) reads only the
+// `axes` field; expected requires it, actual treats it as optional.
+type AxisMismatchFn = (args: {
+  expected: { readonly axes: CapabilityAxes };
+  actual: { readonly axes?: CapabilityAxes };
+}) => readonly unknown[];
 
 function mdCell(value: unknown): string {
   if (value === undefined || value === null) return '';
@@ -27,10 +40,10 @@ function mdCell(value: unknown): string {
 }
 
 function statusWithAxes(
-  original: AnyRecord,
-  current: AnyRecord | undefined,
+  original: OriginalCapability,
+  current: CurrentCapability | undefined,
   exceptionByCapability: ExceptionByCapability,
-  behavioralAxisMismatches: (args: { expected: AnyRecord; actual: AnyRecord }) => unknown[],
+  behavioralAxisMismatches: AxisMismatchFn,
 ): string {
   const exception = exceptionByCapability.get(original.id);
   if (current === undefined) {
@@ -42,9 +55,13 @@ function statusWithAxes(
   return String(exception?.status ?? 'partial');
 }
 
-function axisCell(original: AnyRecord, current: AnyRecord | undefined, key: string): string {
-  const expected = (original.axes as AnyRecord)[key];
-  const actual = (current?.axes as AnyRecord | undefined)?.[key];
+function axisCell(
+  original: OriginalCapability,
+  current: CurrentCapability | undefined,
+  key: keyof CapabilityAxes,
+): string {
+  const expected = original.axes[key];
+  const actual = current?.axes?.[key];
   const expectedText = mdCell(expected);
   const actualText = mdCell(actual);
   if (expectedText === '') return actualText;
@@ -54,14 +71,14 @@ function axisCell(original: AnyRecord, current: AnyRecord | undefined, key: stri
 }
 
 function renderFlowRows(
-  original: AnyRecord,
+  original: OriginalCapabilitySnapshot,
   currentById: CapabilityById,
   exceptionByCapability: ExceptionByCapability,
-  behavioralAxisMismatches: (args: { expected: AnyRecord; actual: AnyRecord }) => unknown[],
+  behavioralAxisMismatches: AxisMismatchFn,
 ): string {
-  const rows = (original.capabilities as AnyRecord[])
-    .filter((capability: AnyRecord) => capability.kind === 'flow')
-    .map((capability: AnyRecord) => {
+  const rows = original.capabilities
+    .filter((capability) => capability.kind === 'flow')
+    .map((capability) => {
       const current = currentById.get(capability.id);
       const status = statusWithAxes(
         capability,
@@ -109,14 +126,14 @@ function renderFlowRows(
 }
 
 function renderOtherRows(
-  original: AnyRecord,
+  original: OriginalCapabilitySnapshot,
   currentById: CapabilityById,
   exceptionByCapability: ExceptionByCapability,
-  behavioralAxisMismatches: (args: { expected: AnyRecord; actual: AnyRecord }) => unknown[],
+  behavioralAxisMismatches: AxisMismatchFn,
 ): string {
-  const rows = (original.capabilities as AnyRecord[])
-    .filter((capability: AnyRecord) => capability.kind !== 'flow')
-    .map((capability: AnyRecord) => {
+  const rows = original.capabilities
+    .filter((capability) => capability.kind !== 'flow')
+    .map((capability) => {
       const current = currentById.get(capability.id);
       const status = statusWithAxes(
         capability,
@@ -138,7 +155,7 @@ function renderOtherRows(
         axisCell(capability, current, 'continuity'),
         axisCell(capability, current, 'proof'),
         exceptionByCapability.get(capability.id)?.readiness_ref ??
-          (current?.readiness_refs as string[] | undefined)?.join(', ') ??
+          current?.readiness_refs.join(', ') ??
           '',
       ];
     });
@@ -162,9 +179,9 @@ function renderOtherRows(
   );
 }
 
-function axisSelectionsFor(axes: AnyRecord): string[] {
+function axisSelectionsFor(axes: FlowAxisSupportRecord): string[] {
   const selections = new Set<string>();
-  const allowedRigors = Array.isArray(axes.allowed_rigors) ? axes.allowed_rigors : [];
+  const allowedRigors = axes.allowed_rigors;
   if (allowedRigors.includes('standard')) selections.add('default');
   if (allowedRigors.includes('lite')) selections.add('lite');
   if (allowedRigors.includes('deep')) selections.add('deep');
@@ -173,12 +190,12 @@ function axisSelectionsFor(axes: AnyRecord): string[] {
   return [...selections].sort();
 }
 
-function renderCurrentModeRows(current: AnyRecord): string {
-  const rows = (current.flows as AnyRecord[]).map((flow: AnyRecord) => [
+function renderCurrentModeRows(current: CurrentCapabilitySnapshot): string {
+  const rows = current.flows.map((flow) => [
     flow.id,
     axisSelectionsFor(flow.axis_support).join(', '),
-    (flow.route_outcomes as unknown[]).map(String).join(', '),
-    (flow.unsupported_route_outcomes as unknown[]).map(String).join(', '),
+    flow.route_outcomes.map(String).join(', '),
+    flow.unsupported_route_outcomes.map(String).join(', '),
   ]);
   return table(['Current Flow', 'Axis Selections', 'Declared Routes', 'Unsupported Routes'], rows);
 }
@@ -196,25 +213,22 @@ async function main() {
   const original = loadYamlWithSchema(
     'docs/release/parity/original-circuit.yaml',
     schemas.OriginalCapabilitySnapshot,
-  ) as AnyRecord;
+  );
   const current = loadJsonWithSchema(
     'generated/release/current-capabilities.json',
     schemas.CurrentCapabilitySnapshot,
-  ) as AnyRecord;
+  );
   const exceptions = loadYamlWithSchema(
     'docs/release/parity/exceptions.yaml',
     schemas.ParityExceptionLedger,
-  ) as AnyRecord;
+  );
   const currentById: CapabilityById = new Map(
-    (current.capabilities as AnyRecord[]).map((capability: AnyRecord) => [
-      capability.id,
-      capability,
-    ]),
+    current.capabilities.map((capability) => [capability.id, capability]),
   );
   const exceptionByCapability: ExceptionByCapability = new Map(
-    (exceptions.exceptions as AnyRecord[])
-      .filter((exception: AnyRecord) => exception.capability_id !== undefined)
-      .map((exception: AnyRecord) => [exception.capability_id, exception]),
+    exceptions.exceptions
+      .filter((exception) => exception.capability_id !== undefined)
+      .map((exception) => [exception.capability_id as string, exception]),
   );
 
   const lines = [
