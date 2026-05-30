@@ -19,6 +19,7 @@ import {
   isClaudeCodeStructuredOutputCompatible,
 } from '../../src/connectors/claude-code.js';
 import { assertCodexSpawnArgvBoundary, buildCodexArgs } from '../../src/connectors/codex.js';
+import { buildCursorAgentArgs } from '../../src/connectors/cursor-agent.js';
 
 describe('claude-code argv', () => {
   it('omits --json-schema when responseSchema is undefined', () => {
@@ -86,5 +87,43 @@ describe('codex argv', () => {
     const flagIndex = args.indexOf('--output-schema');
     const promptIndex = args.indexOf('hi');
     expect(flagIndex).toBeLessThan(promptIndex);
+  });
+});
+
+// Capability-gap pin (CH-P5). BUILTIN_CONNECTOR_SPECS declares
+// `structured_output: 'json'` for every built-in connector, but only
+// claude-code (`--json-schema`) and codex (`--output-schema`) consume the
+// runtime-supplied `responseSchema` natively. cursor-agent accepts the field
+// on its input type (via ConnectorRelayInput) but `buildCursorAgentArgs`
+// deliberately ignores it: cursor-agent has no native structured-output flag,
+// so it relies on the prompt shape hint plus the authoritative runtime Zod
+// parse. This test pins that gap so a future change that starts emitting a
+// schema flag for cursor-agent (or silently drops the claude/codex paths)
+// trips a contract failure rather than drifting unnoticed.
+describe('cursor-agent argv — structured-output capability gap', () => {
+  const compatibleSchema = {
+    type: 'object',
+    properties: { verdict: { type: 'string' } },
+    required: ['verdict'],
+    additionalProperties: false,
+  } as const;
+
+  it('emits no native structured-output flag even when responseSchema is supplied', () => {
+    const args = buildCursorAgentArgs({ prompt: 'hi', responseSchema: { ...compatibleSchema } });
+    expect(args).not.toContain('--json-schema');
+    expect(args).not.toContain('--output-schema');
+    // The serialized schema must not leak into argv under any flag.
+    expect(args.some((arg) => arg.includes('"verdict"'))).toBe(false);
+  });
+
+  it('keeps the prompt as the final positional arg regardless of responseSchema', () => {
+    const withSchema = buildCursorAgentArgs({
+      prompt: 'hi',
+      responseSchema: { ...compatibleSchema },
+    });
+    const withoutSchema = buildCursorAgentArgs({ prompt: 'hi' });
+    expect(withSchema.at(-1)).toBe('hi');
+    // Supplying a schema does not change cursor-agent's argv at all.
+    expect(withSchema).toEqual(withoutSchema);
   });
 });
