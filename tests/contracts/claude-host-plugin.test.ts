@@ -208,11 +208,13 @@ describe('Claude Code host plugin package', () => {
       const scriptsDir = join(tempPluginRoot, 'scripts');
       const binDir = join(tempDir, 'bin');
       const fakeBin = join(binDir, 'circuit');
-      // The wrapper imports ./auto-open-policy.ts and ./launcher-core.ts at
-      // top-level — copy them so the fixture script can load.
+      // The wrapper imports ./auto-open-policy.ts, ./launcher-core.ts, and
+      // ./present-rendering.ts at top-level — copy them so the fixture script
+      // can load.
       const wrapperPath = copyWrapperWithSidecars(PLUGIN_ROOT, scriptsDir, [
         'auto-open-policy.ts',
         'launcher-core.ts',
+        'present-rendering.ts',
       ]);
       mkdirSync(binDir, { recursive: true });
       writeFileSync(
@@ -558,6 +560,211 @@ describe('Claude Code host plugin package', () => {
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toBe('# Clean Summary\n\n- Recommendation: keep it short.\n');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode prefers the run-surface Markdown over the operator summary (F-M-3)', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-run-surface-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const runSurfacePath = join(tempDir, 'run-surface.md');
+      const operatorSummaryPath = join(tempDir, 'operator-summary.md');
+      const fakeBin = join(binDir, 'circuit');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(runSurfacePath, '# Run Surface\n\n- compact answer.\n');
+      writeFileSync(operatorSummaryPath, '# Operator Summary\n\n- verbose brief.\n');
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'complete',
+              run_folder: tempDir,
+              run_surface_markdown_path: runSurfacePath,
+              operator_summary_markdown_path: operatorSummaryPath,
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'prefer run surface',
+        ],
+        { cwd: tempDir, encoding: 'utf8', env: envWithOverride(fakeBin) },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('# Run Surface');
+      expect(result.stdout).not.toContain('# Operator Summary');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode falls back to the operator summary when the run-surface file is missing (F-M-3)', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-run-surface-miss-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const operatorSummaryPath = join(tempDir, 'operator-summary.md');
+      const fakeBin = join(binDir, 'circuit');
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(operatorSummaryPath, '# Operator Summary\n\n- verbose brief.\n');
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'complete',
+              run_folder: tempDir,
+              // The run-surface path is advertised but never written to disk.
+              run_surface_markdown_path: join(tempDir, 'absent-run-surface.md'),
+              operator_summary_markdown_path: operatorSummaryPath,
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
+          'present',
+          'run',
+          'explore',
+          '--goal',
+          'run surface missing',
+        ],
+        { cwd: tempDir, encoding: 'utf8', env: envWithOverride(fakeBin) },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain('# Operator Summary');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode renders the abort reason from result.json when the envelope omits it (F-H-2)', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-abort-resultjson-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const resultPath = join(tempDir, 'reports', 'result.json');
+      const fakeBin = join(binDir, 'circuit');
+      const specificReason = 'variant-options-step requires circuits.prototype.variant_models';
+      mkdirSync(binDir, { recursive: true });
+      mkdirSync(join(tempDir, 'reports'), { recursive: true });
+      writeFileSync(
+        resultPath,
+        `${JSON.stringify({ schema_version: 1, outcome: 'aborted', reason: specificReason })}\n`,
+      );
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          // No streamed progress (no blocks) and NO `reason` on the envelope, so
+          // the no-blocks abort branch must read it from result.json via result_path.
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              outcome: 'aborted',
+              run_folder: tempDir,
+              result_path: resultPath,
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
+          'present',
+          'run',
+          'prototype',
+          '--goal',
+          'abort reason from result.json',
+        ],
+        { cwd: tempDir, encoding: 'utf8', env: envWithOverride(fakeBin) },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(specificReason);
+      expect(result.stdout).not.toContain('Circuit aborted before completing.');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('present mode renders a streamed abort reason once with no duplicate generic line (F-H-2)', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-present-abort-stream-'));
+    try {
+      const binDir = join(tempDir, 'bin');
+      const fakeBin = join(binDir, 'circuit');
+      const runId = '87000000-0000-0000-0000-000000000001';
+      const specificReason = "step 'variant-options-step' requires variant_models config";
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(
+        fakeBin,
+        [
+          '#!/usr/bin/env node',
+          `const runId = ${JSON.stringify(runId)};`,
+          `const reason = ${JSON.stringify(specificReason)};`,
+          // The runtime emits a run.aborted progress block carrying the reason; the
+          // wrapper renders it as the final status line. The final envelope also
+          // carries the reason, but the streamed-block branch must NOT print a
+          // second, redundant generic line.
+          'const aborted = { schema_version: 1, type: "run.aborted", run_id: runId, flow_id: "prototype", recorded_at: "2026-05-07T12:00:02.000Z", label: "Circuit run aborted", display: { text: `Circuit: Run aborted: ${reason}`, importance: "major", tone: "error" }, presentation: { block_id: runId, line_mode: "append", status_text: `Run aborted: ${reason}` }, outcome: "aborted", reason };',
+          'process.stderr.write(`${JSON.stringify(aborted)}\\n`);',
+          `process.stdout.write(${JSON.stringify(
+            `${JSON.stringify({
+              schema_version: 1,
+              run_id: runId,
+              outcome: 'aborted',
+              run_folder: tempDir,
+              reason: specificReason,
+            })}\n`,
+          )});`,
+          '',
+        ].join('\n'),
+      );
+      chmodSync(fakeBin, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(PLUGIN_ROOT, 'scripts/circuit.ts'),
+          'present',
+          'run',
+          'prototype',
+          '--goal',
+          'streamed abort single line',
+        ],
+        { cwd: tempDir, encoding: 'utf8', env: envWithOverride(fakeBin) },
+      );
+
+      expect(result.status, result.stderr).toBe(0);
+      const occurrences = result.stdout.split(`Run aborted: ${specificReason}`).length - 1;
+      expect(occurrences).toBe(1);
+      expect(result.stdout).not.toContain('Circuit aborted before completing.');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

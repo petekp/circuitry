@@ -81,6 +81,43 @@ describe('project-store', () => {
     expect(facts.map((fact) => fact.memory_id)).toEqual(['project-note-keep']);
   });
 
+  it('upserts an identical note (idempotent: same memory_id never duplicates)', () => {
+    const memoryDir = tempMemoryDir();
+    const fact = projectFact({ id: 'project-note-dup', flowId: 'explore' });
+    appendProjectFact(fact, { memoryDir });
+    const path = appendProjectFact(fact, { memoryDir });
+    const { facts } = readProjectFacts({ memoryDir });
+    expect(facts.map((entry) => entry.memory_id)).toEqual(['project-note-dup']);
+    // The store file itself must not grow: one record, one line.
+    const lines = readFileSync(path, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim().length > 0);
+    expect(lines).toHaveLength(1);
+  });
+
+  it('append upsert replaces an existing record with the same memory_id (last write wins)', () => {
+    const memoryDir = tempMemoryDir();
+    const first = projectFact({ id: 'project-note-up', flowId: 'explore' });
+    appendProjectFact(first, { memoryDir });
+    const updated = MemoryInputV0Schema.parse({ ...first, summary: 'updated summary' });
+    appendProjectFact(updated, { memoryDir });
+    const { facts } = readProjectFacts({ memoryDir });
+    expect(facts).toHaveLength(1);
+    expect(facts[0]?.summary).toBe('updated summary');
+  });
+
+  it('readProjectFacts collapses duplicate memory_ids defensively (heals legacy stores)', () => {
+    const memoryDir = tempMemoryDir();
+    const fact = projectFact({ id: 'project-note-legacy', flowId: 'explore' });
+    // Simulate a store written before the dedup fix (or hand-edited): two
+    // identical lines for the same memory_id. The read path must collapse them
+    // so list counts and recall injection never double-count.
+    const line = `${JSON.stringify(fact)}\n`;
+    appendFileSync(join(memoryDir, PROJECT_FACTS_FILE), line + line, 'utf8');
+    const { facts } = readProjectFacts({ memoryDir });
+    expect(facts.map((entry) => entry.memory_id)).toEqual(['project-note-legacy']);
+  });
+
   it('reports a no-op forget rather than failing', () => {
     const memoryDir = tempMemoryDir();
     appendProjectFact(projectFact({ id: 'project-note-keep', flowId: 'build' }), { memoryDir });

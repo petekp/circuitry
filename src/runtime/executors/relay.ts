@@ -472,6 +472,8 @@ export async function executeProductionRelayAttempt(input: {
     // Slice 4 D4: thread the active flow into the always-on pull affordance so the
     // agent's copyable command already targets the correct flow for suppression.
     context.flow.id,
+    // F-M-1: thread the run's resolved rigor as a worker-effort signal.
+    context.axes?.rigor,
   );
 
   const request = step.writes?.request;

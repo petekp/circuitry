@@ -154,7 +154,17 @@ function parseMemoryArgs(argv: readonly string[]): ParsedMemoryArgs | string {
   try {
     program.parse(argv, { from: 'user' });
   } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
+    if (err instanceof CommanderError) {
+      // `-h`/`--help` prints help and exits cleanly.
+      if (err.code === 'commander.helpDisplayed') process.exit(0);
+      // Invoking `circuit memory` with no subcommand makes commander emit its
+      // help via an error (code `commander.help`, message `(outputHelp)`) before
+      // any action runs. Surface the intended hint instead of leaking the raw
+      // commander token (F-L-1).
+      if (err.code === 'commander.help') {
+        return 'memory requires a subcommand: note, list, or forget';
+      }
+    }
     return commanderErrorMessage(err);
   }
   if (parsed === undefined) return 'memory requires a subcommand: note, list, or forget';
@@ -211,8 +221,10 @@ function buildOperatorNote(input: {
   readonly capturedAt: string;
 }): MemoryInputV0 {
   // A stable-but-distinct id per note: hash the flow, category, text, and the
-  // cited source sha so two identical notes against the same source collapse to
-  // one id (idempotent) while genuinely distinct notes stay distinct.
+  // cited source sha so two identical notes against the same source derive the
+  // SAME memory_id (and `appendProjectFact` upserts on that id, so re-filing an
+  // identical note is idempotent — it replaces rather than duplicates) while
+  // genuinely distinct notes derive distinct ids.
   const basis = `${input.flowId}\u0000${input.appliesTo}\u0000${input.text}\u0000${input.source.sha256}`;
   const memoryId = `project-note-${sha256Text(basis).slice(0, 16)}`;
   // A trace ref carries no ref.sha256, so bind source.sha256 to ref.sha256 only

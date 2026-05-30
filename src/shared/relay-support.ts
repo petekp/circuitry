@@ -192,6 +192,7 @@ export function composeRelayPrompt(
   operatorGoal?: string,
   memoryInputs: readonly MemoryInputValue[] = [],
   flowId?: string,
+  rigor?: string,
 ): string {
   const readsBody =
     step.reads.length === 0
@@ -215,6 +216,14 @@ export function composeRelayPrompt(
     `Title: ${step.title}`,
     `Role: ${step.role}`,
     `Accepted verdicts: ${step.check.pass.join(', ')}`,
+    // Thread the run's resolved rigor to the worker as an effort signal: it
+    // tunes how much thoroughness to spend, it does not change which steps run
+    // (F-M-1). Omitted when no rigor is supplied so direct callers are unchanged.
+    ...(rigor === undefined || rigor.length === 0
+      ? []
+      : [
+          `Rigor: ${rigor}. Tune your thoroughness and effort to this level; it does not change which steps run.`,
+        ]),
     '',
     ...(operatorGoal === undefined || operatorGoal.length === 0
       ? []

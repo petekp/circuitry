@@ -120,7 +120,15 @@ export function readProjectFacts(options: ReadProjectFactsOptions = {}): ReadPro
     }
     facts.push(parsed.data);
   }
-  return { facts, warnings };
+  // Collapse duplicate memory_ids defensively (last write wins, first-seen
+  // position). The write path upserts, so a freshly-written store never holds
+  // duplicates; this heals a legacy store written before the upsert fix (or one
+  // hand-edited) so `circuit memory list` counts and run-start recall injection
+  // never double-count the same id. A Map keyed by memory_id keeps the original
+  // position of the first occurrence while taking the latest record's value.
+  const byId = new Map<string, MemoryInputV0>();
+  for (const fact of facts) byId.set(fact.memory_id, fact);
+  return { facts: [...byId.values()], warnings };
 }
 
 // Atomically rewrite the full fact set (eviction/forget is a rewrite). Writes a
@@ -153,16 +161,22 @@ export function rewriteProjectFacts(
   return paths.factsPath;
 }
 
-// Append one fact. Implemented as a read-then-rewrite so the write is atomic and
-// re-parsed (rather than a non-atomic O_APPEND that could tear a line). Existing
-// invalid lines are dropped on rewrite ONLY if they cannot be read back — the
-// read path already surfaced them as warnings; an append never silently
-// resurrects an unparseable line into the validated set.
+// Upsert one fact by memory_id. Implemented as a read-then-rewrite so the write
+// is atomic and re-parsed (rather than a non-atomic O_APPEND that could tear a
+// line). Re-filing a note whose deterministic memory_id already exists REPLACES
+// the prior record rather than appending a duplicate — the operation is
+// idempotent (a re-file is a no-op on the id set) and the store cannot grow
+// unboundedly on repeated identical notes. Existing invalid lines are dropped on
+// rewrite ONLY if they cannot be read back — the read path already surfaced them
+// as warnings; an upsert never silently resurrects an unparseable line into the
+// validated set.
 export function appendProjectFact(
   record: MemoryInputV0,
   options: ProjectStoreOptions = {},
 ): string {
-  const existing = readProjectFacts(options).facts;
+  const existing = readProjectFacts(options).facts.filter(
+    (entry) => entry.memory_id !== record.memory_id,
+  );
   return rewriteProjectFacts([...existing, record], options);
 }
 

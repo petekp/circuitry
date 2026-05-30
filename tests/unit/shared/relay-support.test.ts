@@ -47,6 +47,50 @@ describe('composeRelayPrompt', () => {
     expect(prompt.indexOf('Operator Goal:')).toBeLessThan(prompt.indexOf('Context (from reads):'));
   });
 
+  it('threads the resolved rigor into the prompt when supplied and omits it otherwise (F-M-1)', () => {
+    const step = {
+      id: 'act-step',
+      title: 'Act - implement',
+      role: 'implementer',
+      reads: [],
+      writes: {
+        request: { path: 'reports/relay/act.request.json' },
+        receipt: { path: 'reports/relay/act.receipt.txt' },
+        result: { path: 'reports/relay/act.result.json' },
+        report: { path: 'reports/act.json', schema: 'flow.result@v1' },
+      },
+      check: { kind: 'result_verdict', pass: ['accept'] },
+    } as unknown as Parameters<typeof composeRelayPrompt>[0];
+
+    const withRigor = composeRelayPrompt(
+      step,
+      runFolder,
+      [],
+      undefined,
+      undefined,
+      [],
+      'build',
+      'lite',
+    );
+    expect(withRigor).toContain('Rigor: lite');
+
+    // Direct callers that pass no rigor (the "direct callers unchanged" invariant)
+    // or an empty string get no Rigor line at all.
+    const withoutRigor = composeRelayPrompt(step, runFolder, [], undefined, undefined, [], 'build');
+    expect(withoutRigor).not.toContain('Rigor:');
+    const emptyRigor = composeRelayPrompt(
+      step,
+      runFolder,
+      [],
+      undefined,
+      undefined,
+      [],
+      'build',
+      '',
+    );
+    expect(emptyRigor).not.toContain('Rigor:');
+  });
+
   it('includes prior history only as hint-only relay context when memory is provided', () => {
     const memory = MemoryInputV0.parse({
       schema_version: 1,

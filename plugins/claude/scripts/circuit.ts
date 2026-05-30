@@ -22,6 +22,7 @@ import {
   shouldInjectCreateTemplateRoot,
   shouldInjectPackagedFlowRoot,
 } from './launcher-core.ts';
+import { finalAnswerMarkdownPath, presentAbortReason } from './present-rendering.ts';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
@@ -246,6 +247,21 @@ function debugPathFromResult(result: unknown): string | undefined {
   );
 }
 
+// Read the specific abort reason from a run's reports/result.json (the file the
+// envelope's result_path points at). Best-effort: returns undefined when the
+// file is missing, unreadable, or carries no non-empty string reason. Injected
+// into presentAbortReason so the reason-resolution logic stays pure/testable.
+function loadResultReason(resultPath: string): string | undefined {
+  if (!existsSync(resultPath)) return undefined;
+  try {
+    const parsed = readJson(resultPath);
+    const reason = isRecord(parsed) ? parsed.reason : undefined;
+    return typeof reason === 'string' && reason.length > 0 ? reason : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function autoOpenEnv() {
   return {
     CIRCUIT_NO_AUTO_OPEN: process.env.CIRCUIT_NO_AUTO_OPEN,
@@ -316,15 +332,17 @@ function renderFinalResult(
       if (htmlPath !== undefined && existsSync(htmlPath)) tryOpenInBrowser(htmlPath);
       return 0;
     }
-    const summaryPath = stringField(result, 'operator_summary_markdown_path');
-    if (summaryPath !== undefined && existsSync(summaryPath)) {
-      const markdown = readFileSync(summaryPath, 'utf8');
+    // Prefer the compact Run surface over the verbose operator summary per
+    // docs/contracts/host-rendering.md "Final Rendering" (F-M-3).
+    const finalAnswerPath = finalAnswerMarkdownPath(result, existsSync);
+    if (finalAnswerPath !== undefined) {
+      const markdown = readFileSync(finalAnswerPath, 'utf8');
       process.stdout.write(markdown.endsWith('\n') ? markdown : `${markdown}\n`);
       const htmlPath = stringField(result, 'operator_summary_html_path');
       if (htmlPath !== undefined && existsSync(htmlPath)) tryOpenInBrowser(htmlPath);
       return 0;
     }
-    renderLine('Circuit completed, but the summary Markdown was not available.');
+    renderLine('Circuit completed, but the final-answer Markdown was not available.');
     const debugPath = debugPathFromResult(result);
     if (debugPath !== undefined) renderLine(`Debug path: ${debugPath}`);
     return 0;
@@ -352,11 +370,17 @@ function renderFinalResult(
   }
 
   if (outcome === 'aborted') {
-    const reason = stringField(result, 'reason') ?? 'Circuit aborted before completing.';
+    // In streamed mode the runtime's `run.aborted` progress event already
+    // rendered the abort line (with the specific reason) as the final status
+    // under this block. Don't emit a second, redundant generic line (F-H-2).
     if (statusBlocks.renderedAnyBlock) {
-      renderStatusText(statusBlocks, stringField(result, 'run_id'), `Run aborted: ${reason}`);
       return 0;
     }
+    // No streamed block (quiet / non-streaming host): render the specific
+    // reason from the envelope, falling back to reports/result.json via
+    // result_path, before the generic fallback (F-H-2).
+    const reason =
+      presentAbortReason(result, loadResultReason) ?? 'Circuit aborted before completing.';
     renderLine(`Circuit aborted: ${reason}`);
     const runFolder = stringField(result, 'run_folder');
     if (runFolder !== undefined) renderLine(`Run folder: ${runFolder}`);
@@ -369,9 +393,9 @@ function renderFinalResult(
   const action = stringField(result, 'action');
   const status = stringField(result, 'status');
   if (action !== undefined && status !== undefined) {
-    const summaryPath = stringField(result, 'operator_summary_markdown_path');
-    if (summaryPath !== undefined && existsSync(summaryPath)) {
-      const markdown = readFileSync(summaryPath, 'utf8');
+    const finalAnswerPath = finalAnswerMarkdownPath(result, existsSync);
+    if (finalAnswerPath !== undefined) {
+      const markdown = readFileSync(finalAnswerPath, 'utf8');
       process.stdout.write(markdown.endsWith('\n') ? markdown : `${markdown}\n`);
       return 0;
     }
