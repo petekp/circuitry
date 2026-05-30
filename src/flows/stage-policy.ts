@@ -1,6 +1,5 @@
 import type { SpinePolicy } from '../schemas/stage.js';
 import type {
-  FlowDefinition,
   FlowDefinitionCanonicalStagePolicy,
   FlowDefinitionCanonicalStagePolicyVariant,
 } from './flow-definition.js';
@@ -27,15 +26,6 @@ export interface EnforcedStagePolicyInput
 export interface EnforcedStagePolicyDeclaration {
   readonly stagePathPolicy: PartialStagePathPolicy;
   readonly canonicalStagePolicy: EnforcedCanonicalStagePolicy;
-}
-
-export type FlowStagePolicyStatus = 'missing' | 'exempt' | 'enforced';
-
-export function classifyFlowStagePolicy(
-  definition: Pick<FlowDefinition, 'canonicalStagePolicy'>,
-): FlowStagePolicyStatus {
-  if (definition.canonicalStagePolicy === undefined) return 'missing';
-  return definition.canonicalStagePolicy.kind === 'exempt' ? 'exempt' : 'enforced';
 }
 
 export function defineEnforcedStagePolicy(
