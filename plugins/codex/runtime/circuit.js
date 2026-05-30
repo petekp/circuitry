@@ -49416,6 +49416,20 @@ async function executeProductionRelay(step, context) {
 }
 
 // dist/runtime/fanout/branch-execution.js
+async function appendFanoutBranchStarted(context, fields) {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: "fanout.branch_started",
+    ...fields
+  });
+}
+async function appendFanoutBranchCompleted(context, fields) {
+  await context.trace.append({
+    run_id: context.runId,
+    kind: "fanout.branch_completed",
+    ...fields
+  });
+}
 function admitList(step) {
   const admit = step.check.verdicts?.admit;
   return Array.isArray(admit) ? admit.filter((entry) => typeof entry === "string") : [];
@@ -49559,9 +49573,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
   const childRunId = randomUUID();
   const resultPath2 = `${branchDirRel}/result.json`;
   const reportPath = `${branchDirRel}/report.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: "fanout.branch_started",
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -49602,9 +49614,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
         admitted: false,
         failure_reason: relayAttempt.evaluation.reason
       };
-      await context.trace.append({
-        run_id: context.runId,
-        kind: "fanout.branch_completed",
+      await appendFanoutBranchCompleted(context, {
         step_id: step.id,
         attempt,
         branch_id: branch.branch_id,
@@ -49650,9 +49660,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     await context.files.writeText(`${branchDirRel}/receipt.txt`, `stub relay receipt for ${branch.branch_id}
 `);
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49677,9 +49685,7 @@ async function executeRelayFanoutBranch(step, context, branch, relayConnector, b
     };
   } catch (error51) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49708,9 +49714,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
   const attempt = context.activeStepAttempt ?? 1;
   const childRunId = randomUUID();
   const resultPath2 = `${branchDirRel}/result.json`;
-  await context.trace.append({
-    run_id: context.runId,
-    kind: "fanout.branch_started",
+  await appendFanoutBranchStarted(context, {
     step_id: step.id,
     attempt,
     branch_id: branch.branch_id,
@@ -49721,9 +49725,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
   if (context.childCompiledFlowResolver === void 0 || context.childRunner === void 0) {
     const failureReason = `fanout step '${step.id}': child resolver and child runner are required for sub-run branches`;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49786,9 +49788,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     const evaluation = branchResult(childResult, admitList(step));
     const admitted = childResult.outcome === "complete" && evaluation.admitted;
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
@@ -49812,9 +49812,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
     };
   } catch (error51) {
     const durationMs = Math.max(0, Date.now() - startMs);
-    await context.trace.append({
-      run_id: context.runId,
-      kind: "fanout.branch_completed",
+    await appendFanoutBranchCompleted(context, {
       step_id: step.id,
       attempt,
       branch_id: branch.branch_id,
