@@ -8,6 +8,7 @@ import { requireRuntimeIndexedStep } from '../../flows/registries/runtime-index.
 import type { EnabledConnector, ResolvedConnector } from '../../schemas/connector.js';
 import { Depth } from '../../schemas/depth.js';
 import type { GuidanceDecisionTraceEntryBody } from '../../schemas/guidance-decision.js';
+import { canonicalJson, sha256OfString } from '../../schemas/hashing.js';
 import {
   ProofAssessment,
   type Evidence as ProofEvidence,
@@ -19,7 +20,7 @@ import { ResolvedSelection } from '../../schemas/selection-policy.js';
 import { RelayRole } from '../../schemas/step.js';
 import { CheckEvaluatedTraceEntry } from '../../schemas/trace-entry.js';
 import type { ConnectorRelayInput } from '../../shared/connector-relay.js';
-import { type RelayResult, sha256Hex } from '../../shared/connector-relay.js';
+import type { RelayResult } from '../../shared/connector-relay.js';
 import { evidenceFromAcceptanceCriteriaTrace } from '../../shared/proof-assessment.js';
 import {
   type CheckEvaluation,
@@ -270,17 +271,8 @@ async function writeAcceptanceProofAssessment(input: {
   });
 }
 
-function stableJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(
-      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  });
-}
-
 function sameJson(left: unknown, right: unknown): boolean {
-  return stableJson(left) === stableJson(right);
+  return canonicalJson(left) === canonicalJson(right);
 }
 
 function relaySkillIdentities(
@@ -488,7 +480,7 @@ export async function executeProductionRelayAttempt(input: {
     );
   }
   await context.files.writeText(request, prompt);
-  const requestPayloadHash = sha256Hex(prompt);
+  const requestPayloadHash = sha256OfString(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
   const relayGuidance = await appendRelayExecutionGuidance(context, {
@@ -607,7 +599,7 @@ export async function executeProductionRelayAttempt(input: {
     kind: 'relay.result',
     step_id: step.id,
     attempt,
-    result_report_hash: sha256Hex(relayResult.result_body),
+    result_report_hash: sha256OfString(relayResult.result_body),
   });
 
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);

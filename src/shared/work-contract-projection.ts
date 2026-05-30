@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import type { CompiledFlow } from '../schemas/compiled-flow.js';
+import { sha256OfJson } from '../schemas/hashing.js';
 import type { JsonObject } from '../schemas/json.js';
 import type { Ref } from '../schemas/ref.js';
 import type {
@@ -259,17 +259,8 @@ function attemptBudgetForRecoveryKind(
   };
 }
 
-function stableJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(
-      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  });
-}
-
 function sha256(value: unknown): string {
-  return createHash('sha256').update(stableJson(value)).digest('hex');
+  return sha256OfJson(value);
 }
 
 function asJsonObject(value: unknown): JsonObject {

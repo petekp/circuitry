@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { sha256OfString } from '../schemas/hashing.js';
 import { SkillId, type SkillId as SkillIdValue } from '../schemas/ids.js';
 import { UserSkillEntry, type UserSkillEntry as UserSkillEntryValue } from '../schemas/skill.js';
 
@@ -32,10 +32,6 @@ const UserSkillFrontmatter = UserSkillEntry.pick({
 
 export function defaultUserSkillRoots(homeDir = homedir()): readonly string[] {
   return [join(homeDir, '.agents', 'skills'), join(homeDir, '.claude', 'skills')];
-}
-
-function sha256Hex(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
 function parseSkillMarkdown(
@@ -121,7 +117,7 @@ function loadCandidate(candidate: SkillCandidate): LoadedUserSkill {
     ...parsed.metadata,
     root: candidate.root,
     path: candidate.path,
-    sha256: sha256Hex(text),
+    sha256: sha256OfString(text),
     bytes: Buffer.byteLength(text, 'utf8'),
   });
 

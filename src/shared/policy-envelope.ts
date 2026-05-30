@@ -1,7 +1,7 @@
-import { createHash } from 'node:crypto';
 import type { Config, ConnectorReference } from '../schemas/config.js';
 import type { LayeredConfig as LayeredConfigValue } from '../schemas/config.js';
 import { EnabledConnector } from '../schemas/connector.js';
+import { sha256OfJson } from '../schemas/hashing.js';
 import {
   ComposedPolicyHardConstraints,
   type PolicyConnectorReference,
@@ -115,17 +115,8 @@ function rejectOldAuthority(path: string, field: string, reason: string): Reject
   return { path, field, reason };
 }
 
-function stableJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(
-      Object.entries(item as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
-    );
-  });
-}
-
 function sha256Json(value: unknown): string {
-  return createHash('sha256').update(stableJson(value)).digest('hex');
+  return sha256OfJson(value);
 }
 
 function policyLayerSourceForConfigLayer(layer: LayeredConfigValue['layer']): PolicyLayerSource {

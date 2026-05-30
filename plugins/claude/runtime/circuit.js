@@ -28801,10 +28801,110 @@ var BuildResult = external_exports.object({
 // dist/flows/build/writers/checkpoint-brief.js
 import { readFileSync as readFileSync3 } from "node:fs";
 
-// dist/shared/connector-relay.js
+// dist/schemas/hashing.js
 import { createHash } from "node:crypto";
-function sha256Hex(payload) {
+
+// dist/schemas/ref.js
+var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
+  message: "must be a 64-character lowercase hex SHA-256 digest"
+});
+var RefKind = external_exports.enum([
+  "work_contract",
+  "policy",
+  "trace",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory",
+  "operator_input"
+]);
+var ContentRefKinds = /* @__PURE__ */ new Set([
+  "work_contract",
+  "report",
+  "evidence",
+  "request",
+  "context_packet",
+  "diff",
+  "patch",
+  "command",
+  "change_packet",
+  "safe_apply",
+  "worktree",
+  "generated_surface",
+  "memory"
+]);
+var Ref = external_exports.object({
+  kind: RefKind,
+  ref: external_exports.string().min(1),
+  sha256: Sha256.optional(),
+  run_id: RunId.optional(),
+  flow_id: CompiledFlowId.optional(),
+  step_id: StepId.optional(),
+  attempt: external_exports.number().int().positive().optional(),
+  sequence: external_exports.number().int().nonnegative().optional()
+}).strict().superRefine((ref, ctx) => {
+  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sha256"],
+      message: `${ref.kind} refs require sha256`
+    });
+  }
+  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["flow_id"],
+      message: "work_contract refs require flow_id"
+    });
+  }
+  if (ref.kind !== "trace")
+    return;
+  if (ref.run_id === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["run_id"],
+      message: "trace refs require run_id"
+    });
+  }
+  if (ref.sequence === void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["sequence"],
+      message: "trace refs require sequence"
+    });
+    return;
+  }
+  const expected = `trace.ndjson#sequence=${ref.sequence}`;
+  if (ref.ref !== expected) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["ref"],
+      message: `trace refs must use ${expected}`
+    });
+  }
+});
+
+// dist/schemas/hashing.js
+function canonicalJson(value) {
+  return JSON.stringify(value, (_key, item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
+}
+function sha256OfString(payload) {
   return createHash("sha256").update(payload, "utf8").digest("hex");
+}
+function sha256OfJson(value) {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 
 // dist/shared/run-relative-path.js
@@ -29309,7 +29409,7 @@ var buildBriefCheckpointBuilder = {
     if (context.reportSha256 === void 0) {
       throw new Error("checkpoint resume rejected: checkpoint request is missing checkpoint_report_sha256");
     }
-    const observedHash = sha256Hex(raw);
+    const observedHash = sha256OfString(raw);
     if (observedHash !== context.reportSha256) {
       throw new Error("checkpoint resume rejected: waiting Build brief hash differs from request");
     }
@@ -34231,94 +34331,6 @@ var RelayResolutionSource = external_exports.discriminatedUnion("source", [
   DefaultResolutionSource,
   AutoResolutionSource
 ]);
-
-// dist/schemas/ref.js
-var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
-  message: "must be a 64-character lowercase hex SHA-256 digest"
-});
-var RefKind = external_exports.enum([
-  "work_contract",
-  "policy",
-  "trace",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory",
-  "operator_input"
-]);
-var ContentRefKinds = /* @__PURE__ */ new Set([
-  "work_contract",
-  "report",
-  "evidence",
-  "request",
-  "context_packet",
-  "diff",
-  "patch",
-  "command",
-  "change_packet",
-  "safe_apply",
-  "worktree",
-  "generated_surface",
-  "memory"
-]);
-var Ref = external_exports.object({
-  kind: RefKind,
-  ref: external_exports.string().min(1),
-  sha256: Sha256.optional(),
-  run_id: RunId.optional(),
-  flow_id: CompiledFlowId.optional(),
-  step_id: StepId.optional(),
-  attempt: external_exports.number().int().positive().optional(),
-  sequence: external_exports.number().int().nonnegative().optional()
-}).strict().superRefine((ref, ctx) => {
-  if (ContentRefKinds.has(ref.kind) && ref.sha256 === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sha256"],
-      message: `${ref.kind} refs require sha256`
-    });
-  }
-  if (ref.kind === "work_contract" && ref.flow_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["flow_id"],
-      message: "work_contract refs require flow_id"
-    });
-  }
-  if (ref.kind !== "trace")
-    return;
-  if (ref.run_id === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["run_id"],
-      message: "trace refs require run_id"
-    });
-  }
-  if (ref.sequence === void 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["sequence"],
-      message: "trace refs require sequence"
-    });
-    return;
-  }
-  const expected = `trace.ndjson#sequence=${ref.sequence}`;
-  if (ref.ref !== expected) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["ref"],
-      message: `trace refs must use ${expected}`
-    });
-  }
-});
 
 // dist/schemas/recovery-route-kind.js
 var RecoveryRouteKind = external_exports.enum([
@@ -42477,9 +42489,6 @@ var ComposedPolicyHardConstraints = external_exports.object({
   limits: PolicyLimits
 }).strict();
 
-// dist/shared/checkpoint-boundary.js
-import { createHash as createHash3 } from "node:crypto";
-
 // dist/schemas/checkpoint-boundary.js
 var CheckpointReasonCode = external_exports.enum([
   "scope_expansion",
@@ -42692,15 +42701,8 @@ var CheckpointBoundaryProjectionError = class extends Error {
     this.name = "CheckpointBoundaryProjectionError";
   }
 };
-function stableJson(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha256(value) {
-  return createHash3("sha256").update(stableJson(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function rejectOldAuthority(path, field, reason) {
   return { path, field, reason };
@@ -42808,7 +42810,6 @@ function projectCheckpointBoundaryV0(input) {
 }
 
 // dist/shared/policy-envelope.js
-import { createHash as createHash4 } from "node:crypto";
 var PolicyEnvelopeCompositionError = class extends Error {
   constructor(message) {
     super(message);
@@ -42885,15 +42886,8 @@ function connectorRefFromConfig(ref) {
 function rejectOldAuthority2(path, field, reason) {
   return { path, field, reason };
 }
-function stableJson2(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha256Json(value) {
-  return createHash4("sha256").update(stableJson2(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function policyLayerSourceForConfigLayer(layer) {
   if (layer === "default")
@@ -43086,9 +43080,6 @@ function policyRefsForRuntimeInputs(input) {
   }
   return refs;
 }
-
-// dist/shared/work-contract-projection.js
-import { createHash as createHash5 } from "node:crypto";
 
 // dist/schemas/work-contract-projection.js
 var ReportSlot = external_exports.object({
@@ -43472,15 +43463,8 @@ function attemptBudgetForRecoveryKind(kind, routeTarget, stepId) {
     retry_target: "declared_step"
   };
 }
-function stableJson3(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha2562(value) {
-  return createHash5("sha256").update(stableJson3(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function asJsonObject(value) {
   return value;
@@ -44551,7 +44535,7 @@ var CompiledFlowStrict = CompiledFlowBody.superRefine((wf, ctx) => {
 var CompiledFlow = CompiledFlowStrict;
 
 // dist/schemas/manifest.js
-import { createHash as createHash6 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 var HEX643 = /^[0-9a-f]{64}$/;
 var ManifestHash = external_exports.string().regex(HEX643, {
   message: "must be a 64-character lowercase hex SHA-256 digest"
@@ -44579,7 +44563,7 @@ var ManifestSnapshot = external_exports.object({
     });
     return;
   }
-  const computed = createHash6("sha256").update(decoded).digest("hex");
+  const computed = createHash3("sha256").update(decoded).digest("hex");
   if (computed !== snap.hash) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -44589,7 +44573,7 @@ var ManifestSnapshot = external_exports.object({
   }
 });
 function computeManifestHash(bytes) {
-  return createHash6("sha256").update(bytes).digest("hex");
+  return createHash3("sha256").update(bytes).digest("hex");
 }
 
 // dist/runtime/run/graph-runner.js
@@ -45316,7 +45300,7 @@ async function resolveAutoResolution(step, context, stepPolicy, autoResolution) 
   const sourceReportRef = {
     kind: "report",
     ref: autoResolution.source_report,
-    sha256: sha256Hex(sourceText),
+    sha256: sha256OfString(sourceText),
     run_id: RunId.parse(context.runId),
     flow_id: CompiledFlowId.parse(context.flow.id)
   };
@@ -45422,7 +45406,7 @@ async function executeCheckpointResult(step, context) {
           responsePath: response.path
         });
         await context.files.writeJson(report, body);
-        checkpointReportSha256 = sha256Hex(await context.files.readText(report));
+        checkpointReportSha256 = sha256OfString(await context.files.readText(report));
         await context.trace.append({
           run_id: context.runId,
           kind: "step.report_written",
@@ -45441,7 +45425,7 @@ async function executeCheckpointResult(step, context) {
       });
       await context.files.writeJson(request, requestBody);
       const requestText = await context.files.readText(request);
-      checkpointRequestSha256 = sha256Hex(requestText);
+      checkpointRequestSha256 = sha256OfString(requestText);
       await context.trace.append({
         run_id: context.runId,
         kind: "checkpoint.requested",
@@ -45499,7 +45483,7 @@ async function executeCheckpointResult(step, context) {
     }
     const routeId = routeResult.routeId;
     if (checkpointRequestSha256 === void 0) {
-      checkpointRequestSha256 = sha256Hex(await context.files.readText(request));
+      checkpointRequestSha256 = sha256OfString(await context.files.readText(request));
     }
     const guidance = await appendCheckpointResolutionGuidance(context, {
       stepId: step.id,
@@ -45684,7 +45668,7 @@ function proofAssessmentReportRef(input) {
   return {
     kind: "report",
     ref: input.path,
-    sha256: sha256Hex(`${JSON.stringify(input.body, null, 2)}
+    sha256: sha256OfString(`${JSON.stringify(input.body, null, 2)}
 `),
     run_id: RunId.parse(input.context.runId),
     flow_id: CompiledFlowId.parse(input.context.flow.id),
@@ -46895,7 +46879,7 @@ async function relayCursorAgent(input) {
   }
   return {
     request_payload: input.prompt,
-    receipt_id: sha256Hex(resultBodyRaw),
+    receipt_id: sha256OfString(resultBodyRaw),
     result_body: extractJsonObject(resultBodyRaw),
     duration_ms: result.durationMs,
     cli_version: cliVersion
@@ -46985,16 +46969,8 @@ async function relayCustom(input) {
 }
 
 // dist/shared/proof-assessment.js
-import { createHash as createHash7 } from "node:crypto";
-function stableJson4(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sha2563(value) {
-  return createHash7("sha256").update(stableJson4(value)).digest("hex");
+  return sha256OfJson(value);
 }
 function traceRef(entry) {
   return {
@@ -47735,15 +47711,8 @@ var issueAt4 = (ctx, path, message) => {
 function isGuidanceDecision(entry) {
   return entry.kind === "guidance.decision";
 }
-function stableJson5(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sameJson(a, b) {
-  return stableJson5(a) === stableJson5(b);
+  return canonicalJson(a) === canonicalJson(b);
 }
 function selectedRecord(entry) {
   return entry.selected;
@@ -49449,7 +49418,6 @@ function deriveResolvedSelection(inv, flow, step, depth) {
 
 // dist/shared/user-skill-registry.js
 var import_yaml = __toESM(require_dist(), 1);
-import { createHash as createHash8 } from "node:crypto";
 import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join as join6, resolve as resolve6 } from "node:path";
@@ -49461,9 +49429,6 @@ var UserSkillFrontmatter = UserSkillEntry.pick({
 }).passthrough();
 function defaultUserSkillRoots(homeDir = homedir()) {
   return [join6(homeDir, ".agents", "skills"), join6(homeDir, ".claude", "skills")];
-}
-function sha256Hex2(text) {
-  return createHash8("sha256").update(text, "utf8").digest("hex");
 }
 function parseSkillMarkdown(text, skillPath) {
   if (!text.startsWith("---"))
@@ -49531,7 +49496,7 @@ function loadCandidate(candidate) {
     ...parsed.metadata,
     root: candidate.root,
     path: candidate.path,
-    sha256: sha256Hex2(text),
+    sha256: sha256OfString(text),
     bytes: Buffer.byteLength(text, "utf8")
   });
   return { entry, body: parsed.body };
@@ -50005,15 +49970,8 @@ async function writeAcceptanceProofAssessment(input) {
     close_allowed: closeAllowed
   });
 }
-function stableJson6(value) {
-  return JSON.stringify(value, (_key, item) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item))
-      return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
 function sameJson2(left, right) {
-  return stableJson6(left) === stableJson6(right);
+  return canonicalJson(left) === canonicalJson(right);
 }
 function relaySkillIdentities(skills) {
   return skills.map((skill) => ({
@@ -50136,7 +50094,7 @@ async function executeProductionRelayAttempt(input) {
     throw new Error(`relay step '${step.id}' requires writes.request, writes.receipt, and writes.result`);
   }
   await context.files.writeText(request, prompt);
-  const requestPayloadHash = sha256Hex(prompt);
+  const requestPayloadHash = sha256OfString(prompt);
   const startMs = Date.now();
   const attempt = context.activeStepAttempt ?? 1;
   const relayGuidance = await appendRelayExecutionGuidance(context, {
@@ -50243,7 +50201,7 @@ async function executeProductionRelayAttempt(input) {
     kind: "relay.result",
     step_id: step.id,
     attempt,
-    result_report_hash: sha256Hex(relayResult.result_body)
+    result_report_hash: sha256OfString(relayResult.result_body)
   });
   const checkEvaluation = evaluateRelayCheck(compiledStep, relayResult.result_body);
   let evaluation = checkEvaluation;
@@ -51423,7 +51381,7 @@ function commandEvidenceRef(input) {
   return {
     kind: "command",
     ref: `verification/${input.stepId}/${input.attempt}/${observation.command.id}`,
-    sha256: sha256Hex(`${JSON.stringify({
+    sha256: sha256OfString(`${JSON.stringify({
       command_id: observation.command.id,
       cwd: observation.command.cwd,
       argv: observation.command.argv,
@@ -53723,7 +53681,7 @@ function readCheckpointRequestContextResult(input) {
   } catch (error51) {
     return checkpointResumeRejectedFrom(error51);
   }
-  if (sha256Hex(requestText) !== input.expectedRequestHash) {
+  if (sha256OfString(requestText) !== input.expectedRequestHash) {
     return checkpointResumeRejected("runtime checkpoint resume rejected: checkpoint request hash differs from trace");
   }
   let raw;
@@ -54233,7 +54191,7 @@ function readJsonRecord(path) {
   }
 }
 function sha256File(path) {
-  return sha256Hex(readFileSync24(path, "utf8"));
+  return sha256OfString(readFileSync24(path, "utf8"));
 }
 function mtimeMs(path) {
   return Math.trunc(statSync(path).mtimeMs);
@@ -54467,7 +54425,7 @@ function traceSourceRef(input) {
   return Ref.parse(ref);
 }
 function docId(input) {
-  return `${input.runId}/${input.docKind}/${sha256Hex(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
+  return `${input.runId}/${input.docKind}/${sha256OfString(`${input.sourcePath}#${input.selector}`).slice(0, 12)}`;
 }
 function skipReport(relPath) {
   const name = basename(relPath);
@@ -54888,7 +54846,7 @@ function listCandidateRunFolders(runsBase) {
   }
 }
 function computeRunFolderNamesHash(runFolders) {
-  return sha256Hex(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
+  return sha256OfString(runFolders.map((folder) => basename2(folder)).sort().join("\n"));
 }
 function computeLatestSourceMtime(sourceFiles) {
   let latest = 0;
@@ -55138,7 +55096,7 @@ function historyMemoryInputPreview(input) {
   for (const hit of input.hits) {
     if (!hit.doc.memory_safe)
       continue;
-    const hash2 = sha256Hex(hit.doc.doc_id).slice(0, 12);
+    const hash2 = sha256OfString(hit.doc.doc_id).slice(0, 12);
     const runPrefix = fileStem(hit.doc.run_id).slice(0, 32);
     const memoryId = `prior-run-${runPrefix}-${hash2}`.slice(0, 128);
     const source = hit.doc.source_ref.sha256 !== void 0 && hit.doc.source_sha256 !== void 0 && hit.doc.source_ref.sha256 === hit.doc.source_sha256 ? {
@@ -55355,7 +55313,7 @@ function sourceStaleness(doc, checkedAt) {
         checked_at: checkedAt
       };
     }
-    const currentHash = sha256Hex(readFileSync26(sourcePath, "utf8"));
+    const currentHash = sha256OfString(readFileSync26(sourcePath, "utf8"));
     return currentHash === doc.source_sha256 ? {
       status: "fresh",
       reason_codes: ["source_hash_verified"],
@@ -55439,7 +55397,7 @@ function queryHistory(options) {
   const runCounts = /* @__PURE__ */ new Map();
   const selected = [];
   for (const candidate of scored) {
-    const textHash = sha256Hex(normalizeText(candidate.doc.text));
+    const textHash = sha256OfString(normalizeText(candidate.doc.text));
     if (seenText.has(textHash))
       continue;
     const runCount = runCounts.get(candidate.doc.run_id) ?? 0;
@@ -55552,11 +55510,11 @@ function prepareRunStartHistoryRecall(options) {
 }
 
 // dist/process-evidence/projection.js
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { existsSync as existsSync15, mkdirSync as mkdirSync2, readFileSync as readFileSync27, writeFileSync as writeFileSync2 } from "node:fs";
 import { dirname as dirname5, isAbsolute as isAbsolute9, join as join13, relative as relative9 } from "node:path";
 function sha256File2(path) {
-  return Sha256.parse(createHash9("sha256").update(readFileSync27(path)).digest("hex"));
+  return Sha256.parse(createHash4("sha256").update(readFileSync27(path)).digest("hex"));
 }
 function runRelativePath(runFolder, path) {
   return isAbsolute9(path) ? relative9(runFolder, path) : path;
@@ -55761,17 +55719,17 @@ function detectNoProgress(attempts) {
 }
 
 // dist/run-envelope/source-record.js
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
 import { mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync3 } from "node:fs";
 import { dirname as dirname6, isAbsolute as isAbsolute10, join as join14, relative as relative10 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
 var RUN_SURFACE_RELATIVE_PATH = "reports/run-surface.md";
 var RUN_DECISION_PACKET_RELATIVE_DIR = "reports/decision-packets";
 function sha256File3(path) {
-  return Sha256.parse(createHash10("sha256").update(readFileSync28(path)).digest("hex"));
+  return Sha256.parse(createHash5("sha256").update(readFileSync28(path)).digest("hex"));
 }
 function sha256Text(text) {
-  return Sha256.parse(createHash10("sha256").update(text).digest("hex"));
+  return Sha256.parse(createHash5("sha256").update(text).digest("hex"));
 }
 function runRelativePath2(runFolder, path) {
   return isAbsolute10(path) ? relative10(runFolder, path) : path;
@@ -56434,12 +56392,12 @@ async function runAutonomousContinuation(input) {
 }
 
 // dist/run-envelope/shadow-record.js
-import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 import { mkdirSync as mkdirSync4, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
 import { dirname as dirname7, isAbsolute as isAbsolute11, join as join15, relative as relative11 } from "node:path";
 var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
 function sha256File4(path) {
-  return Sha256.parse(createHash11("sha256").update(readFileSync29(path)).digest("hex"));
+  return Sha256.parse(createHash6("sha256").update(readFileSync29(path)).digest("hex"));
 }
 function runRelativePath3(runFolder, path) {
   return isAbsolute11(path) ? relative11(runFolder, path) : path;
@@ -58507,7 +58465,7 @@ function runtimeWaitingCheckpointProjection(input) {
       manifestIdentity: input.manifestIdentity
     });
   }
-  if (sha256Hex(requestText) !== expectedHash) {
+  if (sha256OfString(requestText) !== expectedHash) {
     return invalidProjection({
       runFolder: input.runFolder,
       reason: "checkpoint_invalid",

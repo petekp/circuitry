@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
+export { sha256OfString as sha256Hex } from '../schemas/hashing.js';
 
 // Shared relay-result shape produced by connector subprocess implementations.
 // Materializers and runtime executors consume this shape without branching on the
@@ -23,8 +23,4 @@ export interface ConnectorRelayInput {
   // connectors and any connector that does not yet honor it fall back to
   // the prose shape hint already in the prompt.
   responseSchema?: Record<string, unknown>;
-}
-
-export function sha256Hex(payload: string): string {
-  return createHash('sha256').update(payload, 'utf8').digest('hex');
 }
