@@ -5,8 +5,8 @@
 // the canonical pointer set. Outcome is 'complete' only when verification
 // passed and review accepted cleanly; accepted follow-ups need attention.
 
-import { reportPathForSchemaInRuntimeFlow } from '../../registries/close-writers/shared.js';
 import type { CloseBuildContext, CloseBuilder } from '../../registries/close-writers/types.js';
+import { reportPathForSchemaInRuntimeFlow } from '../../registries/runtime-index.js';
 import {
   BuildBrief,
   BuildImplementation,

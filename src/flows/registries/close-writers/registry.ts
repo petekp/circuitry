@@ -4,8 +4,11 @@
 
 import { buildCloseRegistry } from '../../catalog-derivations.js';
 import { flowPackages } from '../../catalog.js';
-import type { RuntimeIndexedFlow } from '../runtime-index.js';
-import { flowHasReportSchemaInRuntimeFlow, reportPathForSchemaInRuntimeFlow } from './shared.js';
+import {
+  type RuntimeIndexedFlow,
+  flowHasReportSchemaInRuntimeFlow,
+  reportPathForSchemaInRuntimeFlow,
+} from '../runtime-index.js';
 import type { CloseBuildContext, CloseBuilder } from './types.js';
 
 const REGISTRY = buildCloseRegistry(flowPackages);

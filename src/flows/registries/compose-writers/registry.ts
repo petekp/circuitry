@@ -4,8 +4,7 @@
 
 import { buildComposeRegistry } from '../../catalog-derivations.js';
 import { flowPackages } from '../../catalog.js';
-import { reportPathForSchemaInRuntimeFlow } from '../close-writers/shared.js';
-import type { RuntimeIndexedFlow } from '../runtime-index.js';
+import { type RuntimeIndexedFlow, reportPathForSchemaInRuntimeFlow } from '../runtime-index.js';
 import type { ComposeBuilder, ComposeStep } from './types.js';
 
 const REGISTRY = buildComposeRegistry(flowPackages);

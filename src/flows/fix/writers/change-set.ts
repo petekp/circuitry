@@ -28,7 +28,7 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, relative } from 'node:path';
 import { resolveRunRelative } from '../../../shared/run-relative-path.js';
-import { reportPathForSchemaInRuntimeFlow } from '../../registries/close-writers/shared.js';
+import { reportPathForSchemaInRuntimeFlow } from '../../registries/runtime-index.js';
 import type {
   VerificationBuildContext,
   VerificationBuilder,
