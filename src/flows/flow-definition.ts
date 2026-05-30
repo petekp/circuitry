@@ -353,10 +353,16 @@ function validatePackageSet(packages: readonly CompiledFlowPackage[]): void {
   }
 }
 
-export function compileFlowDefinitions(
-  definitions: readonly FlowDefinition[],
-): readonly CompiledFlowPackage[] {
-  const packages = definitions.map(compileFlowDefinition);
+// Single explicit entry point for every package-set invariant the
+// catalog must uphold. `validatePackageSet` enforces id and schema-name
+// uniqueness directly; each derived registry is then built once. The
+// builders throw on duplicate keys (writer result schemas, relay schema
+// names, hint ids, runtime surfaces), so constructing them here surfaces
+// catalog authoring errors at module load with a precise message. The
+// registry return values are intentionally discarded — this is a
+// validation pass, not a cache; the registries that the engine actually
+// consumes are built lazily by their own modules.
+function assertCatalogInvariants(packages: readonly CompiledFlowPackage[]): void {
   validatePackageSet(packages);
   buildComposeRegistry(packages);
   buildCloseRegistry(packages);
@@ -367,6 +373,13 @@ export function compileFlowDefinitions(
   buildStructuralHintList(packages);
   buildCrossReportValidatorRegistry(packages);
   buildRuntimeSurfaceRegistry(packages);
+}
+
+export function compileFlowDefinitions(
+  definitions: readonly FlowDefinition[],
+): readonly CompiledFlowPackage[] {
+  const packages = definitions.map(compileFlowDefinition);
+  assertCatalogInvariants(packages);
   return packages;
 }
 

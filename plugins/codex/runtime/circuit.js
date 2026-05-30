@@ -28451,8 +28451,7 @@ function validatePackageSet(packages) {
     }
   }
 }
-function compileFlowDefinitions(definitions) {
-  const packages = definitions.map(compileFlowDefinition);
+function assertCatalogInvariants(packages) {
   validatePackageSet(packages);
   buildComposeRegistry(packages);
   buildCloseRegistry(packages);
@@ -28463,6 +28462,10 @@ function compileFlowDefinitions(definitions) {
   buildStructuralHintList(packages);
   buildCrossReportValidatorRegistry(packages);
   buildRuntimeSurfaceRegistry(packages);
+}
+function compileFlowDefinitions(definitions) {
+  const packages = definitions.map(compileFlowDefinition);
+  assertCatalogInvariants(packages);
   return packages;
 }
 
