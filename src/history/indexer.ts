@@ -22,6 +22,7 @@ import {
 import { sha256Hex } from '../shared/connector-relay.js';
 import { mtimeMs } from '../shared/run-artifact-io.js';
 import { extractRunHistoryDocuments } from './extract.js';
+import { collectRunSourceFiles } from './run-source-files.js';
 
 export const DEFAULT_RUNS_BASE = '.circuit/runs';
 export const DEFAULT_INDEX_DIR = '.circuit/history';
@@ -155,28 +156,7 @@ export function computeHistoryFingerprint(input: {
 function collectSourceFiles(runFolders: readonly string[]): readonly string[] {
   const files: string[] = [];
   for (const runFolder of runFolders) {
-    for (const candidate of [
-      join(runFolder, 'manifest.snapshot.json'),
-      join(runFolder, 'trace.ndjson'),
-      join(runFolder, 'reports/result.json'),
-    ]) {
-      if (existsSync(candidate)) files.push(candidate);
-    }
-    const reportsRoot = join(runFolder, 'reports');
-    if (!existsSync(reportsRoot)) continue;
-    const stack = [reportsRoot];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === undefined) continue;
-      for (const entry of readdirSync(current, { withFileTypes: true })) {
-        const path = join(current, entry.name);
-        if (entry.isDirectory()) {
-          stack.push(path);
-        } else if (entry.isFile() && entry.name.endsWith('.json')) {
-          files.push(path);
-        }
-      }
-    }
+    files.push(...collectRunSourceFiles(runFolder));
   }
   return files.sort();
 }

@@ -10767,8 +10767,8 @@ var require_dist = __commonJS({
 
 // dist/cli/circuit.js
 import { randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync22, mkdirSync as mkdirSync8, readFileSync as readFileSync36, writeFileSync as writeFileSync9 } from "node:fs";
-import { dirname as dirname12, join as join23, resolve as resolve15 } from "node:path";
+import { existsSync as existsSync23, mkdirSync as mkdirSync8, readFileSync as readFileSync36, writeFileSync as writeFileSync9 } from "node:fs";
+import { dirname as dirname12, join as join23, resolve as resolve16 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/commander/esm.mjs
@@ -46116,7 +46116,7 @@ function appendCapped(current, currentBytes, chunk, maxBytes) {
 }
 async function runConnectorSubprocess(input) {
   const start = performance.now();
-  return await new Promise((resolve16, reject) => {
+  return await new Promise((resolve17, reject) => {
     let child;
     try {
       child = spawn(input.executable, [...input.args], {
@@ -46189,7 +46189,7 @@ async function runConnectorSubprocess(input) {
     });
     child.on("close", (code, signal) => {
       clearAllTimers();
-      resolve16({
+      resolve17({
         stdout,
         stderr,
         stdoutCapped,
@@ -54131,8 +54131,8 @@ function classifyCompiledFlowTask(taskText) {
 }
 
 // dist/history/indexer.js
-import { existsSync as existsSync13, mkdirSync, readFileSync as readFileSync26, readdirSync as readdirSync3, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
-import { basename as basename2, join as join12, resolve as resolve8 } from "node:path";
+import { existsSync as existsSync14, mkdirSync, readFileSync as readFileSync26, readdirSync as readdirSync4, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
+import { basename as basename2, join as join12, resolve as resolve9 } from "node:path";
 
 // dist/shared/run-artifact-io.js
 import { statSync } from "node:fs";
@@ -54145,8 +54145,67 @@ function mtimeMs(path) {
 }
 
 // dist/history/extract.js
-import { existsSync as existsSync12, lstatSync as lstatSync5, readFileSync as readFileSync25, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
-import { basename, isAbsolute as isAbsolute9, relative as relative9, resolve as resolve7 } from "node:path";
+import { existsSync as existsSync13, lstatSync as lstatSync6, readFileSync as readFileSync25, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
+import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve8 } from "node:path";
+
+// dist/history/run-source-files.js
+import { existsSync as existsSync12, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
+import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve7 } from "node:path";
+function collectRunSourceFiles(runFolder) {
+  const runFolderAbs = resolve7(runFolder);
+  const files = /* @__PURE__ */ new Set();
+  for (const candidate of [
+    resolve7(runFolderAbs, "manifest.snapshot.json"),
+    resolve7(runFolderAbs, "trace.ndjson")
+  ]) {
+    if (existsSync12(candidate) && !isSymlink(candidate))
+      files.add(candidate);
+  }
+  const reportsRoot2 = resolve7(runFolderAbs, "reports");
+  for (const absPath of walkReportJsonFiles(reportsRoot2)) {
+    files.add(absPath);
+  }
+  return [...files].sort();
+}
+function isSymlink(absPath) {
+  try {
+    return lstatSync5(absPath).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+function isInside3(root, target) {
+  const fromRoot = relative9(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
+}
+function walkReportJsonFiles(reportsRoot2) {
+  if (!existsSync12(reportsRoot2))
+    return [];
+  const rootReal = realpathSync4.native(reportsRoot2);
+  const out = [];
+  const stack = [reportsRoot2];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === void 0)
+      continue;
+    for (const entry of readdirSync2(current, { withFileTypes: true })) {
+      const absPath = resolve7(current, entry.name);
+      if (entry.isSymbolicLink() || lstatSync5(absPath).isSymbolicLink())
+        continue;
+      const real = realpathSync4.native(absPath);
+      if (!isInside3(rootReal, real))
+        continue;
+      if (entry.isDirectory()) {
+        stack.push(absPath);
+      } else if (entry.isFile() && entry.name.endsWith(".json")) {
+        out.push(absPath);
+      }
+    }
+  }
+  return out;
+}
+
+// dist/history/extract.js
 var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
   "goal",
   "objective",
@@ -54207,23 +54266,23 @@ function readJsonRecord(path) {
 function sha256File(path) {
   return sha256OfString(readFileSync25(path, "utf8"));
 }
-function isInside3(root, target) {
-  const fromRoot = relative9(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute9(fromRoot);
+function isInside4(root, target) {
+  const fromRoot = relative10(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute10(fromRoot);
 }
 function listFiles(root, prefix = "") {
-  const absRoot = resolve7(root);
-  if (!existsSync12(absRoot))
+  const absRoot = resolve8(root);
+  if (!existsSync13(absRoot))
     return [];
-  const rootReal = realpathSync4.native(absRoot);
+  const rootReal = realpathSync5.native(absRoot);
   const out = [];
   function walk(absDir, relDir) {
-    for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
-      const absPath = resolve7(absDir, entry.name);
-      if (lstatSync5(absPath).isSymbolicLink())
+    for (const entry of readdirSync3(absDir, { withFileTypes: true })) {
+      const absPath = resolve8(absDir, entry.name);
+      if (lstatSync6(absPath).isSymbolicLink())
         continue;
-      const real = realpathSync4.native(absPath);
-      if (!isInside3(rootReal, real))
+      const real = realpathSync5.native(absPath);
+      if (!isInside4(rootReal, real))
         continue;
       const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
       if (entry.isDirectory()) {
@@ -54257,8 +54316,8 @@ function validStepId(value) {
   return StepId.safeParse(value).success ? value : void 0;
 }
 function parseTrace(runFolder, runFolderName) {
-  const tracePath = resolve7(runFolder, "trace.ndjson");
-  if (!existsSync12(tracePath)) {
+  const tracePath = resolve8(runFolder, "trace.ndjson");
+  if (!existsSync13(tracePath)) {
     return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
   }
   let entries = [];
@@ -54482,8 +54541,8 @@ function resolveRunIdentity(input) {
 }
 function makeRunDocument(input) {
   const sourcePath = input.resultPath ?? "trace.ndjson";
-  const sourceAbs = resolve7(input.runFolder, sourcePath);
-  if (!existsSync12(sourceAbs))
+  const sourceAbs = resolve8(input.runFolder, sourcePath);
+  if (!existsSync13(sourceAbs))
     return void 0;
   const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
   if (sourceSha === void 0)
@@ -54698,28 +54757,21 @@ function makeTraceDocument(input) {
   });
 }
 function extractRunHistoryDocuments(runFolder) {
-  const runFolderAbs = resolve7(runFolder);
+  const runFolderAbs = resolve8(runFolder);
   const runFolderName = basename(runFolderAbs);
   const warnings = [];
   const documents = [];
-  const sourceFiles = /* @__PURE__ */ new Set();
-  const manifestPath2 = resolve7(runFolderAbs, "manifest.snapshot.json");
-  const resultPath2 = resolve7(runFolderAbs, "reports/result.json");
-  const manifest = existsSync12(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
-  const result = existsSync12(resultPath2) ? readJsonRecord(resultPath2) : void 0;
-  if (existsSync12(manifestPath2))
-    sourceFiles.add(manifestPath2);
-  if (existsSync12(resultPath2))
-    sourceFiles.add(resultPath2);
+  const manifestPath2 = resolve8(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve8(runFolderAbs, "reports/result.json");
+  const manifest = existsSync13(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
+  const result = existsSync13(resultPath2) ? readJsonRecord(resultPath2) : void 0;
   const trace = parseTrace(runFolderAbs, runFolderName);
   if (trace.warning !== void 0)
     warnings.push(trace.warning);
-  const tracePath = resolve7(runFolderAbs, "trace.ndjson");
-  const traceExists = existsSync12(tracePath);
+  const tracePath = resolve8(runFolderAbs, "trace.ndjson");
+  const traceExists = existsSync13(tracePath);
   const traceSha = traceExists ? sha256File(tracePath) : void 0;
   const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
-  if (traceExists)
-    sourceFiles.add(tracePath);
   const identity = resolveRunIdentity({
     runFolderName,
     traceEntries: trace.entries,
@@ -54729,7 +54781,7 @@ function extractRunHistoryDocuments(runFolder) {
   const runDocument = makeRunDocument({
     runFolder: runFolderAbs,
     identity,
-    ...existsSync12(resultPath2) ? { resultPath: "reports/result.json" } : {},
+    ...existsSync13(resultPath2) ? { resultPath: "reports/result.json" } : {},
     result,
     traceEntries: trace.entries,
     traceSha,
@@ -54737,12 +54789,11 @@ function extractRunHistoryDocuments(runFolder) {
   });
   if (runDocument !== void 0)
     documents.push(runDocument);
-  const reportRoot = resolve7(runFolderAbs, "reports");
+  const reportRoot = resolve8(runFolderAbs, "reports");
   for (const relPath of listFiles(reportRoot, "reports")) {
-    const absPath = resolve7(runFolderAbs, relPath);
+    const absPath = resolve8(runFolderAbs, relPath);
     if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
       continue;
-    sourceFiles.add(absPath);
     if (skipReport(relPath))
       continue;
     const validation = validateRunFilePath(relPath);
@@ -54800,7 +54851,7 @@ function extractRunHistoryDocuments(runFolder) {
   return {
     documents,
     warnings,
-    sourceFiles: [...sourceFiles].sort()
+    sourceFiles: collectRunSourceFiles(runFolderAbs)
   };
 }
 
@@ -54819,9 +54870,9 @@ var HistoryCommandError = class extends Error {
   }
 };
 function resolveHistoryPaths(options = {}) {
-  const repoRoot = resolve8(options.repoRoot ?? process.cwd());
-  const runsBase = resolve8(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
-  const indexDir = resolve8(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  const repoRoot = resolve9(options.repoRoot ?? process.cwd());
+  const runsBase = resolve9(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve9(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
   return {
     repoRoot,
     runsBase,
@@ -54831,10 +54882,10 @@ function resolveHistoryPaths(options = {}) {
   };
 }
 function isCandidateRunFolder(runFolder) {
-  return existsSync13(join12(runFolder, "manifest.snapshot.json")) || existsSync13(join12(runFolder, "trace.ndjson")) || existsSync13(join12(runFolder, "reports/result.json"));
+  return existsSync14(join12(runFolder, "manifest.snapshot.json")) || existsSync14(join12(runFolder, "trace.ndjson")) || existsSync14(join12(runFolder, "reports/result.json"));
 }
 function listCandidateRunFolders(runsBase) {
-  if (!existsSync13(runsBase)) {
+  if (!existsSync14(runsBase)) {
     throw new HistoryCommandError("runs_base_not_found", `runs base not found: ${runsBase}`, {
       runsBase
     });
@@ -54851,7 +54902,7 @@ function listCandidateRunFolders(runsBase) {
     });
   }
   try {
-    return readdirSync3(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
+    return readdirSync4(runsBase, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => join12(runsBase, entry.name)).filter(isCandidateRunFolder).sort((left, right) => basename2(left).localeCompare(basename2(right)));
   } catch (error51) {
     throw new HistoryCommandError("runs_base_unreadable", `runs base unreadable: ${error51 instanceof Error ? error51.message : String(error51)}`, { runsBase });
   }
@@ -54879,31 +54930,7 @@ function computeHistoryFingerprint(input) {
 function collectSourceFiles(runFolders) {
   const files = [];
   for (const runFolder of runFolders) {
-    for (const candidate of [
-      join12(runFolder, "manifest.snapshot.json"),
-      join12(runFolder, "trace.ndjson"),
-      join12(runFolder, "reports/result.json")
-    ]) {
-      if (existsSync13(candidate))
-        files.push(candidate);
-    }
-    const reportsRoot2 = join12(runFolder, "reports");
-    if (!existsSync13(reportsRoot2))
-      continue;
-    const stack = [reportsRoot2];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === void 0)
-        continue;
-      for (const entry of readdirSync3(current, { withFileTypes: true })) {
-        const path = join12(current, entry.name);
-        if (entry.isDirectory()) {
-          stack.push(path);
-        } else if (entry.isFile() && entry.name.endsWith(".json")) {
-          files.push(path);
-        }
-      }
-    }
+    files.push(...collectRunSourceFiles(runFolder));
   }
   return files.sort();
 }
@@ -54978,7 +55005,7 @@ function rebuildHistoryIndex(options = {}) {
   };
 }
 function readHistoryManifest(paths) {
-  if (!existsSync13(paths.manifestPath) || !existsSync13(paths.documentsPath)) {
+  if (!existsSync14(paths.manifestPath) || !existsSync14(paths.documentsPath)) {
     throw new HistoryCommandError("index_missing", `history index missing: ${paths.indexDir}`, {
       runsBase: paths.runsBase,
       indexDir: paths.indexDir
@@ -55161,7 +55188,7 @@ function historyMemoryInputPreview(input) {
 }
 
 // dist/history/query.js
-import { existsSync as existsSync14, readFileSync as readFileSync27 } from "node:fs";
+import { existsSync as existsSync15, readFileSync as readFileSync27 } from "node:fs";
 var STOPWORDS = /* @__PURE__ */ new Set([
   "the",
   "and",
@@ -55317,7 +55344,7 @@ function sourceStaleness(doc, checkedAt) {
   }
   try {
     const sourcePath = resolveRunFilePath(doc.run_folder, doc.source_path);
-    if (!existsSync14(sourcePath)) {
+    if (!existsSync15(sourcePath)) {
       return {
         status: "stale",
         reason_codes: ["memory_stale"],
@@ -55521,7 +55548,7 @@ function prepareRunStartHistoryRecall(options) {
 }
 
 // dist/process-evidence/projection.js
-import { existsSync as existsSync15, mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync16, mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { dirname as dirname5, join as join13 } from "node:path";
 function traceRef2(runId) {
   return {
@@ -55579,7 +55606,7 @@ function projectClosedProcessEvidence(input) {
     runId: input.runResult.run_id,
     flowId
   });
-  const declaredReportRefs = declaredPaths.filter((path) => existsSync15(join13(input.runFolder, path))).map((path) => reportRef({
+  const declaredReportRefs = declaredPaths.filter((path) => existsSync16(join13(input.runFolder, path))).map((path) => reportRef({
     runFolder: input.runFolder,
     path: join13(input.runFolder, path),
     runId: input.runResult.run_id,
@@ -56485,9 +56512,9 @@ function writeRunEnvelopeShadowRecord(input) {
 
 // dist/shared/config-loader.js
 var import_yaml2 = __toESM(require_dist(), 1);
-import { existsSync as existsSync16, readFileSync as readFileSync28 } from "node:fs";
+import { existsSync as existsSync17, readFileSync as readFileSync28 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join16, resolve as resolve9 } from "node:path";
+import { join as join16, resolve as resolve10 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
@@ -56504,8 +56531,8 @@ function parseConfigYaml(text, sourcePath) {
   }
 }
 function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve9(sourcePath);
-  if (!existsSync16(abs))
+  const abs = resolve10(sourcePath);
+  if (!existsSync17(abs))
     return void 0;
   const raw = parseConfigYaml(readFileSync28(abs, "utf8"), abs);
   if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
@@ -56802,17 +56829,17 @@ ${issueSummary}${more}`
 }
 
 // dist/shared/operator-summary-writer.js
-import { existsSync as existsSync18, mkdirSync as mkdirSync5, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
-import { dirname as dirname8, isAbsolute as isAbsolute10, join as join17, relative as relative10, resolve as resolve10 } from "node:path";
+import { existsSync as existsSync19, mkdirSync as mkdirSync5, readFileSync as readFileSync30, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { dirname as dirname8, isAbsolute as isAbsolute11, join as join17, relative as relative11, resolve as resolve11 } from "node:path";
 
 // dist/shared/operator-summary/json.js
-import { existsSync as existsSync17, readFileSync as readFileSync29 } from "node:fs";
+import { existsSync as existsSync18, readFileSync as readFileSync29 } from "node:fs";
 function isObject4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readJsonIfPresent(runFolder, relPath) {
   const path = resolveRunRelative(runFolder, relPath);
-  if (!existsSync17(path))
+  if (!existsSync18(path))
     return void 0;
   const parsed = JSON.parse(readFileSync29(path, "utf8"));
   return isObject4(parsed) ? parsed : void 0;
@@ -57350,7 +57377,7 @@ function projectSummary(input) {
 // dist/shared/operator-summary-writer.js
 function readPriorRoute(runFolder) {
   const path = join17(runFolder, "reports", "operator-summary.json");
-  if (!existsSync18(path))
+  if (!existsSync19(path))
     return {};
   try {
     const raw = JSON.parse(readFileSync30(path, "utf8"));
@@ -57377,19 +57404,19 @@ function htmlPath(runFolder) {
   return join17(runFolder, "reports", "operator-summary.html");
 }
 function isInsideOrSame4(root, target) {
-  const fromRoot = relative10(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute10(fromRoot);
+  const fromRoot = relative11(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute11(fromRoot);
 }
 function readCheckpointRequest(runFolder, checkpoint) {
   let requestPath;
   try {
-    requestPath = isAbsolute10(checkpoint.request_path) ? resolve10(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
+    requestPath = isAbsolute11(checkpoint.request_path) ? resolve11(checkpoint.request_path) : resolveRunRelative(runFolder, checkpoint.request_path);
   } catch {
     return void 0;
   }
-  if (!isInsideOrSame4(resolve10(runFolder), requestPath))
+  if (!isInsideOrSame4(resolve11(runFolder), requestPath))
     return void 0;
-  if (!existsSync18(requestPath))
+  if (!existsSync19(requestPath))
     return void 0;
   try {
     const parsed = JSON.parse(readFileSync30(requestPath, "utf8"));
@@ -57404,7 +57431,7 @@ function checkpointProjectRoot(runFolder, checkpoint) {
   if (!isObject4(executionContext))
     return void 0;
   const projectRoot = stringField2(executionContext, "project_root");
-  return projectRoot !== void 0 && isAbsolute10(projectRoot) ? projectRoot : void 0;
+  return projectRoot !== void 0 && isAbsolute11(projectRoot) ? projectRoot : void 0;
 }
 function reportLink(runFolder, label, relPath, schema) {
   return {
@@ -57442,7 +57469,7 @@ function evidenceLinks2(runFolder, report) {
 }
 function readAutoResolutions(runFolder) {
   const tracePath = join17(runFolder, "trace.ndjson");
-  if (!existsSync18(tracePath))
+  if (!existsSync19(tracePath))
     return [];
   const records = [];
   for (const line of readFileSync30(tracePath, "utf8").split(/\r?\n/)) {
@@ -57575,14 +57602,14 @@ function writeOperatorSummary(input) {
     }
   }
   if (renderedHtml === void 0) {
-    if (existsSync18(candidateHtmlPath))
+    if (existsSync19(candidateHtmlPath))
       rmSync(candidateHtmlPath, { force: true, recursive: true });
   } else {
     try {
       writeFileSync5(candidateHtmlPath, renderedHtml);
       outHtmlPath = candidateHtmlPath;
     } catch (err) {
-      if (existsSync18(candidateHtmlPath))
+      if (existsSync19(candidateHtmlPath))
         rmSync(candidateHtmlPath, { force: true, recursive: true });
       htmlEmitWarning = {
         kind: "html_write_failed",
@@ -57665,14 +57692,14 @@ function writeOperatorSummary(input) {
 
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync19, mkdirSync as mkdirSync6, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync20, mkdirSync as mkdirSync6, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { dirname as dirname10, join as join18, resolve as resolve12 } from "node:path";
+import { dirname as dirname10, join as join18, resolve as resolve13 } from "node:path";
 var import_yaml3 = __toESM(require_dist(), 1);
 
 // dist/cli/runtime-routing-policy.js
 import { readFileSync as readFileSync31 } from "node:fs";
-import { dirname as dirname9, relative as relative11, resolve as resolve11 } from "node:path";
+import { dirname as dirname9, relative as relative12, resolve as resolve12 } from "node:path";
 var GENERATED_FLOW_MIRROR_ROOT_ENV = "CIRCUIT_GENERATED_FLOW_MIRROR_ROOT";
 var COMPOSE_WRITER_UNSUPPORTED_REASON = "programmatic composeWriter injections are not supported by the CLI runtime; use executor injection or generated reports";
 var RUNTIME_POLICY_REASONS = {
@@ -57683,14 +57710,14 @@ var RUNTIME_POLICY_REASONS = {
 var CUSTOM_FLOW_ROOT_RUNTIME_POLICY = "Custom roots created by `circuit create` publish a normal runnable flow command.";
 var CLI_RUNTIME_ROUTING_POLICY = "Runtime routing: supported flow modes use the runtime by default. Unsupported modes, untrusted fixtures, and programmatic composeWriter injection fail closed. Runtime diagnostics: CIRCUIT_SHOW_RUNTIME_DECISION=1 includes runtime_reason for the selector decision.";
 function pathIsInside(parent, child) {
-  const rel = relative11(parent, child);
+  const rel = relative12(parent, child);
   return rel.length === 0 || !rel.startsWith("..") && !rel.startsWith("/");
 }
 function fixtureEligibleForRuntime(input) {
   if (input.args.fixturePath === void 0 && input.args.flowRoot === void 0)
     return true;
-  const fixturePath = resolve11(input.fixturePath);
-  if (pathIsInside(resolve11(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
+  const fixturePath = resolve12(input.fixturePath);
+  if (pathIsInside(resolve12(input.generatedFlowsRoot ?? "generated/flows"), fixturePath)) {
     return true;
   }
   if (input.args.flowRoot !== void 0 && publishedCustomFlowMatches(input.args.flowRoot, fixturePath)) {
@@ -57700,12 +57727,12 @@ function fixtureEligibleForRuntime(input) {
   if (mirrorRoot === void 0 || mirrorRoot.length === 0 || input.args.flowRoot === void 0) {
     return false;
   }
-  const trustedMirrorRoot = resolve11(mirrorRoot);
-  return resolve11(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
+  const trustedMirrorRoot = resolve12(mirrorRoot);
+  return resolve12(input.args.flowRoot) === trustedMirrorRoot && pathIsInside(trustedMirrorRoot, fixturePath);
 }
 function publishedCustomFlowMatches(flowRoot2, fixturePath) {
   try {
-    const manifest = JSON.parse(readFileSync31(resolve11(dirname9(resolve11(flowRoot2)), "manifest.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync31(resolve12(dirname9(resolve12(flowRoot2)), "manifest.json"), "utf8"));
     if (manifest === null || typeof manifest !== "object" || Array.isArray(manifest))
       return false;
     const customFlows = manifest.custom_flows;
@@ -57716,7 +57743,7 @@ function publishedCustomFlowMatches(flowRoot2, fixturePath) {
         return false;
       }
       const flowPath = candidate.flow_path;
-      return typeof flowPath === "string" && resolve11(flowPath) === fixturePath;
+      return typeof flowPath === "string" && resolve12(flowPath) === fixturePath;
     });
   } catch {
     return false;
@@ -57824,7 +57851,7 @@ function assertValidSlug(slug) {
   }
 }
 function customHome(args) {
-  return resolve12(args.home ?? join18(homedir3(), ".config", "circuit", "custom"));
+  return resolve13(args.home ?? join18(homedir3(), ".config", "circuit", "custom"));
 }
 function draftRoot(home, slug) {
   return join18(home, "drafts", slug);
@@ -57872,11 +57899,11 @@ function validateCustomFlow(slug, flow, source) {
 }
 function candidateTemplatePaths(args) {
   const roots = [args.templateFlowRoot, "generated/flows", "plugins/codex/flows"].filter((root) => root !== void 0);
-  return roots.map((root) => resolve12(root, "build", "circuit.json"));
+  return roots.map((root) => resolve13(root, "build", "circuit.json"));
 }
 function loadTemplateFlow(args) {
   for (const candidate of candidateTemplatePaths(args)) {
-    if (!existsSync19(candidate))
+    if (!existsSync20(candidate))
       continue;
     return CompiledFlow.parse(JSON.parse(readFileSync32(candidate, "utf8")));
   }
@@ -57974,7 +58001,7 @@ function publishManifest(input) {
     schema_version: 1,
     custom_flows: []
   };
-  if (existsSync19(manifestPath(input.home))) {
+  if (existsSync20(manifestPath(input.home))) {
     existing = JSON.parse(readFileSync32(manifestPath(input.home), "utf8"));
   }
   const withoutSlug = existing.custom_flows.filter((flow) => !(typeof flow === "object" && flow !== null && "id" in flow && flow.id === input.slug));
@@ -58027,7 +58054,7 @@ function loadDraftFlow(home, slug) {
 }
 function publishDraft(input) {
   const draft = draftRoot(input.home, input.slug);
-  if (!existsSync19(join18(draft, "SKILL.md"))) {
+  if (!existsSync20(join18(draft, "SKILL.md"))) {
     throw new Error(`draft missing for ${input.slug}: ${draft}`);
   }
   const descriptor = readFileSync32(join18(draft, "circuit.yaml"), "utf8");
@@ -58103,11 +58130,11 @@ async function runCreateCommand(argv, options = {}) {
     const slug = slugify2(args.name ?? args.description);
     assertValidSlug(slug);
     const home = customHome(args);
-    if (args.publish && existsSync19(join18(flowRoot(home), slug, "circuit.json"))) {
+    if (args.publish && existsSync20(join18(flowRoot(home), slug, "circuit.json"))) {
       throw new Error(`custom flow already published: ${slug}`);
     }
     const createdAt = args.createdAt ?? now().toISOString();
-    const draftExists = existsSync19(join18(draftRoot(home, slug), "circuit.json"));
+    const draftExists = existsSync20(join18(draftRoot(home, slug), "circuit.json"));
     const flow = args.publish && draftExists ? loadDraftFlow(home, slug) : customizeTemplateFlow({
       slug,
       description: args.description,
@@ -58173,14 +58200,14 @@ async function runCreateCommand(argv, options = {}) {
 
 // dist/cli/handoff.js
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { copyFileSync, existsSync as existsSync21, mkdirSync as mkdirSync7, readFileSync as readFileSync35, writeFileSync as writeFileSync8 } from "node:fs";
+import { copyFileSync, existsSync as existsSync22, mkdirSync as mkdirSync7, readFileSync as readFileSync35, writeFileSync as writeFileSync8 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import { dirname as dirname11, join as join22, resolve as resolve14 } from "node:path";
+import { dirname as dirname11, join as join22, resolve as resolve15 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // dist/run-status/run-folder-projector.js
 import { constants, accessSync, statSync as statSync3 } from "node:fs";
-import { resolve as resolve13 } from "node:path";
+import { resolve as resolve14 } from "node:path";
 
 // dist/shared/manifest-snapshot.js
 import { readFileSync as readFileSync33, writeFileSync as writeFileSync7 } from "node:fs";
@@ -58198,7 +58225,7 @@ function verifyManifestSnapshotBytes(runFolder) {
 }
 
 // dist/run-status/projection-common.js
-import { existsSync as existsSync20 } from "node:fs";
+import { existsSync as existsSync21 } from "node:fs";
 import { join as join20 } from "node:path";
 function errorMessage3(err) {
   return err instanceof Error ? err.message : String(err);
@@ -58237,9 +58264,9 @@ function optionalReportPaths(runFolder) {
   const operatorSummary = join20(runFolder, "reports", "operator-summary.json");
   const operatorSummaryMarkdown = join20(runFolder, "reports", "operator-summary.md");
   return {
-    ...existsSync20(result) ? { result_path: result } : {},
-    ...existsSync20(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
-    ...existsSync20(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
+    ...existsSync21(result) ? { result_path: result } : {},
+    ...existsSync21(operatorSummary) ? { operator_summary_path: operatorSummary } : {},
+    ...existsSync21(operatorSummaryMarkdown) ? { operator_summary_markdown_path: operatorSummaryMarkdown } : {}
   };
 }
 function stepMetadata(flow, stepId) {
@@ -58707,7 +58734,7 @@ function assertReadableRunFolder(runFolder) {
   }
 }
 function projectRunStatusFromRunFolder(runFolder) {
-  const resolvedRunFolder = resolve13(runFolder);
+  const resolvedRunFolder = resolve14(runFolder);
   assertReadableRunFolder(resolvedRunFolder);
   let manifest;
   try {
@@ -58815,15 +58842,15 @@ function parseArgs2(argv) {
   };
 }
 function resolveProjectRootArg(args) {
-  return resolve14(args.projectRoot ?? process.cwd());
+  return resolve15(args.projectRoot ?? process.cwd());
 }
 function resolveControlPlaneArg(args) {
   if (args.controlPlane !== void 0)
-    return resolve14(args.controlPlane);
-  return resolve14(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
+    return resolve15(args.controlPlane);
+  return resolve15(resolveProjectRootArg(args), DEFAULT_CONTROL_PLANE);
 }
 function continuityRoot(controlPlane) {
-  return resolve14(controlPlane, "continuity");
+  return resolve15(controlPlane, "continuity");
 }
 function recordsRoot(controlPlane) {
   return join22(continuityRoot(controlPlane), "records");
@@ -58962,7 +58989,7 @@ function handoffBrief(args) {
   const projectRoot = resolveProjectRootArg(args);
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync21(indexAbs))
+  if (!existsSync22(indexAbs))
     return emptyBrief(args, "no_index");
   let index;
   try {
@@ -58973,7 +59000,7 @@ function handoffBrief(args) {
   if (index.pending_record === null)
     return emptyBrief(args, "no_pending_record");
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync21(recordAbs)) {
+  if (!existsSync22(recordAbs)) {
     return invalidBrief(args, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   let record2;
@@ -59075,14 +59102,14 @@ function runHandoffHook(args) {
   return 0;
 }
 function defaultCodexHooksFile() {
-  const codexHome = process.env.CODEX_HOME ?? resolve14(homedir4(), ".codex");
-  return resolve14(codexHome, "hooks.json");
+  const codexHome = process.env.CODEX_HOME ?? resolve15(homedir4(), ".codex");
+  return resolve15(codexHome, "hooks.json");
 }
 function resolveDefaultLauncher(pluginRoot, moduleDir) {
   if (pluginRoot !== void 0 && pluginRoot.length > 0) {
-    return resolve14(pluginRoot, "scripts/circuit.ts");
+    return resolve15(pluginRoot, "scripts/circuit.ts");
   }
-  return resolve14(moduleDir, "../..", "bin/circuit");
+  return resolve15(moduleDir, "../..", "bin/circuit");
 }
 function missingDefaultLauncherMessage(launcher) {
   return [
@@ -59100,11 +59127,11 @@ function parseCodexHooksHost(args) {
   throw new Error("handoff hooks requires --host codex");
 }
 function resolveHooksFileArg(args) {
-  return resolve14(args.hooksFile ?? defaultCodexHooksFile());
+  return resolve15(args.hooksFile ?? defaultCodexHooksFile());
 }
 function resolveLauncherArg(args) {
-  const launcher = resolve14(args.launcher ?? defaultLauncherPath());
-  if (!existsSync21(launcher)) {
+  const launcher = resolve15(args.launcher ?? defaultLauncherPath());
+  if (!existsSync22(launcher)) {
     if (args.launcher === void 0 && (process.env.CIRCUIT_PLUGIN_ROOT ?? "").length === 0) {
       throw new Error(missingDefaultLauncherMessage(launcher));
     }
@@ -59130,7 +59157,7 @@ function defaultHooksConfig() {
   return { hooks: {} };
 }
 function readHooksConfig(path) {
-  if (!existsSync21(path))
+  if (!existsSync22(path))
     return defaultHooksConfig();
   const parsed = JSON.parse(readFileSync35(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -59242,9 +59269,9 @@ function launcherPathFromCircuitHookCommand(command) {
 function writeHooksConfig(path, config2) {
   mkdirSync7(dirname11(path), { recursive: true });
   let backupPath;
-  if (existsSync21(path)) {
+  if (existsSync22(path)) {
     const candidate = `${path}.circuit-backup`;
-    if (!existsSync21(candidate)) {
+    if (!existsSync22(candidate)) {
       copyFileSync(path, candidate);
       backupPath = candidate;
     }
@@ -59295,7 +59322,7 @@ function installCodexHandoffHook(args) {
 function uninstallCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
-  if (!existsSync21(hooksPath)) {
+  if (!existsSync22(hooksPath)) {
     return {
       api_version: HANDOFF_HOOKS_API_VERSION,
       schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59334,7 +59361,7 @@ function doctorCodexHandoffHook(args) {
   parseCodexHooksHost(args);
   const hooksPath = resolveHooksFileArg(args);
   const checks = [];
-  checks.push({ name: "hooks_file_exists", ok: existsSync21(hooksPath), detail: hooksPath });
+  checks.push({ name: "hooks_file_exists", ok: existsSync22(hooksPath), detail: hooksPath });
   let config2;
   try {
     config2 = readHooksConfig(hooksPath);
@@ -59365,7 +59392,7 @@ function doctorCodexHandoffHook(args) {
       });
       checks.push({
         name: "circuit_handoff_hook_launcher_exists",
-        ok: launchers.length > 0 && launchers.every((launcher) => existsSync21(launcher)),
+        ok: launchers.length > 0 && launchers.every((launcher) => existsSync22(launcher)),
         detail: launchers.length > 0 ? launchers.join(", ") : "launcher not found in hook command"
       });
     } catch (err) {
@@ -59389,7 +59416,7 @@ function doctorCodexHandoffHook(args) {
   const failed = checks.filter((item) => !item.ok && item.severity !== "warning");
   const installedCheck = checks.find((item) => item.name === "circuit_handoff_hook_installed");
   const structuralFailure = failed.some((item) => item.name === "hooks_file_parseable" || item.name === "session_start_array");
-  const status = !existsSync21(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
+  const status = !existsSync22(hooksPath) ? "missing" : structuralFailure ? "invalid" : installedCheck?.ok === false ? "missing" : failed.length === 0 ? "ok" : "invalid";
   return {
     api_version: HANDOFF_HOOKS_API_VERSION,
     schema_version: HANDOFF_HOOKS_SCHEMA_VERSION,
@@ -59485,7 +59512,7 @@ function buildRecord(args, now) {
       }
     });
   }
-  const runFolder = resolve14(args.runFolder);
+  const runFolder = resolve15(args.runFolder);
   const { snapshot, currentStage } = loadRunBackedSnapshot(runFolder);
   if (snapshot.current_step === void 0) {
     throw new Error(`cannot save run-backed continuity: ${runFolder} has no current step`);
@@ -59613,7 +59640,7 @@ Saved continuity record could not be resumed: ${message}`);
 function resumeContinuity(args) {
   const controlPlane = resolveControlPlaneArg(args);
   const indexAbs = indexPath(controlPlane);
-  if (!existsSync21(indexAbs)) {
+  if (!existsSync22(indexAbs)) {
     const summaryPath3 = operatorSummaryPath(controlPlane);
     writeMarkdown(summaryPath3, "# Circuit Handoff\n\nNo saved continuity found.");
     const result2 = {
@@ -59651,7 +59678,7 @@ function resumeContinuity(args) {
     return { ...result2, result_path: resultPath3 };
   }
   const recordAbs = recordPath(controlPlane, index.pending_record.record_id);
-  if (!existsSync21(recordAbs)) {
+  if (!existsSync22(recordAbs)) {
     return invalidResumeResult(controlPlane, "record_missing", "Continuity index points at a missing record.", index.pending_record.record_id);
   }
   const recordRaw = readJsonSafely(recordAbs);
@@ -60107,8 +60134,8 @@ function readSourceVersion() {
   if (true)
     return "0.1.0-alpha.6";
   const candidates = [
-    resolve15(dirname12(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
-    resolve15(process.cwd(), "plugins/version.json")
+    resolve16(dirname12(fileURLToPath3(import.meta.url)), "../../plugins/version.json"),
+    resolve16(process.cwd(), "plugins/version.json")
   ];
   for (const candidate of candidates) {
     try {
@@ -60308,14 +60335,14 @@ function parseExecutionArgs(command, argv) {
 }
 function resolveFixturePath(flowName, modeName, override, flowRoot2) {
   if (override !== void 0)
-    return resolve15(override);
-  const root = resolve15(flowRoot2 ?? "generated/flows");
+    return resolve16(override);
+  const root = resolve16(flowRoot2 ?? "generated/flows");
   if (modeName !== void 0) {
-    const perMode = resolve15(root, flowName, `${modeName}.json`);
-    if (existsSync22(perMode))
+    const perMode = resolve16(root, flowName, `${modeName}.json`);
+    if (existsSync23(perMode))
       return perMode;
   }
-  return resolve15(root, flowName, "circuit.json");
+  return resolve16(root, flowName, "circuit.json");
 }
 function progressReporter(enabled) {
   if (!enabled)
@@ -60440,7 +60467,7 @@ function validateFlowAxes(input) {
   }
 }
 function loadFixture(fixturePath) {
-  if (!existsSync22(fixturePath)) {
+  if (!existsSync23(fixturePath)) {
     throw new Error(`flow fixture not found: ${fixturePath}`);
   }
   const bytes = readFileSync36(fixturePath);
@@ -60557,7 +60584,7 @@ async function main(argv, options = {}) {
     return 2;
   }
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
-    const runFolder2 = resolve15(args.runFolder);
+    const runFolder2 = resolve16(args.runFolder);
     const progress2 = progressReporter(args.progress === "jsonl");
     if (await isRuntimeRunFolder(runFolder2)) {
       const runtimeResult = await resumeCompiledFlow({
@@ -60677,13 +60704,13 @@ async function main(argv, options = {}) {
     ...entryModeSelection.entryModeName === void 0 ? {} : { entry_mode: entryModeSelection.entryModeName },
     ...entryModeSelection.source === void 0 ? {} : { entry_mode_source: entryModeSelection.source }
   });
-  const runFolder = resolve15(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
+  const runFolder = resolve16(args.runFolder ?? `${DEFAULT_RUNS_BASE2}/${runId}`);
   const runtimeConfigLayers = discoverRuntimeConfigLayers({
     ...options.configHomeDir !== void 0 ? { homeDir: options.configHomeDir } : {},
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
-  const projectRoot = resolve15(options.configCwd ?? process.cwd());
+  const projectRoot = resolve16(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
     args,

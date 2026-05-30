@@ -13,6 +13,7 @@ import {
 import { sha256Hex } from '../shared/connector-relay.js';
 import { mtimeMs } from '../shared/run-artifact-io.js';
 import { resolveRunFilePath, validateRunFilePath } from '../shared/run-file-paths.js';
+import { collectRunSourceFiles } from './run-source-files.js';
 
 const HIGH_VALUE_FIELDS = new Set([
   'goal',
@@ -748,14 +749,11 @@ export function extractRunHistoryDocuments(runFolder: string): ExtractRunOutput 
   const runFolderName = basename(runFolderAbs);
   const warnings: HistoryWarningV1[] = [];
   const documents: HistoryDocument[] = [];
-  const sourceFiles = new Set<string>();
 
   const manifestPath = resolve(runFolderAbs, 'manifest.snapshot.json');
   const resultPath = resolve(runFolderAbs, 'reports/result.json');
   const manifest = existsSync(manifestPath) ? readJsonRecord(manifestPath) : undefined;
   const result = existsSync(resultPath) ? readJsonRecord(resultPath) : undefined;
-  if (existsSync(manifestPath)) sourceFiles.add(manifestPath);
-  if (existsSync(resultPath)) sourceFiles.add(resultPath);
 
   const trace = parseTrace(runFolderAbs, runFolderName);
   if (trace.warning !== undefined) warnings.push(trace.warning);
@@ -763,7 +761,6 @@ export function extractRunHistoryDocuments(runFolder: string): ExtractRunOutput 
   const traceExists = existsSync(tracePath);
   const traceSha = traceExists ? sha256File(tracePath) : undefined;
   const traceMtime = traceExists ? mtimeMs(tracePath) : undefined;
-  if (traceExists) sourceFiles.add(tracePath);
 
   const identity = resolveRunIdentity({
     runFolderName,
@@ -787,7 +784,6 @@ export function extractRunHistoryDocuments(runFolder: string): ExtractRunOutput 
   for (const relPath of listFiles(reportRoot, 'reports')) {
     const absPath = resolve(runFolderAbs, relPath);
     if (absPath !== resolveRunFilePath(runFolderAbs, relPath)) continue;
-    sourceFiles.add(absPath);
     if (skipReport(relPath)) continue;
     const validation = validateRunFilePath(relPath);
     if (validation.length > 0) {
@@ -843,6 +839,6 @@ export function extractRunHistoryDocuments(runFolder: string): ExtractRunOutput 
   return {
     documents,
     warnings,
-    sourceFiles: [...sourceFiles].sort(),
+    sourceFiles: collectRunSourceFiles(runFolderAbs),
   };
 }
