@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCheckpointProjector } from '../../../../src/shared/html/build-checkpoint.js';
+import { buildCheckpointProjector } from '../../../../src/flows/build/index.js';
 import type { HtmlProjectorContext, JsonObject } from '../../../../src/shared/html/projector.js';
 
 function verificationCommand(overrides: Record<string, unknown> = {}) {

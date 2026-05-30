@@ -1,18 +1,21 @@
 // Operator-summary HTML projector registry.
 //
-// Adding HTML for a new flow is a single entry here plus the projector
-// module the entry references. The writer dispatches by flowId through
-// this map; flows without an entry skip HTML emission cleanly.
+// A registration-based registry mapping flow ids to their HTML projectors.
+// Flows register here at module load (via the flow catalog); the writer reads
+// through the getter. This inverts the dependency so shared/html never imports
+// a flow module directly. Flows without a registered projector skip HTML
+// emission cleanly.
 
-import { buildCheckpointProjector } from './build-checkpoint.js';
-import { exploreTournamentProjector } from './explore-tournament.js';
 import type { HtmlProjector } from './projector.js';
-import { prototypeCheckpointProjector } from './prototype-checkpoint.js';
 
 export type { HtmlProjector, HtmlProjectorContext, JsonObject } from './projector.js';
 
-export const HTML_PROJECTORS: Partial<Record<string, HtmlProjector>> = {
-  build: buildCheckpointProjector,
-  explore: exploreTournamentProjector,
-  prototype: prototypeCheckpointProjector,
-};
+const HTML_PROJECTORS = new Map<string, HtmlProjector>();
+
+export function registerHtmlProjector(flowId: string, projector: HtmlProjector): void {
+  HTML_PROJECTORS.set(flowId, projector);
+}
+
+export function getHtmlProjector(flowId: string): HtmlProjector | undefined {
+  return HTML_PROJECTORS.get(flowId);
+}

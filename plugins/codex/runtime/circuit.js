@@ -10907,6 +10907,15 @@ function findDefaultRoutablePackage(routables) {
   return first;
 }
 
+// dist/shared/html/index.js
+var HTML_PROJECTORS = /* @__PURE__ */ new Map();
+function registerHtmlProjector(flowId, projector) {
+  HTML_PROJECTORS.set(flowId, projector);
+}
+function getHtmlProjector(flowId) {
+  return HTML_PROJECTORS.get(flowId);
+}
+
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -29850,6 +29859,318 @@ var buildFlowData = {
 // dist/flows/build/flow.js
 var buildFlowDefinition = defineFlowData(buildFlowData);
 
+// dist/shared/html/page.js
+var ESCAPE_MAP = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+};
+function buildSanitizePattern() {
+  const ranges = [
+    [0, 8],
+    [11, 12],
+    [14, 31],
+    [8234, 8238],
+    [8294, 8297]
+  ];
+  const klass = ranges.map(([lo, hi]) => {
+    const loEsc = `\\u${lo.toString(16).padStart(4, "0")}`;
+    const hiEsc = `\\u${hi.toString(16).padStart(4, "0")}`;
+    return `${loEsc}-${hiEsc}`;
+  }).join("");
+  return new RegExp(`[${klass}]`, "g");
+}
+var SANITIZE_PATTERN = buildSanitizePattern();
+var MAX_BULLET_LEN = 4096;
+var MAX_PROMPT_LEN = 32768;
+function sanitizeForRender(value) {
+  return value.replace(SANITIZE_PATTERN, "");
+}
+function escapeHtmlChars(value) {
+  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
+}
+function escapeHtml(value) {
+  return escapeHtmlChars(sanitizeForRender(value));
+}
+function truncate(value, max) {
+  return value.length > max ? `${value.slice(0, max - 1)}\u2026` : value;
+}
+function styles() {
+  return `:root{--bg:#fafaf9;--surface:#fff;--surface-2:#f5f5f4;--border:#e7e5e4;--border-strong:#d6d3d1;--text:#1c1917;--text-2:#57534e;--text-3:#a8a29e;--accent:#0f172a;--intent-positive:#166534;--intent-positive-soft:#f0fdf4;--intent-info:#1e40af;--intent-info-soft:#eff6ff;--intent-attention:#9a3412;--intent-attention-soft:#fff7ed;--intent-negative:#991b1b;--intent-negative-soft:#fef2f2}@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--surface:#1c1917;--surface-2:#292524;--border:#292524;--border-strong:#44403c;--text:#fafaf9;--text-2:#a8a29e;--text-3:#78716c;--accent:#fafaf9;--intent-positive:#4ade80;--intent-positive-soft:#052e16;--intent-info:#93c5fd;--intent-info-soft:#172554;--intent-attention:#fb923c;--intent-attention-soft:#431407;--intent-negative:#f87171;--intent-negative-soft:#450a0a}}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}.wrap{max-width:1200px;margin:0 auto;padding:48px 32px 96px}header.top{margin-bottom:24px}.meta{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}h1{font:600 28px/1.25 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;margin:0 0 8px;letter-spacing:-.01em}.subtitle{color:var(--text-2);font-size:16px;margin:0}.verdict{margin:24px 0 32px;padding:16px 20px;background:var(--intent-info-soft);border:1px solid var(--intent-info);border-radius:8px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.verdict.intent-positive{background:var(--intent-positive-soft);border-color:var(--intent-positive)}.verdict.intent-attention{background:var(--intent-attention-soft);border-color:var(--intent-attention)}.verdict.intent-negative{background:var(--intent-negative-soft);border-color:var(--intent-negative)}.verdict .badge{font:600 11px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--intent-info);padding:4px 8px;border:1px solid var(--intent-info);border-radius:4px}.verdict.intent-positive .badge{color:var(--intent-positive);border-color:var(--intent-positive)}.verdict.intent-attention .badge{color:var(--intent-attention);border-color:var(--intent-attention)}.verdict.intent-negative .badge{color:var(--intent-negative);border-color:var(--intent-negative)}.verdict .text{color:var(--text);font-size:14px;flex:1;min-width:200px}.verdict .text strong{font-weight:600}.verdict .confidence{font-size:12px;color:var(--text-2);text-transform:lowercase}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative}.card.intent-info{border-color:var(--intent-info);box-shadow:0 0 0 3px var(--intent-info-soft)}.card.intent-positive{border-color:var(--intent-positive);box-shadow:0 0 0 3px var(--intent-positive-soft)}.card.intent-attention{border-color:var(--intent-attention);box-shadow:0 0 0 3px var(--intent-attention-soft)}.card.intent-negative{border-color:var(--intent-negative);box-shadow:0 0 0 3px var(--intent-negative-soft)}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.card-id{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);letter-spacing:.05em}.card h2{font:600 17px/1.3 -apple-system,system-ui,sans-serif;margin:4px 0 0;letter-spacing:-.005em}.intent-badge{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:4px;white-space:nowrap;color:var(--intent-info);background:var(--intent-info-soft)}.intent-badge.intent-positive{color:var(--intent-positive);background:var(--intent-positive-soft)}.intent-badge.intent-attention{color:var(--intent-attention);background:var(--intent-attention-soft)}.intent-badge.intent-negative{color:var(--intent-negative);background:var(--intent-negative-soft)}.summary{color:var(--text-2);font-size:14px;margin:0}.section-label{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:0 0 8px}ul.tradeoffs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}ul.tradeoffs li{font-size:13px;color:var(--text);padding-left:18px;position:relative;line-height:1.5}ul.tradeoffs li::before{content:"\\2022";position:absolute;left:6px;color:var(--text-3);font-weight:700}.evidence{display:flex;flex-wrap:wrap;gap:6px}.chip{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:4px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text-2)}.actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}button.copy{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}button.copy:hover{background:var(--surface-2)}button.copy.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}button.copy.primary:hover{opacity:.9}details{margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px}details summary{cursor:pointer;font:500 13px/1.4 -apple-system,system-ui,sans-serif;color:var(--text-2);user-select:none}details[open] summary{margin-bottom:12px}details .body{font-size:13px;color:var(--text-2)}details ul{margin:6px 0;padding-left:20px}details li{margin-bottom:4px}footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}footer code{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace}`;
+}
+function clipboardScript() {
+  return `document.querySelectorAll('button.copy').forEach(btn=>{btn.addEventListener('click',async()=>{const p=btn.dataset.prompt;if(!p)return;try{await navigator.clipboard.writeText(p);const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.textContent=o;},1200);}catch(e){btn.textContent='Copy failed';}});});`;
+}
+function renderPage(input) {
+  const footerLeft = input.footerLeft === void 0 ? "" : `<span>${escapeHtml(input.footerLeft)}</span>`;
+  const footerRight = input.footerRight === void 0 ? "" : `<span><code>${escapeHtml(input.footerRight)}</code></span>`;
+  const wrapClassName = input.wrapClassName ?? "wrap";
+  const extraStyles = input.extraStyles === void 0 ? "" : input.extraStyles;
+  const extraScript = input.extraScript === void 0 ? "" : input.extraScript;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(input.title)}</title>
+<style>${styles()}${extraStyles}</style>
+</head>
+<body>
+<div class="${escapeHtml(wrapClassName)}">
+  <header class="top">
+    <div class="meta">${escapeHtml(input.metaLine)}</div>
+    <h1>${escapeHtml(input.headline)}</h1>
+    <p class="subtitle">${escapeHtml(input.subtitle)}</p>
+  </header>
+${input.bodyHtml}
+  <footer>
+    ${footerLeft}
+    ${footerRight}
+  </footer>
+</div>
+<script>${clipboardScript()}${extraScript}</script>
+</body>
+</html>
+`;
+}
+
+// dist/shared/html/components.js
+function intentClass(intent) {
+  return intent === "neutral" || intent === "info" ? "" : `intent-${intent}`;
+}
+function intentBadge(input) {
+  const classes = ["intent-badge"];
+  const className = intentClass(input.intent);
+  if (className.length > 0)
+    classes.push(className);
+  return `<span class="${classes.join(" ")}">${escapeHtml(input.text)}</span>`;
+}
+function chip(text) {
+  return `<span class="chip">${escapeHtml(truncate(text, MAX_BULLET_LEN))}</span>`;
+}
+function card(input) {
+  const intent = input.intent ?? "neutral";
+  const classes = ["card"];
+  const intentClassName = intentClass(intent);
+  if (intentClassName.length > 0)
+    classes.push(intentClassName);
+  const eyebrowMarkup = input.eyebrow === void 0 ? "" : `<div class="card-id">${escapeHtml(input.eyebrow)}</div>`;
+  const badgeMarkup = input.badge === void 0 ? "" : intentBadge(input.badge);
+  return `    <article class="${classes.join(" ")}">
+      <div class="card-head">
+        <div>
+          ${eyebrowMarkup}
+          <h2>${escapeHtml(input.title)}</h2>
+        </div>
+        ${badgeMarkup}
+      </div>
+${input.bodyHtml}
+    </article>`;
+}
+function verdictBanner(input) {
+  const classes = ["verdict"];
+  const intentClassName = intentClass(input.intent);
+  if (intentClassName.length > 0)
+    classes.push(intentClassName);
+  const aside = input.aside === void 0 ? "" : `<span class="confidence">${escapeHtml(input.aside)}</span>`;
+  return `  <div class="${classes.join(" ")}">
+    <span class="badge">${escapeHtml(input.badgeText)}</span>
+    <span class="text">${input.mainHtml}</span>
+    ${aside}
+  </div>`;
+}
+
+// dist/flows/build/writers/checkpoint-html.js
+var BUILD_BRIEF_PATH = "reports/build/brief.json";
+function bulletList(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function renderCommandChips(commands) {
+  return `<div class="evidence">
+          ${commands.map((command) => chip(commandText(command))).join("\n          ")}
+        </div>`;
+}
+function choiceIntent(choiceId, recommendedId) {
+  return choiceId === recommendedId ? "positive" : "neutral";
+}
+function shellSingleQuote(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice(runFolder, choiceId) {
+  return `circuit resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
+}
+function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
+  const isRecommended = choice.id === recommendedChoiceId2;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div>
+        <p class="section-label">Executable route</p>
+        <div class="evidence">
+          ${chip(`${choice.route.key} -> ${choice.route.target}`)}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: choiceIntent(choice.id, recommendedChoiceId2),
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function renderArtifactCard(brief, packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.artifact.preview)}</p>
+      <div>
+        <p class="section-label">Scope</p>
+        <p class="summary">${escapeHtml(packet.artifact.scope)}</p>
+      </div>
+      <div>
+        <p class="section-label">Success bar</p>
+        ${bulletList(packet.artifact.success_criteria)}
+      </div>`;
+  return card({
+    intent: "info",
+    eyebrow: packet.artifact.title,
+    title: brief.objective,
+    bodyHtml
+  });
+}
+function renderProofCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.proof.summary)}</p>
+      <div>
+        <p class="section-label">Planned checks</p>
+        ${renderCommandChips(packet.proof.commands)}
+      </div>
+      <div>
+        <p class="section-label">Proof state</p>
+        ${bulletList(packet.proof.evidence)}
+      </div>`;
+  return card({
+    intent: packet.proof.status === "missing" ? "attention" : "neutral",
+    eyebrow: packet.proof.status,
+    title: "Proof",
+    bodyHtml
+  });
+}
+function renderRiskCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.risk.summary)}</p>
+      <div>
+        <p class="section-label">Tradeoffs</p>
+        ${bulletList(packet.risk.tradeoffs)}
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "manager judgment",
+    title: "Risk",
+    bodyHtml
+  });
+}
+function renderSalienceCard(packet) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(packet.salience.summary)}</p>
+      <div>
+        <p class="section-label">Why now</p>
+        ${bulletList(packet.salience.why_now)}
+      </div>
+      <div>
+        <p class="section-label">Stays internal</p>
+        ${bulletList(packet.salience.hidden_routine_work)}
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "salience",
+    title: "Why this needs you",
+    bodyHtml
+  });
+}
+function filteredChoices(packetChoices, allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return packetChoices.filter((choice) => allowed.has(choice.id));
+}
+function loadBrief(readJsonRunRelative) {
+  const raw = readJsonRunRelative(BUILD_BRIEF_PATH);
+  const parsed = BuildBrief.safeParse(raw);
+  return parsed.success ? parsed.data : void 0;
+}
+var buildCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "build" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint === void 0)
+    return void 0;
+  const brief = loadBrief(ctx.readJsonRunRelative);
+  if (brief === void 0)
+    return void 0;
+  const packet = brief.checkpoint_packet;
+  if (packet === void 0)
+    return void 0;
+  const choices = filteredChoices(packet.choices, ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Recommended",
+    mainHtml: `<strong>${escapeHtml(packet.recommendation.label)}</strong> &mdash; ${escapeHtml(packet.recommendation.rationale)}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoiceCard(choice, recommendedChoice.id, ctx.runFolder)).join("\n\n");
+  const rawEvidence = [
+    BUILD_BRIEF_PATH,
+    packet.internal.request_path,
+    packet.internal.response_path,
+    ...packet.internal.raw_evidence,
+    ctx.checkpoint.request_path
+  ];
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard(brief, packet)}
+
+${renderSalienceCard(packet)}
+
+${renderRiskCard(packet)}
+
+${renderProofCard(packet)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Decision.</strong> ${escapeHtml(packet.decision.question)}</p>
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${rawEvidence.map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} \xB7 Circuit Build checkpoint`,
+    metaLine: `Build checkpoint \xB7 ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle,
+    bodyHtml,
+    footerLeft: `circuit \xB7 build \xB7 ${ctx.runId}`,
+    footerRight: BUILD_BRIEF_PATH
+  });
+};
+
 // dist/shared/rubric.js
 var RUBRIC_DIM_SCORE_BY_JUDGMENT = {
   pass: 1,
@@ -31353,6 +31674,179 @@ var exploreFlowData = {
 
 // dist/flows/explore/flow.js
 var exploreFlowDefinition = defineFlowData(exploreFlowData);
+
+// dist/flows/explore/writers/tournament-html.js
+function stringField(report, key) {
+  const value = report?.[key];
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function isObject2(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function verdictBadgeText(verdict) {
+  if (verdict === "recommend")
+    return "Recommended";
+  if (verdict === "no-clear-winner")
+    return "No clear winner";
+  return "Operator decision";
+}
+function verdictIntent(verdict) {
+  if (verdict === "recommend")
+    return "info";
+  if (verdict === "no-clear-winner")
+    return "attention";
+  return "attention";
+}
+function confidenceText(confidence) {
+  return `${confidence} confidence`;
+}
+function renderOptionCard(option, isRecommended, isSelected) {
+  const intent = isSelected ? "positive" : isRecommended ? "info" : "neutral";
+  const badge = isSelected ? { text: "Selected", intent: "positive" } : isRecommended ? { text: "Recommended", intent: "info" } : void 0;
+  const tradeoffsMarkup = option.tradeoffs.map((tradeoff) => `<li>${escapeHtml(truncate(tradeoff, MAX_BULLET_LEN))}</li>`).join("\n          ");
+  const evidenceMarkup = option.evidence_refs.map((ref) => chip(ref)).join("\n          ");
+  const bodyHtml = `      <p class="summary">${escapeHtml(option.summary)}</p>
+      <div>
+        <p class="section-label">Tradeoffs</p>
+        <ul class="tradeoffs">
+          ${tradeoffsMarkup}
+        </ul>
+      </div>
+      <div>
+        <p class="section-label">Evidence</p>
+        <div class="evidence">
+          ${evidenceMarkup}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(option.best_case_prompt, MAX_PROMPT_LEN))}">Copy as prompt</button>
+      </div>`;
+  return card({
+    intent,
+    eyebrow: option.id,
+    title: option.label,
+    ...badge === void 0 ? {} : { badge },
+    bodyHtml
+  });
+}
+function renderTournamentVerdictBanner(review, decisionOptions, decision2) {
+  const recommendedOption = decisionOptions.options.find((option) => option.id === review.recommended_option_id);
+  const recommendedLabel = recommendedOption?.label ?? review.recommended_option_id;
+  const decisionText = decision2.decision;
+  return verdictBanner({
+    intent: verdictIntent(review.verdict),
+    badgeText: verdictBadgeText(review.verdict),
+    mainHtml: `<strong>${escapeHtml(recommendedLabel)}</strong> &mdash; ${escapeHtml(decisionText)}`,
+    aside: confidenceText(review.confidence)
+  });
+}
+function renderTournamentDetails(review, decision2) {
+  const sections = [];
+  sections.push(`<p><strong>Comparison.</strong> ${escapeHtml(review.comparison)}</p>`);
+  if (review.objections.length > 0) {
+    const items = review.objections.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Objections.</strong></p><ul>${items}</ul>`);
+  }
+  if (review.missing_evidence.length > 0) {
+    const items = review.missing_evidence.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Missing evidence.</strong></p><ul>${items}</ul>`);
+  }
+  if (review.tradeoff_question.length > 0) {
+    sections.push(`<p><strong>Tradeoff question.</strong> ${escapeHtml(review.tradeoff_question)}</p>`);
+  }
+  sections.push(`<p><strong>Rationale.</strong> ${escapeHtml(decision2.rationale)}</p>`);
+  if (decision2.residual_risks.length > 0) {
+    const items = decision2.residual_risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
+    sections.push(`<p><strong>Residual risks.</strong></p><ul>${items}</ul>`);
+  }
+  sections.push(`<p><strong>Next action.</strong> ${escapeHtml(decision2.next_action)}</p>`);
+  return sections.join("\n      ");
+}
+function formatScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  return value.toFixed(3).replace(/\.?0+$/, "");
+}
+function formatSignedScore(value) {
+  if (value === null || value === void 0)
+    return "n/a";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${formatScore(value)}`;
+}
+function autoResolutionLine(record2) {
+  const label = record2.checkpoint_label ?? record2.checkpoint_id;
+  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
+  return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
+}
+function renderAutoResolutions(records) {
+  if (records === void 0 || records.length === 0)
+    return "";
+  const items = records.map((record2) => `<li>${escapeHtml(autoResolutionLine(record2))}</li>`).join("");
+  return `
+  <section>
+    <h2>Auto-resolutions</h2>
+    <ul>${items}</ul>
+  </section>
+`;
+}
+function loadHtmlPayload(flowReport, readEvidenceReportById) {
+  const snapshot = isObject2(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
+  if (stringField(snapshot, "decision_verdict") !== "decided")
+    return void 0;
+  const optionsRaw = readEvidenceReportById("explore.decision-options");
+  const reviewRaw = readEvidenceReportById("explore.tournament-review");
+  const decisionRaw = readEvidenceReportById("explore.decision");
+  if (optionsRaw === void 0 || reviewRaw === void 0 || decisionRaw === void 0) {
+    return void 0;
+  }
+  const optionsParsed = ExploreDecisionOptions.safeParse(optionsRaw);
+  const reviewParsed = ExploreTournamentReview.safeParse(reviewRaw);
+  const decisionParsed = ExploreDecision.safeParse(decisionRaw);
+  if (!optionsParsed.success || !reviewParsed.success || !decisionParsed.success)
+    return void 0;
+  return {
+    decisionOptions: optionsParsed.data,
+    tournamentReview: reviewParsed.data,
+    decision: decisionParsed.data
+  };
+}
+var exploreTournamentProjector = (ctx) => {
+  const payload = loadHtmlPayload(ctx.flowReport, ctx.readEvidenceReportById);
+  if (payload === void 0)
+    return void 0;
+  const { decisionOptions, tournamentReview, decision: decision2 } = payload;
+  const recommendedId = tournamentReview.recommended_option_id;
+  const selectedId = decision2.selected_option_id;
+  const subtitle = `${decisionOptions.options.length} options surfaced. Tournament review: ${tournamentReview.verdict.replace(/-/g, " ")} (${tournamentReview.confidence} confidence).`;
+  const cards = decisionOptions.options.map((option) => renderOptionCard(option, option.id === recommendedId, option.id === selectedId)).join("\n\n");
+  const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision2);
+  const detailsBody = renderTournamentDetails(tournamentReview, decision2);
+  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${cards}
+  </div>
+
+${autoResolutions}
+
+  <details>
+    <summary>Tournament reasoning &middot; why this recommendation?</summary>
+    <div class="body">
+      ${detailsBody}
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${decisionOptions.decision_question} \xB7 Circuit Explore`,
+    metaLine: `Explore \xB7 ${ctx.flowId} \xB7 ${ctx.runId}`,
+    headline: decisionOptions.decision_question,
+    subtitle,
+    bodyHtml,
+    footerLeft: `circuit \xB7 explore \xB7 ${ctx.runId}`,
+    footerRight: decisionOptions.recommendation_basis
+  });
+};
 
 // dist/flows/registries/shape-hints/from-zod.js
 function defOf(node) {
@@ -39166,6 +39660,551 @@ var prototypeFlowData = {
 // dist/flows/prototype/flow.js
 var prototypeFlowDefinition = defineFlowData(prototypeFlowData);
 
+// dist/shared/html/multi-variant.js
+import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve3 } from "node:path";
+import { pathToFileURL } from "node:url";
+var PREVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".gif",
+  ".htm",
+  ".html",
+  ".jpeg",
+  ".jpg",
+  ".pdf",
+  ".png",
+  ".svg",
+  ".webp"
+]);
+function withoutQueryOrHash(value) {
+  const queryIndex = value.search(/[?#]/);
+  return queryIndex === -1 ? value : value.slice(0, queryIndex);
+}
+function extensionForPath(value) {
+  const cleaned = withoutQueryOrHash(value).toLowerCase();
+  const dotIndex = cleaned.lastIndexOf(".");
+  if (dotIndex === -1)
+    return "";
+  const slashIndex = cleaned.lastIndexOf("/");
+  return dotIndex > slashIndex ? cleaned.slice(dotIndex) : "";
+}
+function isPreviewableArtifactPath(value) {
+  return PREVIEWABLE_EXTENSIONS.has(extensionForPath(value));
+}
+function toBrowserPath(value) {
+  return value.replace(/\\/g, "/");
+}
+function encodeUrlPath(value) {
+  return value.split("/").map((part) => part === ".." || part === "." ? part : encodeURIComponent(part)).join("/");
+}
+function isInside2(root, target) {
+  const fromRoot = relative5(root, target);
+  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute5(fromRoot);
+}
+function runIdFromFolder(runFolder) {
+  const parts = toBrowserPath(resolve3(runFolder)).split("/").filter((part) => part.length > 0);
+  return parts.at(-1);
+}
+function runArtifactPreviewHref(input) {
+  if (!isPreviewableArtifactPath(input.entryPath))
+    return void 0;
+  const reportsDir = resolve3(input.runFolder, "reports");
+  const runRoot = resolve3(input.runFolder);
+  if (isAbsolute5(input.entryPath)) {
+    const absoluteEntry = resolve3(input.entryPath);
+    if (!isInside2(runRoot, absoluteEntry))
+      return void 0;
+    return encodeUrlPath(toBrowserPath(relative5(reportsDir, absoluteEntry)));
+  }
+  const normalized = toBrowserPath(input.entryPath).replace(/^\.\//, "");
+  if (normalized.split("/").some((part) => part === ".."))
+    return void 0;
+  if (normalized.startsWith("prototype-files/"))
+    return encodeUrlPath(`../${normalized}`);
+  const runId = runIdFromFolder(input.runFolder);
+  const currentRunPrefix = runId === void 0 ? void 0 : `.circuit/runs/${runId}/`;
+  if (currentRunPrefix !== void 0 && normalized.startsWith(currentRunPrefix)) {
+    return encodeUrlPath(`../${normalized.slice(currentRunPrefix.length)}`);
+  }
+  if (input.projectRoot !== void 0) {
+    const projectRoot = resolve3(input.projectRoot);
+    const absoluteEntry = resolve3(projectRoot, normalized);
+    if (!isInside2(projectRoot, absoluteEntry))
+      return void 0;
+    return pathToFileURL(absoluteEntry).href;
+  }
+  return void 0;
+}
+function previewForEntryPoints(input) {
+  for (const entryPoint of input.entryPoints) {
+    const href = runArtifactPreviewHref({
+      entryPath: entryPoint,
+      runFolder: input.runFolder,
+      projectRoot: input.projectRoot
+    });
+    if (href !== void 0)
+      return { href, sourcePath: entryPoint };
+  }
+  return void 0;
+}
+function multiVariantStyles() {
+  return `.mv-wrap{--mv-pad:clamp(18px,2.4vw,44px);--mv-top:clamp(30px,3vw,50px);--mv-rail-width:clamp(420px,32vw,640px);--mv-rail-gap:clamp(34px,4vw,72px);max-width:1280px}.mv-wrap.mv-visual{max-width:none;width:100%;padding:var(--mv-top) calc(var(--mv-rail-width) + var(--mv-pad) + var(--mv-rail-gap)) 96px var(--mv-pad)}.mv-decision{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin:24px 0 28px;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}.mv-decision strong{display:block;font-size:15px;line-height:1.35;margin-bottom:3px;font-weight:560}.mv-decision span{color:var(--text-2)}.mv-count{font-size:12px;color:var(--text-3);white-space:nowrap}.mv-compare{display:block}.mv-list-head,.mv-row{display:grid;grid-template-columns:minmax(150px,190px) minmax(30ch,1fr) minmax(240px,.9fr);gap:clamp(18px,2vw,34px);align-items:start}.mv-list-head{padding:0 0 10px;color:var(--text-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0}.mv-row{position:relative;width:100%;padding:18px 0;border-top:1px solid var(--border)}.mv-row:last-child{border-bottom:1px solid var(--border)}.mv-row[data-selected="true"]::before{content:"";position:absolute;left:-14px;top:18px;bottom:18px;width:2px;border-radius:999px;background:var(--intent-positive)}.mv-name{display:flex;flex-direction:column;gap:6px}.mv-name strong{font-size:15.5px;line-height:1.3;font-weight:560}.mv-tag{width:max-content;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:500}.mv-tag.good{color:var(--intent-positive);border-color:var(--intent-positive)}.mv-copy p{margin:0 0 9px;color:var(--text)}.mv-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;color:var(--text-2);font-size:13px}.mv-facts b{display:block;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0;font-weight:600;margin-bottom:2px}.mv-evidence-cell{display:flex;flex-direction:column;gap:10px;min-width:0}.mv-actions{display:flex;gap:8px;flex-wrap:wrap}.mv-preview-trigger{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}.mv-preview-trigger:hover{background:var(--surface-2)}.mv-detail{position:fixed;top:var(--mv-top);right:var(--mv-pad);bottom:28px;width:var(--mv-rail-width);border-left:1px solid var(--border);padding-left:clamp(24px,2.4vw,40px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.mv-detail h2{font-size:18px;line-height:1.3;margin:0 0 12px;letter-spacing:0;font-weight:560}.mv-frame{border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);min-height:clamp(280px,42vh,470px);box-shadow:0 16px 42px rgba(22,28,24,.07);overflow:hidden}.mv-frame iframe{display:block;width:100%;height:clamp(280px,42vh,470px);border:0;background:white}.mv-empty-preview{padding:18px;color:var(--text-2);font-size:13px}.mv-detail-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px}.mv-open-link{font-size:13px;color:var(--intent-info);text-decoration:none}.mv-open-link:hover{text-decoration:underline}.mv-detail-source{font:500 11px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);overflow-wrap:anywhere}.mv-wrap.mv-evidence .mv-row{grid-template-columns:minmax(150px,210px) minmax(32ch,1fr) minmax(260px,.8fr)}@media (max-width:1320px){.mv-wrap.mv-visual{max-width:1280px;margin:0 auto;padding:var(--mv-top) var(--mv-pad) 96px}.mv-detail{position:static;width:auto;overflow:visible;border-left:0;border-top:1px solid var(--border);padding-left:0;padding-top:22px;margin-top:24px}.mv-frame iframe{height:420px}}@media (max-width:760px){.mv-decision{grid-template-columns:1fr}.mv-count{white-space:normal}.mv-list-head{display:none}.mv-row,.mv-wrap.mv-evidence .mv-row{grid-template-columns:1fr;gap:12px}.mv-facts{grid-template-columns:1fr}.mv-frame iframe{height:340px}}`;
+}
+function multiVariantScript() {
+  return `(()=>{const frame=document.querySelector('[data-mv-frame]');const title=document.querySelector('[data-mv-title]');const source=document.querySelector('[data-mv-source]');const link=document.querySelector('[data-mv-open]');const empty=document.querySelector('[data-mv-empty]');const rows=[...document.querySelectorAll('[data-mv-row]')];const triggers=[...document.querySelectorAll('[data-mv-preview-trigger]')];if(!frame||!title||!source||!link||!empty)return;function select(trigger){const id=trigger.dataset.mvVariantId||'';const src=trigger.dataset.mvPreviewSrc||'';title.textContent=trigger.dataset.mvPreviewTitle||'';source.textContent=trigger.dataset.mvPreviewSource||'';rows.forEach(row=>{row.dataset.selected=String(row.dataset.mvVariantId===id);});if(src.length>0){frame.hidden=false;empty.hidden=true;frame.setAttribute('src',src);link.hidden=false;link.setAttribute('href',src);}else{frame.hidden=true;empty.hidden=false;link.hidden=true;link.removeAttribute('href');}}triggers.forEach(trigger=>{trigger.addEventListener('click',()=>select(trigger));});})();`;
+}
+function renderFacts(facts) {
+  if (facts.length === 0)
+    return "";
+  return `<div class="mv-facts">
+          ${facts.map((fact) => `<span><b>${escapeHtml(fact.label)}</b>${escapeHtml(truncate(fact.value, MAX_BULLET_LEN))}</span>`).join("\n          ")}
+        </div>`;
+}
+function renderRisks(risks) {
+  if (risks === void 0 || risks.length === 0)
+    return "";
+  return `<div>
+          <p class="section-label">Risks</p>
+          <ul class="tradeoffs">
+            ${risks.map((risk) => `<li>${escapeHtml(truncate(risk, MAX_BULLET_LEN))}</li>`).join("\n            ")}
+          </ul>
+        </div>`;
+}
+function renderAction(action) {
+  if (action === void 0)
+    return "";
+  const classes = action.primary === false ? "copy" : "copy primary";
+  return `<button class="${classes}" data-prompt="${escapeHtml(truncate(action.prompt, MAX_PROMPT_LEN))}">${escapeHtml(action.label)}</button>`;
+}
+function renderVariantRow(input) {
+  const { selected, variant, visual } = input;
+  const previewButton = visual && variant.preview !== void 0 ? `<button class="mv-preview-trigger" type="button" data-mv-preview-trigger data-mv-variant-id="${escapeHtml(variant.id)}" data-mv-preview-src="${escapeHtml(variant.preview.href)}" data-mv-preview-title="${escapeHtml(variant.label)}" data-mv-preview-source="${escapeHtml(variant.preview.sourcePath)}">Preview</button>` : "";
+  const evidence2 = variant.evidence.length === 0 ? "" : variant.evidence.map((item) => chip(item)).join("\n          ");
+  return `      <article class="mv-row" data-mv-row data-mv-variant-id="${escapeHtml(variant.id)}" data-selected="${selected ? "true" : "false"}">
+        <div class="mv-name">
+          <strong>${escapeHtml(variant.label)}</strong>
+          <span class="mv-tag${variant.recommended ? " good" : ""}">${escapeHtml(variant.recommended ? "Recommended" : variant.id)}</span>
+        </div>
+        <div class="mv-copy">
+          <p>${escapeHtml(truncate(variant.description, MAX_BULLET_LEN))}</p>
+          ${renderFacts(variant.facts)}
+          ${renderRisks(variant.risks)}
+        </div>
+        <div class="mv-evidence-cell">
+          <div class="evidence">
+          ${evidence2}
+          </div>
+          <div class="mv-actions">
+            ${previewButton}
+            ${renderAction(variant.action)}
+          </div>
+        </div>
+      </article>`;
+}
+function renderVisualDetail(variant) {
+  const preview = variant.preview;
+  const frameHtml = preview === void 0 ? '<iframe data-mv-frame hidden title=""></iframe><p class="mv-empty-preview" data-mv-empty>No visual preview is available for this variant.</p>' : `<iframe data-mv-frame src="${escapeHtml(preview.href)}" title="${escapeHtml(`${variant.label} preview`)}" sandbox="allow-scripts allow-forms allow-pointer-lock" loading="lazy"></iframe><p class="mv-empty-preview" data-mv-empty hidden>No visual preview is available for this variant.</p>`;
+  const source = preview?.sourcePath ?? "No visual artifact path";
+  const link = preview === void 0 ? '<a class="mv-open-link" data-mv-open hidden>Open artifact</a>' : `<a class="mv-open-link" data-mv-open href="${escapeHtml(preview.href)}" target="_blank" rel="noreferrer">Open artifact</a>`;
+  return `    <aside class="mv-detail" aria-label="Selected variant preview">
+      <h2 data-mv-title>${escapeHtml(variant.label)}</h2>
+      <div class="mv-frame">
+        ${frameHtml}
+      </div>
+      <div class="mv-detail-meta">
+        ${link}
+        <div class="mv-detail-source" data-mv-source>${escapeHtml(source)}</div>
+      </div>
+    </aside>`;
+}
+function renderMultiVariantComparisonPage(input) {
+  if (input.variants.length === 0) {
+    throw new Error("multi-variant comparison requires at least one variant");
+  }
+  const recommended = input.variants.find((variant) => variant.recommended) ?? input.variants[0];
+  if (recommended === void 0) {
+    throw new Error("multi-variant comparison could not choose a default variant");
+  }
+  const visual = input.variants.some((variant) => variant.preview !== void 0);
+  const defaultVariant = visual ? input.variants.find((variant) => variant.recommended && variant.preview !== void 0) ?? input.variants.find((variant) => variant.preview !== void 0) ?? recommended : recommended;
+  const rows = input.variants.map((variant) => renderVariantRow({ variant, visual, selected: variant.id === defaultVariant.id })).join("\n");
+  const banner = verdictBanner({
+    intent: input.recommendation.intent,
+    badgeText: input.recommendation.badgeText,
+    mainHtml: `<strong>${escapeHtml(input.recommendation.label)}</strong> &mdash; ${escapeHtml(input.recommendation.rationale)}`,
+    ...input.recommendation.aside === void 0 ? {} : { aside: input.recommendation.aside }
+  });
+  const details = input.detailsHtml === void 0 ? "" : input.detailsHtml;
+  const bodyHtml = `${banner}
+
+  <section class="mv-decision" aria-label="Checkpoint decision">
+    <div>
+      <strong>Recommended: ${escapeHtml(recommended.label)}</strong>
+      <span>${escapeHtml(input.recommendation.rationale)}</span>
+    </div>
+    <div class="mv-count">${input.variants.length} variants compared</div>
+  </section>
+
+  <div class="mv-compare">
+    <section aria-label="Variant comparison">
+      <div class="mv-list-head">
+        <div>Variant</div>
+        <div>What changes</div>
+        <div>${visual ? "Evidence and preview" : "Evidence"}</div>
+      </div>
+${rows}
+    </section>
+${visual ? renderVisualDetail(defaultVariant) : ""}
+  </div>
+
+${details}
+`;
+  return renderPage({
+    title: input.title,
+    metaLine: input.metaLine,
+    headline: input.headline,
+    subtitle: input.subtitle,
+    bodyHtml,
+    ...input.footerLeft === void 0 ? {} : { footerLeft: input.footerLeft },
+    ...input.footerRight === void 0 ? {} : { footerRight: input.footerRight },
+    wrapClassName: visual ? "wrap mv-wrap mv-visual" : "wrap mv-wrap mv-evidence",
+    extraStyles: multiVariantStyles(),
+    ...visual ? { extraScript: multiVariantScript() } : {}
+  });
+}
+
+// dist/flows/prototype/writers/checkpoint-html.js
+var PROTOTYPE_BRIEF_PATH = "reports/prototype/brief.json";
+var PROTOTYPE_PLAN_PATH = "reports/prototype/plan.json";
+var PROTOTYPE_ARTIFACT_PATH = "reports/prototype/artifact.json";
+var PROTOTYPE_VERIFICATION_PATH = "reports/prototype/verification.json";
+var PROTOTYPE_VARIANT_AGGREGATE_PATH = "reports/prototype/variant-aggregate.json";
+var PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH = "reports/prototype/variant-provider-evidence.json";
+var PROTOTYPE_VARIANT_VERIFICATION_PATH = "reports/prototype/variant-verification.json";
+var PROTOTYPE_VARIANT_REVIEW_PATH = "reports/prototype/variant-review.json";
+var PROTOTYPE_VARIANT_CHOICES_PATH = "reports/prototype/variant-choice-options.json";
+var CHOICES = [
+  {
+    id: "keep-prototype",
+    label: "Keep Prototype",
+    description: "Save the prototype as useful evidence and stop here.",
+    intent: "positive"
+  },
+  {
+    id: "save-build-input",
+    label: "Save Build Input",
+    description: "Close with a Build-ready follow-up prompt, without running Build.",
+    intent: "info"
+  },
+  {
+    id: "discard-prototype",
+    label: "Discard Prototype",
+    description: "Mark the prototype as discarded while keeping the evidence trail.",
+    intent: "attention"
+  }
+];
+function bulletList2(items) {
+  return `<ul class="tradeoffs">
+          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
+        </ul>`;
+}
+function commandText2(command) {
+  return `${command.cwd}$ ${command.argv.join(" ")}`;
+}
+function shellSingleQuote2(value) {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+function resumeCommandForChoice2(runFolder, choiceId) {
+  return `circuit resume --run-folder ${shellSingleQuote2(runFolder)} --checkpoint-choice ${shellSingleQuote2(choiceId)}`;
+}
+function load(readJsonRunRelative, relPath, parse3) {
+  const parsed = parse3(readJsonRunRelative(relPath));
+  return parsed.success ? parsed.data : void 0;
+}
+function renderArtifactCard2(artifact) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(artifact.summary)}</p>
+      <div>
+        <p class="section-label">Prototype root</p>
+        <div class="evidence">${chip(artifact.prototype_root)}</div>
+      </div>
+      <div>
+        <p class="section-label">Entry points</p>
+        <div class="evidence">
+          ${artifact.entry_points.map((entry) => chip(entry)).join("\n          ")}
+        </div>
+      </div>
+      <div>
+        <p class="section-label">Preview</p>
+        <p class="summary">${escapeHtml(artifact.preview_instructions)}</p>
+      </div>`;
+  return card({
+    intent: "positive",
+    eyebrow: "artifact",
+    title: "Prototype files",
+    bodyHtml
+  });
+}
+function renderVerificationCard(verification) {
+  const status = verification.overall_status;
+  const bodyHtml = `      <p class="summary">${escapeHtml(status === "passed" ? "Artifact integrity and target checks passed." : "One or more checks failed.")}</p>
+      <div>
+        <p class="section-label">Checks</p>
+        <div class="evidence">
+          ${verification.commands.map((command) => chip(commandText2(command))).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: status === "passed" ? "positive" : "negative",
+    eyebrow: status,
+    title: "Verification",
+    bodyHtml
+  });
+}
+function renderRiskCard2(artifact, brief) {
+  const limits = [...brief.claim_limits, ...artifact.claim_limits];
+  const bodyHtml = `      <p class="summary">Prototype is local evidence, not a production or deployed result.</p>
+      <div>
+        <p class="section-label">Known limitations</p>
+        ${artifact.known_limitations.length === 0 ? '<p class="summary">No limitations were reported.</p>' : bulletList2(artifact.known_limitations)}
+      </div>
+      <div>
+        <p class="section-label">Claim limits</p>
+        <div class="evidence">
+          ${Array.from(new Set(limits)).map((limit) => chip(limit)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "attention",
+    eyebrow: "limits",
+    title: "Read Before Reuse",
+    bodyHtml
+  });
+}
+function renderPlanCard(plan) {
+  const bodyHtml = `      <p class="summary">${escapeHtml(plan.preview_instructions)}</p>
+      <div>
+        <p class="section-label">Planned files</p>
+        <div class="evidence">
+          ${plan.files_to_create.map((file2) => chip(file2)).join("\n          ")}
+        </div>
+      </div>`;
+  return card({
+    intent: "neutral",
+    eyebrow: "plan",
+    title: "Artifact Plan",
+    bodyHtml
+  });
+}
+function renderChoice(choice, runFolder, recommendedId) {
+  const isRecommended = choice.id === recommendedId;
+  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
+      <div class="actions">
+        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
+      </div>`;
+  return card({
+    intent: isRecommended ? "positive" : choice.intent,
+    eyebrow: choice.id,
+    title: choice.label,
+    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
+    bodyHtml
+  });
+}
+function filteredChoices2(allowedChoices) {
+  const allowed = new Set(allowedChoices);
+  return CHOICES.filter((choice) => allowed.has(choice.id));
+}
+function relaySelectionLine(evidence2) {
+  if (evidence2?.status === "captured" && evidence2.provider !== void 0 && evidence2.model !== void 0 && evidence2.effort !== void 0) {
+    return `${evidence2.provider}/${evidence2.model} (${evidence2.effort})`;
+  }
+  return "No captured relay selection evidence";
+}
+function renderVariantDetails(input) {
+  const missingEvidenceHtml = input.providerEvidence.missing_evidence.length === 0 && input.review.missing_evidence.length === 0 ? "" : `<p><strong>Missing evidence.</strong> ${escapeHtml([
+    ...input.providerEvidence.missing_evidence.map((item) => `${item.variant_id}: ${item.reason}`),
+    ...input.review.missing_evidence
+  ].join("; "))}</p>`;
+  const strengthsHtml = input.review.strengths.length === 0 ? "" : `<p><strong>Strengths.</strong></p><ul>${input.review.strengths.map((item) => `<li>${escapeHtml(`${item.variant_id}: ${item.note}`)}</li>`).join("")}</ul>`;
+  const risksHtml = input.review.risks.length === 0 ? "" : `<p><strong>Risks.</strong></p><ul>${input.review.risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("")}</ul>`;
+  return `  <details>
+    <summary>Comparison evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Comparison.</strong> ${escapeHtml(input.review.comparison_summary)}</p>
+      ${strengthsHtml}
+      ${risksHtml}
+      <p><strong>Verification.</strong> ${escapeHtml(input.verification.overall_status)}</p>
+      ${missingEvidenceHtml}
+      <p><strong>Resume command.</strong> <code>${escapeHtml(input.resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_VARIANT_AGGREGATE_PATH,
+    PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
+    PROTOTYPE_VARIANT_VERIFICATION_PATH,
+    PROTOTYPE_VARIANT_REVIEW_PATH,
+    PROTOTYPE_VARIANT_CHOICES_PATH,
+    input.checkpointRequestPath ?? ""
+  ].filter((item) => item.length > 0).map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>`;
+}
+function variantComparisonItems(input) {
+  return input.choices.map((choice) => {
+    const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === choice.id);
+    const artifact = branch?.result_body;
+    const evidence2 = input.providerEvidence.variants.find((candidate) => candidate.variant_id === choice.id);
+    const entryPoints = artifact?.entry_points ?? choice.entry_points;
+    const createdFiles = artifact?.created_files ?? [];
+    const artifactEvidence = artifact?.evidence ?? [];
+    const risks = artifact?.known_limitations ?? [];
+    const providerLine = evidence2?.status === "captured" ? relaySelectionLine(evidence2) : "No captured relay selection evidence";
+    const preview = previewForEntryPoints({
+      entryPoints,
+      runFolder: input.runFolder,
+      projectRoot: input.projectRoot
+    });
+    return {
+      id: choice.id,
+      label: choice.label,
+      description: artifact?.summary ?? choice.description,
+      recommended: choice.id === input.recommendedChoiceId,
+      facts: [
+        { label: "Relay", value: providerLine },
+        { label: "Verification", value: choice.verification_status },
+        { label: "Verdict", value: branch?.verdict ?? "not reported" },
+        { label: "Review", value: choice.review_recommendation ? "recommended" : "compared" }
+      ],
+      evidence: [...entryPoints, ...createdFiles, ...artifactEvidence],
+      risks,
+      ...preview === void 0 ? {} : { preview },
+      action: {
+        label: "Copy resume command",
+        prompt: resumeCommandForChoice2(input.runFolder, choice.id),
+        primary: true
+      }
+    };
+  });
+}
+function renderVariantCheckpoint(ctx) {
+  const aggregate2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_AGGREGATE_PATH, (raw) => PrototypeVariantAggregate.safeParse(raw));
+  const providerEvidence2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH, (raw) => PrototypeVariantProviderEvidence.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_VERIFICATION_PATH, (raw) => PrototypeVariantVerification.safeParse(raw));
+  const review = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_REVIEW_PATH, (raw) => PrototypeVariantReview.safeParse(raw));
+  const choices = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_CHOICES_PATH, (raw) => PrototypeVariantChoiceOptions.safeParse(raw));
+  if (aggregate2 === void 0 || providerEvidence2 === void 0 || verification === void 0 || review === void 0 || choices === void 0) {
+    return void 0;
+  }
+  const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
+  const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
+  if (visibleChoices.length === 0)
+    return void 0;
+  const recommended = visibleChoices.find((choice) => choice.id === choices.recommended_variant_id) ?? visibleChoices.find((choice) => choice.recommended) ?? visibleChoices[0];
+  if (recommended === void 0)
+    return void 0;
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<variant-id>'`;
+  return renderMultiVariantComparisonPage({
+    title: "Prototype model comparison checkpoint",
+    metaLine: `Prototype model comparison - ${ctx.runId}`,
+    headline: "Choose a prototype variant",
+    subtitle: "Compare local prototype artifacts using captured relay selection evidence, then keep one variant.",
+    recommendation: {
+      label: recommended.label,
+      rationale: review.comparison_summary,
+      badgeText: review.verdict === "recommend" ? "Recommended variant" : "Operator choice",
+      intent: review.verdict === "recommend" ? "positive" : "attention",
+      aside: `${providerEvidence2.captured_count} relay selections captured`
+    },
+    variants: variantComparisonItems({
+      aggregate: aggregate2,
+      providerEvidence: providerEvidence2,
+      choices: visibleChoices,
+      recommendedChoiceId: recommended.id,
+      runFolder: ctx.runFolder,
+      projectRoot: ctx.projectRoot
+    }),
+    detailsHtml: renderVariantDetails({
+      review,
+      verification,
+      providerEvidence: providerEvidence2,
+      checkpointRequestPath: ctx.checkpoint?.request_path,
+      resumeCommand
+    }),
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH
+  });
+}
+var prototypeCheckpointProjector = (ctx) => {
+  if (ctx.flowId !== "prototype" || ctx.runOutcome !== "checkpoint_waiting")
+    return void 0;
+  if (ctx.checkpoint?.step_id === "prototype-variant-checkpoint-step") {
+    return renderVariantCheckpoint(ctx);
+  }
+  if (ctx.checkpoint?.step_id !== "prototype-checkpoint-step")
+    return void 0;
+  const brief = load(ctx.readJsonRunRelative, PROTOTYPE_BRIEF_PATH, (raw) => PrototypeBrief.safeParse(raw));
+  const plan = load(ctx.readJsonRunRelative, PROTOTYPE_PLAN_PATH, (raw) => PrototypePlan.safeParse(raw));
+  const artifact = load(ctx.readJsonRunRelative, PROTOTYPE_ARTIFACT_PATH, (raw) => PrototypeArtifact.safeParse(raw));
+  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VERIFICATION_PATH, (raw) => PrototypeVerification.safeParse(raw));
+  if (brief === void 0 || plan === void 0 || artifact === void 0 || verification === void 0) {
+    return void 0;
+  }
+  const choices = filteredChoices2(ctx.checkpoint.allowed_choices);
+  if (choices.length === 0)
+    return void 0;
+  const recommendedChoice = choices.find((choice) => choice.id === "keep-prototype") ?? choices[0];
+  if (recommendedChoice === void 0)
+    return void 0;
+  const banner = verdictBanner({
+    intent: "positive",
+    badgeText: "Verified local artifact",
+    mainHtml: `<strong>${escapeHtml(recommendedChoice.label)}</strong> &mdash; ${escapeHtml("Safe default: keep the prototype evidence and decide on Build separately.")}`,
+    aside: "waiting for choice"
+  });
+  const choiceCards = choices.map((choice) => renderChoice(choice, ctx.runFolder, recommendedChoice.id)).join("\n\n");
+  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<choice>'`;
+  const bodyHtml = `${banner}
+
+  <div class="grid">
+${renderArtifactCard2(artifact)}
+
+${renderVerificationCard(verification)}
+
+${renderRiskCard2(artifact, brief)}
+
+${renderPlanCard(plan)}
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+${choiceCards}
+  </div>
+
+  <details>
+    <summary>Raw evidence and resume command</summary>
+    <div class="body">
+      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
+      <p><strong>Reports.</strong></p>
+      <div class="evidence">
+        ${[
+    PROTOTYPE_BRIEF_PATH,
+    PROTOTYPE_PLAN_PATH,
+    PROTOTYPE_ARTIFACT_PATH,
+    PROTOTYPE_VERIFICATION_PATH,
+    ctx.checkpoint.request_path
+  ].map((item) => chip(item)).join("\n        ")}
+      </div>
+    </div>
+  </details>
+`;
+  return renderPage({
+    title: `${brief.objective} - Circuit Prototype checkpoint`,
+    metaLine: `Prototype checkpoint - ${ctx.runId}`,
+    headline: brief.objective,
+    subtitle: "Choose whether to keep this local prototype, save it as Build input, or mark it discarded.",
+    bodyHtml,
+    footerLeft: `circuit - prototype - ${ctx.runId}`,
+    footerRight: PROTOTYPE_ARTIFACT_PATH
+  });
+};
+
 // dist/flows/stage-policy.js
 function defineEnforcedStagePolicy(input) {
   const canonicals = [...input.canonicals];
@@ -40448,7 +41487,7 @@ var ReviewRelayResult = external_exports.object({
 // dist/flows/review/writers/intake.js
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { closeSync, lstatSync as lstatSync3, openSync, readSync } from "node:fs";
-import { isAbsolute as isAbsolute5, relative as relative5, resolve as resolve3 } from "node:path";
+import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4 } from "node:path";
 
 // dist/flows/review/writers/intake-projection.js
 function gitCommandFailed(text) {
@@ -40600,11 +41639,11 @@ function runGitDiff(projectRoot, args) {
   };
 }
 function insideProject(projectRoot, path) {
-  const rel = relative5(projectRoot, path);
-  return rel === "" || !rel.startsWith("..") && !isAbsolute5(rel);
+  const rel = relative6(projectRoot, path);
+  return rel === "" || !rel.startsWith("..") && !isAbsolute6(rel);
 }
 function readUntrackedFile(projectRoot, path, contentPolicy) {
-  const abs = resolve3(projectRoot, path);
+  const abs = resolve4(projectRoot, path);
   if (!insideProject(projectRoot, abs)) {
     return { path, byte_length: 0, skipped_reason: "path resolves outside project root" };
   }
@@ -41161,6 +42200,9 @@ var PACKAGES_BY_ID = (() => {
   return map2;
 })();
 var RUNTIME_SURFACES = buildRuntimeSurfaceRegistry(flowPackages);
+registerHtmlProjector("build", buildCheckpointProjector);
+registerHtmlProjector("explore", exploreTournamentProjector);
+registerHtmlProjector("prototype", prototypeCheckpointProjector);
 function findCompiledFlowPackageById(id) {
   return PACKAGES_BY_ID.get(id);
 }
@@ -42774,17 +43816,17 @@ var TERMINAL_TARGETS = [
 
 // dist/runtime/run-files/paths.js
 import { existsSync as existsSync9, lstatSync as lstatSync4, realpathSync as realpathSync3 } from "node:fs";
-import { isAbsolute as isAbsolute6, relative as relative6, resolve as resolve4, sep } from "node:path";
+import { isAbsolute as isAbsolute7, relative as relative7, resolve as resolve5, sep } from "node:path";
 function isInsideOrSame3(root, target) {
-  const fromRoot = relative6(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute6(fromRoot);
+  const fromRoot = relative7(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
 }
 function validateRunFilePath(runRelativePath4) {
   const issues = [];
   if (runRelativePath4.trim().length === 0) {
     issues.push("must be non-empty");
   }
-  if (isAbsolute6(runRelativePath4)) {
+  if (isAbsolute7(runRelativePath4)) {
     issues.push("must be relative");
   }
   if (runRelativePath4.includes("\\")) {
@@ -42802,11 +43844,11 @@ function resolveRunFilePath(runDir, runRelativePath4) {
   if (runRelativePath4.trim().length === 0) {
     throw new Error("run file path must be non-empty");
   }
-  if (isAbsolute6(runRelativePath4)) {
+  if (isAbsolute7(runRelativePath4)) {
     throw new Error(`run file path must be relative: ${runRelativePath4}`);
   }
-  const root = resolve4(runDir);
-  const fullPath = resolve4(root, runRelativePath4);
+  const root = resolve5(runDir);
+  const fullPath = resolve5(root, runRelativePath4);
   if (fullPath !== root && !fullPath.startsWith(`${root}${sep}`)) {
     throw new Error(`run file path escapes run directory: ${runRelativePath4}`);
   }
@@ -42824,7 +43866,7 @@ function resolveRunFilePath(runDir, runRelativePath4) {
     const rootReal = realpathSync3.native(root);
     let cursor = root;
     for (const segment of runRelativePath4.split("/")) {
-      cursor = resolve4(cursor, segment);
+      cursor = resolve5(cursor, segment);
       if (!existsSync9(cursor))
         break;
       if (lstatSync4(cursor).isSymbolicLink()) {
@@ -48410,7 +49452,7 @@ var import_yaml = __toESM(require_dist(), 1);
 import { createHash as createHash8 } from "node:crypto";
 import { existsSync as existsSync11, readFileSync as readFileSync21, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join as join6, resolve as resolve5 } from "node:path";
+import { join as join6, resolve as resolve6 } from "node:path";
 var FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/;
 var UserSkillFrontmatter = UserSkillEntry.pick({
   name: true,
@@ -48452,7 +49494,7 @@ function parseSkillMarkdown(text, skillPath) {
 function discoverCandidates(roots) {
   const candidates = /* @__PURE__ */ new Map();
   for (const root of roots) {
-    const rootAbs = resolve5(root);
+    const rootAbs = resolve6(root);
     if (!existsSync11(rootAbs))
       continue;
     for (const entry of readdirSync(rootAbs, { withFileTypes: true })) {
@@ -48497,7 +49539,7 @@ function loadCandidate(candidate) {
 function createUserSkillRegistry(options = {}) {
   const roots = options.roots ?? defaultUserSkillRoots(options.homeDir);
   const candidates = discoverCandidates(roots);
-  const searchedRoots = roots.map((root) => resolve5(root));
+  const searchedRoots = roots.map((root) => resolve6(root));
   return {
     roots: searchedRoots,
     list() {
@@ -53128,11 +54170,11 @@ function classifyCompiledFlowTask(taskText) {
 
 // dist/history/indexer.js
 import { existsSync as existsSync13, mkdirSync, readFileSync as readFileSync25, readdirSync as readdirSync3, renameSync, statSync as statSync2, writeFileSync } from "node:fs";
-import { basename as basename2, join as join12, resolve as resolve7 } from "node:path";
+import { basename as basename2, join as join12, resolve as resolve8 } from "node:path";
 
 // dist/history/extract.js
 import { existsSync as existsSync12, lstatSync as lstatSync5, readFileSync as readFileSync24, readdirSync as readdirSync2, realpathSync as realpathSync4, statSync } from "node:fs";
-import { basename, isAbsolute as isAbsolute7, relative as relative7, resolve as resolve6 } from "node:path";
+import { basename, isAbsolute as isAbsolute8, relative as relative8, resolve as resolve7 } from "node:path";
 var HIGH_VALUE_FIELDS = /* @__PURE__ */ new Set([
   "goal",
   "objective",
@@ -53164,7 +54206,7 @@ var NOISY_FIELDS = /* @__PURE__ */ new Set([
 var REPORT_TEXT_LIMIT = 8e3;
 var HIGH_VALUE_TEXT_LIMIT = 2e3;
 var NORMAL_TEXT_LIMIT = 500;
-function isObject2(value) {
+function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function stringValue(value) {
@@ -53185,7 +54227,7 @@ function readJson2(path) {
 function readJsonRecord(path) {
   try {
     const parsed = readJson2(path);
-    return isObject2(parsed) ? parsed : void 0;
+    return isObject3(parsed) ? parsed : void 0;
   } catch {
     return void 0;
   }
@@ -53196,23 +54238,23 @@ function sha256File(path) {
 function mtimeMs(path) {
   return Math.trunc(statSync(path).mtimeMs);
 }
-function isInside2(root, target) {
-  const fromRoot = relative7(root, target);
-  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute7(fromRoot);
+function isInside3(root, target) {
+  const fromRoot = relative8(root, target);
+  return fromRoot === "" || !fromRoot.startsWith("..") && !isAbsolute8(fromRoot);
 }
 function listFiles(root, prefix = "") {
-  const absRoot = resolve6(root);
+  const absRoot = resolve7(root);
   if (!existsSync12(absRoot))
     return [];
   const rootReal = realpathSync4.native(absRoot);
   const out = [];
   function walk(absDir, relDir) {
     for (const entry of readdirSync2(absDir, { withFileTypes: true })) {
-      const absPath = resolve6(absDir, entry.name);
+      const absPath = resolve7(absDir, entry.name);
       if (lstatSync5(absPath).isSymbolicLink())
         continue;
       const real = realpathSync4.native(absPath);
-      if (!isInside2(rootReal, real))
+      if (!isInside3(rootReal, real))
         continue;
       const relPath = relDir.length === 0 ? entry.name : `${relDir}/${entry.name}`;
       if (entry.isDirectory()) {
@@ -53246,13 +54288,13 @@ function validStepId(value) {
   return StepId.safeParse(value).success ? value : void 0;
 }
 function parseTrace(runFolder, runFolderName) {
-  const tracePath = resolve6(runFolder, "trace.ndjson");
+  const tracePath = resolve7(runFolder, "trace.ndjson");
   if (!existsSync12(tracePath)) {
     return { entries: [], reportWrites: /* @__PURE__ */ new Map(), traceValidForDocs: false };
   }
   let entries = [];
   try {
-    entries = readFileSync24(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject2);
+    entries = readFileSync24(tracePath, "utf8").split("\n").filter((line) => line.trim().length > 0).map((line) => JSON.parse(line)).filter(isObject3);
   } catch (error51) {
     return {
       entries: [],
@@ -53329,7 +54371,7 @@ function extractText(value, options) {
         visit(item, [...path, String(index)]);
       return;
     }
-    if (isObject2(current)) {
+    if (isObject3(current)) {
       for (const [key, item] of Object.entries(current)) {
         if (options.allowCheckpointResponseFields && ["selection", "route_id", "resolution_source"].includes(key)) {
           visit(item, [...path, key]);
@@ -53471,7 +54513,7 @@ function resolveRunIdentity(input) {
 }
 function makeRunDocument(input) {
   const sourcePath = input.resultPath ?? "trace.ndjson";
-  const sourceAbs = resolve6(input.runFolder, sourcePath);
+  const sourceAbs = resolve7(input.runFolder, sourcePath);
   if (!existsSync12(sourceAbs))
     return void 0;
   const sourceSha = input.resultPath === void 0 ? input.traceSha : sha256File(sourceAbs);
@@ -53687,13 +54729,13 @@ function makeTraceDocument(input) {
   });
 }
 function extractRunHistoryDocuments(runFolder) {
-  const runFolderAbs = resolve6(runFolder);
+  const runFolderAbs = resolve7(runFolder);
   const runFolderName = basename(runFolderAbs);
   const warnings = [];
   const documents = [];
   const sourceFiles = /* @__PURE__ */ new Set();
-  const manifestPath2 = resolve6(runFolderAbs, "manifest.snapshot.json");
-  const resultPath2 = resolve6(runFolderAbs, "reports/result.json");
+  const manifestPath2 = resolve7(runFolderAbs, "manifest.snapshot.json");
+  const resultPath2 = resolve7(runFolderAbs, "reports/result.json");
   const manifest = existsSync12(manifestPath2) ? readJsonRecord(manifestPath2) : void 0;
   const result = existsSync12(resultPath2) ? readJsonRecord(resultPath2) : void 0;
   if (existsSync12(manifestPath2))
@@ -53703,7 +54745,7 @@ function extractRunHistoryDocuments(runFolder) {
   const trace = parseTrace(runFolderAbs, runFolderName);
   if (trace.warning !== void 0)
     warnings.push(trace.warning);
-  const tracePath = resolve6(runFolderAbs, "trace.ndjson");
+  const tracePath = resolve7(runFolderAbs, "trace.ndjson");
   const traceExists = existsSync12(tracePath);
   const traceSha = traceExists ? sha256File(tracePath) : void 0;
   const traceMtime = traceExists ? mtimeMs(tracePath) : void 0;
@@ -53726,9 +54768,9 @@ function extractRunHistoryDocuments(runFolder) {
   });
   if (runDocument !== void 0)
     documents.push(runDocument);
-  const reportRoot = resolve6(runFolderAbs, "reports");
+  const reportRoot = resolve7(runFolderAbs, "reports");
   for (const relPath of listFiles(reportRoot, "reports")) {
-    const absPath = resolve6(runFolderAbs, relPath);
+    const absPath = resolve7(runFolderAbs, relPath);
     if (absPath !== resolveRunFilePath(runFolderAbs, relPath))
       continue;
     sourceFiles.add(absPath);
@@ -53747,7 +54789,7 @@ function extractRunHistoryDocuments(runFolder) {
     let body;
     try {
       const parsed = readJson2(absPath);
-      body = isObject2(parsed) ? parsed : void 0;
+      body = isObject3(parsed) ? parsed : void 0;
     } catch (error51) {
       warnings.push({
         code: "report_skipped",
@@ -53808,9 +54850,9 @@ var HistoryCommandError = class extends Error {
   }
 };
 function resolveHistoryPaths(options = {}) {
-  const repoRoot = resolve7(options.repoRoot ?? process.cwd());
-  const runsBase = resolve7(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
-  const indexDir = resolve7(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
+  const repoRoot = resolve8(options.repoRoot ?? process.cwd());
+  const runsBase = resolve8(repoRoot, options.runsBase ?? DEFAULT_RUNS_BASE);
+  const indexDir = resolve8(repoRoot, options.indexDir ?? DEFAULT_INDEX_DIR);
   return {
     repoRoot,
     runsBase,
@@ -54512,12 +55554,12 @@ function prepareRunStartHistoryRecall(options) {
 // dist/process-evidence/projection.js
 import { createHash as createHash9 } from "node:crypto";
 import { existsSync as existsSync15, mkdirSync as mkdirSync2, readFileSync as readFileSync27, writeFileSync as writeFileSync2 } from "node:fs";
-import { dirname as dirname5, isAbsolute as isAbsolute8, join as join13, relative as relative8 } from "node:path";
+import { dirname as dirname5, isAbsolute as isAbsolute9, join as join13, relative as relative9 } from "node:path";
 function sha256File2(path) {
   return Sha256.parse(createHash9("sha256").update(readFileSync27(path)).digest("hex"));
 }
 function runRelativePath(runFolder, path) {
-  return isAbsolute8(path) ? relative8(runFolder, path) : path;
+  return isAbsolute9(path) ? relative9(runFolder, path) : path;
 }
 function traceRef2(runId) {
   return {
@@ -54721,7 +55763,7 @@ function detectNoProgress(attempts) {
 // dist/run-envelope/source-record.js
 import { createHash as createHash10 } from "node:crypto";
 import { mkdirSync as mkdirSync3, readFileSync as readFileSync28, writeFileSync as writeFileSync3 } from "node:fs";
-import { dirname as dirname6, isAbsolute as isAbsolute9, join as join14, relative as relative9 } from "node:path";
+import { dirname as dirname6, isAbsolute as isAbsolute10, join as join14, relative as relative10 } from "node:path";
 var RUN_ENVELOPE_RELATIVE_PATH = "reports/run-envelope.json";
 var RUN_SURFACE_RELATIVE_PATH = "reports/run-surface.md";
 var RUN_DECISION_PACKET_RELATIVE_DIR = "reports/decision-packets";
@@ -54732,7 +55774,7 @@ function sha256Text(text) {
   return Sha256.parse(createHash10("sha256").update(text).digest("hex"));
 }
 function runRelativePath2(runFolder, path) {
-  return isAbsolute9(path) ? relative9(runFolder, path) : path;
+  return isAbsolute10(path) ? relative10(runFolder, path) : path;
 }
 function childRunIdFromProjection(projection) {
   return RunId.parse(projection.child_run_ref.run_id);
@@ -55394,13 +56436,13 @@ async function runAutonomousContinuation(input) {
 // dist/run-envelope/shadow-record.js
 import { createHash as createHash11 } from "node:crypto";
 import { mkdirSync as mkdirSync4, readFileSync as readFileSync29, writeFileSync as writeFileSync4 } from "node:fs";
-import { dirname as dirname7, isAbsolute as isAbsolute10, join as join15, relative as relative10 } from "node:path";
+import { dirname as dirname7, isAbsolute as isAbsolute11, join as join15, relative as relative11 } from "node:path";
 var RUN_ENVELOPE_SHADOW_RELATIVE_PATH = "reports/run-envelope-shadow.json";
 function sha256File4(path) {
   return Sha256.parse(createHash11("sha256").update(readFileSync29(path)).digest("hex"));
 }
 function runRelativePath3(runFolder, path) {
-  return isAbsolute10(path) ? relative10(runFolder, path) : path;
+  return isAbsolute11(path) ? relative11(runFolder, path) : path;
 }
 function reportRef2(input) {
   return {
@@ -55500,7 +56542,7 @@ function writeRunEnvelopeShadowRecord(input) {
 var import_yaml2 = __toESM(require_dist(), 1);
 import { existsSync as existsSync16, readFileSync as readFileSync30 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join16, resolve as resolve8 } from "node:path";
+import { join as join16, resolve as resolve9 } from "node:path";
 var USER_GLOBAL_CONFIG_RELATIVE_PATH = [".config", "circuit", "config.yaml"];
 var PROJECT_CONFIG_RELATIVE_PATH = [".circuit", "config.yaml"];
 function userGlobalConfigPath(homeDir = homedir2()) {
@@ -55517,7 +56559,7 @@ function parseConfigYaml(text, sourcePath) {
   }
 }
 function loadRuntimeConfigLayerFromPath(layer, sourcePath) {
-  const abs = resolve8(sourcePath);
+  const abs = resolve9(sourcePath);
   if (!existsSync16(abs))
     return void 0;
   const raw = parseConfigYaml(readFileSync30(abs, "utf8"), abs);
@@ -55817,1043 +56859,6 @@ ${issueSummary}${more}`
 // dist/shared/operator-summary-writer.js
 import { existsSync as existsSync18, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
 import { dirname as dirname8, isAbsolute as isAbsolute12, join as join17, relative as relative12, resolve as resolve10 } from "node:path";
-
-// dist/shared/html/page.js
-var ESCAPE_MAP = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;"
-};
-function buildSanitizePattern() {
-  const ranges = [
-    [0, 8],
-    [11, 12],
-    [14, 31],
-    [8234, 8238],
-    [8294, 8297]
-  ];
-  const klass = ranges.map(([lo, hi]) => {
-    const loEsc = `\\u${lo.toString(16).padStart(4, "0")}`;
-    const hiEsc = `\\u${hi.toString(16).padStart(4, "0")}`;
-    return `${loEsc}-${hiEsc}`;
-  }).join("");
-  return new RegExp(`[${klass}]`, "g");
-}
-var SANITIZE_PATTERN = buildSanitizePattern();
-var MAX_BULLET_LEN = 4096;
-var MAX_PROMPT_LEN = 32768;
-function sanitizeForRender(value) {
-  return value.replace(SANITIZE_PATTERN, "");
-}
-function escapeHtmlChars(value) {
-  return value.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char] ?? char);
-}
-function escapeHtml(value) {
-  return escapeHtmlChars(sanitizeForRender(value));
-}
-function truncate(value, max) {
-  return value.length > max ? `${value.slice(0, max - 1)}\u2026` : value;
-}
-function styles() {
-  return `:root{--bg:#fafaf9;--surface:#fff;--surface-2:#f5f5f4;--border:#e7e5e4;--border-strong:#d6d3d1;--text:#1c1917;--text-2:#57534e;--text-3:#a8a29e;--accent:#0f172a;--intent-positive:#166534;--intent-positive-soft:#f0fdf4;--intent-info:#1e40af;--intent-info-soft:#eff6ff;--intent-attention:#9a3412;--intent-attention-soft:#fff7ed;--intent-negative:#991b1b;--intent-negative-soft:#fef2f2}@media (prefers-color-scheme:dark){:root{--bg:#0c0a09;--surface:#1c1917;--surface-2:#292524;--border:#292524;--border-strong:#44403c;--text:#fafaf9;--text-2:#a8a29e;--text-3:#78716c;--accent:#fafaf9;--intent-positive:#4ade80;--intent-positive-soft:#052e16;--intent-info:#93c5fd;--intent-info-soft:#172554;--intent-attention:#fb923c;--intent-attention-soft:#431407;--intent-negative:#f87171;--intent-negative-soft:#450a0a}}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}.wrap{max-width:1200px;margin:0 auto;padding:48px 32px 96px}header.top{margin-bottom:24px}.meta{font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}h1{font:600 28px/1.25 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;margin:0 0 8px;letter-spacing:-.01em}.subtitle{color:var(--text-2);font-size:16px;margin:0}.verdict{margin:24px 0 32px;padding:16px 20px;background:var(--intent-info-soft);border:1px solid var(--intent-info);border-radius:8px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.verdict.intent-positive{background:var(--intent-positive-soft);border-color:var(--intent-positive)}.verdict.intent-attention{background:var(--intent-attention-soft);border-color:var(--intent-attention)}.verdict.intent-negative{background:var(--intent-negative-soft);border-color:var(--intent-negative)}.verdict .badge{font:600 11px/1 -apple-system,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--intent-info);padding:4px 8px;border:1px solid var(--intent-info);border-radius:4px}.verdict.intent-positive .badge{color:var(--intent-positive);border-color:var(--intent-positive)}.verdict.intent-attention .badge{color:var(--intent-attention);border-color:var(--intent-attention)}.verdict.intent-negative .badge{color:var(--intent-negative);border-color:var(--intent-negative)}.verdict .text{color:var(--text);font-size:14px;flex:1;min-width:200px}.verdict .text strong{font-weight:600}.verdict .confidence{font-size:12px;color:var(--text-2);text-transform:lowercase}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px;position:relative}.card.intent-info{border-color:var(--intent-info);box-shadow:0 0 0 3px var(--intent-info-soft)}.card.intent-positive{border-color:var(--intent-positive);box-shadow:0 0 0 3px var(--intent-positive-soft)}.card.intent-attention{border-color:var(--intent-attention);box-shadow:0 0 0 3px var(--intent-attention-soft)}.card.intent-negative{border-color:var(--intent-negative);box-shadow:0 0 0 3px var(--intent-negative-soft)}.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.card-id{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);letter-spacing:.05em}.card h2{font:600 17px/1.3 -apple-system,system-ui,sans-serif;margin:4px 0 0;letter-spacing:-.005em}.intent-badge{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px;border-radius:4px;white-space:nowrap;color:var(--intent-info);background:var(--intent-info-soft)}.intent-badge.intent-positive{color:var(--intent-positive);background:var(--intent-positive-soft)}.intent-badge.intent-attention{color:var(--intent-attention);background:var(--intent-attention-soft)}.intent-badge.intent-negative{color:var(--intent-negative);background:var(--intent-negative-soft)}.summary{color:var(--text-2);font-size:14px;margin:0}.section-label{font:600 10px/1 -apple-system,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin:0 0 8px}ul.tradeoffs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}ul.tradeoffs li{font-size:13px;color:var(--text);padding-left:18px;position:relative;line-height:1.5}ul.tradeoffs li::before{content:"\\2022";position:absolute;left:6px;color:var(--text-3);font-weight:700}.evidence{display:flex;flex-wrap:wrap;gap:6px}.chip{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;padding:4px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;color:var(--text-2)}.actions{display:flex;gap:8px;margin-top:auto;padding-top:8px}button.copy{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}button.copy:hover{background:var(--surface-2)}button.copy.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}button.copy.primary:hover{opacity:.9}details{margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px}details summary{cursor:pointer;font:500 13px/1.4 -apple-system,system-ui,sans-serif;color:var(--text-2);user-select:none}details[open] summary{margin-bottom:12px}details .body{font-size:13px;color:var(--text-2)}details ul{margin:6px 0;padding-left:20px}details li{margin-bottom:4px}footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}footer code{font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace}`;
-}
-function clipboardScript() {
-  return `document.querySelectorAll('button.copy').forEach(btn=>{btn.addEventListener('click',async()=>{const p=btn.dataset.prompt;if(!p)return;try{await navigator.clipboard.writeText(p);const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.textContent=o;},1200);}catch(e){btn.textContent='Copy failed';}});});`;
-}
-function renderPage(input) {
-  const footerLeft = input.footerLeft === void 0 ? "" : `<span>${escapeHtml(input.footerLeft)}</span>`;
-  const footerRight = input.footerRight === void 0 ? "" : `<span><code>${escapeHtml(input.footerRight)}</code></span>`;
-  const wrapClassName = input.wrapClassName ?? "wrap";
-  const extraStyles = input.extraStyles === void 0 ? "" : input.extraStyles;
-  const extraScript = input.extraScript === void 0 ? "" : input.extraScript;
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(input.title)}</title>
-<style>${styles()}${extraStyles}</style>
-</head>
-<body>
-<div class="${escapeHtml(wrapClassName)}">
-  <header class="top">
-    <div class="meta">${escapeHtml(input.metaLine)}</div>
-    <h1>${escapeHtml(input.headline)}</h1>
-    <p class="subtitle">${escapeHtml(input.subtitle)}</p>
-  </header>
-${input.bodyHtml}
-  <footer>
-    ${footerLeft}
-    ${footerRight}
-  </footer>
-</div>
-<script>${clipboardScript()}${extraScript}</script>
-</body>
-</html>
-`;
-}
-
-// dist/shared/html/components.js
-function intentClass(intent) {
-  return intent === "neutral" || intent === "info" ? "" : `intent-${intent}`;
-}
-function intentBadge(input) {
-  const classes = ["intent-badge"];
-  const className = intentClass(input.intent);
-  if (className.length > 0)
-    classes.push(className);
-  return `<span class="${classes.join(" ")}">${escapeHtml(input.text)}</span>`;
-}
-function chip(text) {
-  return `<span class="chip">${escapeHtml(truncate(text, MAX_BULLET_LEN))}</span>`;
-}
-function card(input) {
-  const intent = input.intent ?? "neutral";
-  const classes = ["card"];
-  const intentClassName = intentClass(intent);
-  if (intentClassName.length > 0)
-    classes.push(intentClassName);
-  const eyebrowMarkup = input.eyebrow === void 0 ? "" : `<div class="card-id">${escapeHtml(input.eyebrow)}</div>`;
-  const badgeMarkup = input.badge === void 0 ? "" : intentBadge(input.badge);
-  return `    <article class="${classes.join(" ")}">
-      <div class="card-head">
-        <div>
-          ${eyebrowMarkup}
-          <h2>${escapeHtml(input.title)}</h2>
-        </div>
-        ${badgeMarkup}
-      </div>
-${input.bodyHtml}
-    </article>`;
-}
-function verdictBanner(input) {
-  const classes = ["verdict"];
-  const intentClassName = intentClass(input.intent);
-  if (intentClassName.length > 0)
-    classes.push(intentClassName);
-  const aside = input.aside === void 0 ? "" : `<span class="confidence">${escapeHtml(input.aside)}</span>`;
-  return `  <div class="${classes.join(" ")}">
-    <span class="badge">${escapeHtml(input.badgeText)}</span>
-    <span class="text">${input.mainHtml}</span>
-    ${aside}
-  </div>`;
-}
-
-// dist/shared/html/build-checkpoint.js
-var BUILD_BRIEF_PATH = "reports/build/brief.json";
-function bulletList(items) {
-  return `<ul class="tradeoffs">
-          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
-        </ul>`;
-}
-function commandText(command) {
-  return `${command.cwd}$ ${command.argv.join(" ")}`;
-}
-function renderCommandChips(commands) {
-  return `<div class="evidence">
-          ${commands.map((command) => chip(commandText(command))).join("\n          ")}
-        </div>`;
-}
-function choiceIntent(choiceId, recommendedId) {
-  return choiceId === recommendedId ? "positive" : "neutral";
-}
-function shellSingleQuote(value) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-function resumeCommandForChoice(runFolder, choiceId) {
-  return `circuit resume --run-folder ${shellSingleQuote(runFolder)} --checkpoint-choice ${shellSingleQuote(choiceId)}`;
-}
-function renderChoiceCard(choice, recommendedChoiceId2, runFolder) {
-  const isRecommended = choice.id === recommendedChoiceId2;
-  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
-      <div>
-        <p class="section-label">Executable route</p>
-        <div class="evidence">
-          ${chip(`${choice.route.key} -> ${choice.route.target}`)}
-        </div>
-      </div>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
-      </div>`;
-  return card({
-    intent: choiceIntent(choice.id, recommendedChoiceId2),
-    eyebrow: choice.id,
-    title: choice.label,
-    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
-    bodyHtml
-  });
-}
-function renderArtifactCard(brief, packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.artifact.preview)}</p>
-      <div>
-        <p class="section-label">Scope</p>
-        <p class="summary">${escapeHtml(packet.artifact.scope)}</p>
-      </div>
-      <div>
-        <p class="section-label">Success bar</p>
-        ${bulletList(packet.artifact.success_criteria)}
-      </div>`;
-  return card({
-    intent: "info",
-    eyebrow: packet.artifact.title,
-    title: brief.objective,
-    bodyHtml
-  });
-}
-function renderProofCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.proof.summary)}</p>
-      <div>
-        <p class="section-label">Planned checks</p>
-        ${renderCommandChips(packet.proof.commands)}
-      </div>
-      <div>
-        <p class="section-label">Proof state</p>
-        ${bulletList(packet.proof.evidence)}
-      </div>`;
-  return card({
-    intent: packet.proof.status === "missing" ? "attention" : "neutral",
-    eyebrow: packet.proof.status,
-    title: "Proof",
-    bodyHtml
-  });
-}
-function renderRiskCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.risk.summary)}</p>
-      <div>
-        <p class="section-label">Tradeoffs</p>
-        ${bulletList(packet.risk.tradeoffs)}
-      </div>`;
-  return card({
-    intent: "attention",
-    eyebrow: "manager judgment",
-    title: "Risk",
-    bodyHtml
-  });
-}
-function renderSalienceCard(packet) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(packet.salience.summary)}</p>
-      <div>
-        <p class="section-label">Why now</p>
-        ${bulletList(packet.salience.why_now)}
-      </div>
-      <div>
-        <p class="section-label">Stays internal</p>
-        ${bulletList(packet.salience.hidden_routine_work)}
-      </div>`;
-  return card({
-    intent: "neutral",
-    eyebrow: "salience",
-    title: "Why this needs you",
-    bodyHtml
-  });
-}
-function filteredChoices(packetChoices, allowedChoices) {
-  const allowed = new Set(allowedChoices);
-  return packetChoices.filter((choice) => allowed.has(choice.id));
-}
-function loadBrief(readJsonRunRelative) {
-  const raw = readJsonRunRelative(BUILD_BRIEF_PATH);
-  const parsed = BuildBrief.safeParse(raw);
-  return parsed.success ? parsed.data : void 0;
-}
-var buildCheckpointProjector = (ctx) => {
-  if (ctx.flowId !== "build" || ctx.runOutcome !== "checkpoint_waiting")
-    return void 0;
-  if (ctx.checkpoint === void 0)
-    return void 0;
-  const brief = loadBrief(ctx.readJsonRunRelative);
-  if (brief === void 0)
-    return void 0;
-  const packet = brief.checkpoint_packet;
-  if (packet === void 0)
-    return void 0;
-  const choices = filteredChoices(packet.choices, ctx.checkpoint.allowed_choices);
-  if (choices.length === 0)
-    return void 0;
-  const recommendedChoice = choices.find((choice) => choice.id === packet.recommendation.choice_id) ?? choices[0];
-  if (recommendedChoice === void 0)
-    return void 0;
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote(ctx.runFolder)} --checkpoint-choice '<choice>'`;
-  const subtitle = `${packet.decision.operator_judgment} Recommended: ${packet.recommendation.label}.`;
-  const banner = verdictBanner({
-    intent: "positive",
-    badgeText: "Recommended",
-    mainHtml: `<strong>${escapeHtml(packet.recommendation.label)}</strong> &mdash; ${escapeHtml(packet.recommendation.rationale)}`,
-    aside: "waiting for choice"
-  });
-  const choiceCards = choices.map((choice) => renderChoiceCard(choice, recommendedChoice.id, ctx.runFolder)).join("\n\n");
-  const rawEvidence = [
-    BUILD_BRIEF_PATH,
-    packet.internal.request_path,
-    packet.internal.response_path,
-    ...packet.internal.raw_evidence,
-    ctx.checkpoint.request_path
-  ];
-  const bodyHtml = `${banner}
-
-  <div class="grid">
-${renderArtifactCard(brief, packet)}
-
-${renderSalienceCard(packet)}
-
-${renderRiskCard(packet)}
-
-${renderProofCard(packet)}
-  </div>
-
-  <div class="grid" style="margin-top:16px">
-${choiceCards}
-  </div>
-
-  <details>
-    <summary>Raw evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Decision.</strong> ${escapeHtml(packet.decision.question)}</p>
-      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${rawEvidence.map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${brief.objective} \xB7 Circuit Build checkpoint`,
-    metaLine: `Build checkpoint \xB7 ${ctx.runId}`,
-    headline: brief.objective,
-    subtitle,
-    bodyHtml,
-    footerLeft: `circuit \xB7 build \xB7 ${ctx.runId}`,
-    footerRight: BUILD_BRIEF_PATH
-  });
-};
-
-// dist/shared/html/explore-tournament.js
-function stringField(report, key) {
-  const value = report?.[key];
-  return typeof value === "string" && value.length > 0 ? value : void 0;
-}
-function isObject3(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-function verdictBadgeText(verdict) {
-  if (verdict === "recommend")
-    return "Recommended";
-  if (verdict === "no-clear-winner")
-    return "No clear winner";
-  return "Operator decision";
-}
-function verdictIntent(verdict) {
-  if (verdict === "recommend")
-    return "info";
-  if (verdict === "no-clear-winner")
-    return "attention";
-  return "attention";
-}
-function confidenceText(confidence) {
-  return `${confidence} confidence`;
-}
-function renderOptionCard(option, isRecommended, isSelected) {
-  const intent = isSelected ? "positive" : isRecommended ? "info" : "neutral";
-  const badge = isSelected ? { text: "Selected", intent: "positive" } : isRecommended ? { text: "Recommended", intent: "info" } : void 0;
-  const tradeoffsMarkup = option.tradeoffs.map((tradeoff) => `<li>${escapeHtml(truncate(tradeoff, MAX_BULLET_LEN))}</li>`).join("\n          ");
-  const evidenceMarkup = option.evidence_refs.map((ref) => chip(ref)).join("\n          ");
-  const bodyHtml = `      <p class="summary">${escapeHtml(option.summary)}</p>
-      <div>
-        <p class="section-label">Tradeoffs</p>
-        <ul class="tradeoffs">
-          ${tradeoffsMarkup}
-        </ul>
-      </div>
-      <div>
-        <p class="section-label">Evidence</p>
-        <div class="evidence">
-          ${evidenceMarkup}
-        </div>
-      </div>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(option.best_case_prompt, MAX_PROMPT_LEN))}">Copy as prompt</button>
-      </div>`;
-  return card({
-    intent,
-    eyebrow: option.id,
-    title: option.label,
-    ...badge === void 0 ? {} : { badge },
-    bodyHtml
-  });
-}
-function renderTournamentVerdictBanner(review, decisionOptions, decision2) {
-  const recommendedOption = decisionOptions.options.find((option) => option.id === review.recommended_option_id);
-  const recommendedLabel = recommendedOption?.label ?? review.recommended_option_id;
-  const decisionText = decision2.decision;
-  return verdictBanner({
-    intent: verdictIntent(review.verdict),
-    badgeText: verdictBadgeText(review.verdict),
-    mainHtml: `<strong>${escapeHtml(recommendedLabel)}</strong> &mdash; ${escapeHtml(decisionText)}`,
-    aside: confidenceText(review.confidence)
-  });
-}
-function renderTournamentDetails(review, decision2) {
-  const sections = [];
-  sections.push(`<p><strong>Comparison.</strong> ${escapeHtml(review.comparison)}</p>`);
-  if (review.objections.length > 0) {
-    const items = review.objections.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Objections.</strong></p><ul>${items}</ul>`);
-  }
-  if (review.missing_evidence.length > 0) {
-    const items = review.missing_evidence.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Missing evidence.</strong></p><ul>${items}</ul>`);
-  }
-  if (review.tradeoff_question.length > 0) {
-    sections.push(`<p><strong>Tradeoff question.</strong> ${escapeHtml(review.tradeoff_question)}</p>`);
-  }
-  sections.push(`<p><strong>Rationale.</strong> ${escapeHtml(decision2.rationale)}</p>`);
-  if (decision2.residual_risks.length > 0) {
-    const items = decision2.residual_risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("");
-    sections.push(`<p><strong>Residual risks.</strong></p><ul>${items}</ul>`);
-  }
-  sections.push(`<p><strong>Next action.</strong> ${escapeHtml(decision2.next_action)}</p>`);
-  return sections.join("\n      ");
-}
-function formatScore(value) {
-  if (value === null || value === void 0)
-    return "n/a";
-  return value.toFixed(3).replace(/\.?0+$/, "");
-}
-function formatSignedScore(value) {
-  if (value === null || value === void 0)
-    return "n/a";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${formatScore(value)}`;
-}
-function autoResolutionLine(record2) {
-  const label = record2.checkpoint_label ?? record2.checkpoint_id;
-  const vetoText = record2.runtime_veto_effect === "none" ? "no runtime vetoes" : record2.runtime_veto_effect;
-  return `${label}: ${record2.resolved_value} selected by policy highest-score (aggregate score ${formatScore(record2.winning_score)}; margin ${formatSignedScore(record2.margin)} over runner-up; ${vetoText}).`;
-}
-function renderAutoResolutions(records) {
-  if (records === void 0 || records.length === 0)
-    return "";
-  const items = records.map((record2) => `<li>${escapeHtml(autoResolutionLine(record2))}</li>`).join("");
-  return `
-  <section>
-    <h2>Auto-resolutions</h2>
-    <ul>${items}</ul>
-  </section>
-`;
-}
-function loadHtmlPayload(flowReport, readEvidenceReportById) {
-  const snapshot = isObject3(flowReport?.verdict_snapshot) ? flowReport.verdict_snapshot : void 0;
-  if (stringField(snapshot, "decision_verdict") !== "decided")
-    return void 0;
-  const optionsRaw = readEvidenceReportById("explore.decision-options");
-  const reviewRaw = readEvidenceReportById("explore.tournament-review");
-  const decisionRaw = readEvidenceReportById("explore.decision");
-  if (optionsRaw === void 0 || reviewRaw === void 0 || decisionRaw === void 0) {
-    return void 0;
-  }
-  const optionsParsed = ExploreDecisionOptions.safeParse(optionsRaw);
-  const reviewParsed = ExploreTournamentReview.safeParse(reviewRaw);
-  const decisionParsed = ExploreDecision.safeParse(decisionRaw);
-  if (!optionsParsed.success || !reviewParsed.success || !decisionParsed.success)
-    return void 0;
-  return {
-    decisionOptions: optionsParsed.data,
-    tournamentReview: reviewParsed.data,
-    decision: decisionParsed.data
-  };
-}
-var exploreTournamentProjector = (ctx) => {
-  const payload = loadHtmlPayload(ctx.flowReport, ctx.readEvidenceReportById);
-  if (payload === void 0)
-    return void 0;
-  const { decisionOptions, tournamentReview, decision: decision2 } = payload;
-  const recommendedId = tournamentReview.recommended_option_id;
-  const selectedId = decision2.selected_option_id;
-  const subtitle = `${decisionOptions.options.length} options surfaced. Tournament review: ${tournamentReview.verdict.replace(/-/g, " ")} (${tournamentReview.confidence} confidence).`;
-  const cards = decisionOptions.options.map((option) => renderOptionCard(option, option.id === recommendedId, option.id === selectedId)).join("\n\n");
-  const banner = renderTournamentVerdictBanner(tournamentReview, decisionOptions, decision2);
-  const detailsBody = renderTournamentDetails(tournamentReview, decision2);
-  const autoResolutions = renderAutoResolutions(ctx.autoResolutions);
-  const bodyHtml = `${banner}
-
-  <div class="grid">
-${cards}
-  </div>
-
-${autoResolutions}
-
-  <details>
-    <summary>Tournament reasoning &middot; why this recommendation?</summary>
-    <div class="body">
-      ${detailsBody}
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${decisionOptions.decision_question} \xB7 Circuit Explore`,
-    metaLine: `Explore \xB7 ${ctx.flowId} \xB7 ${ctx.runId}`,
-    headline: decisionOptions.decision_question,
-    subtitle,
-    bodyHtml,
-    footerLeft: `circuit \xB7 explore \xB7 ${ctx.runId}`,
-    footerRight: decisionOptions.recommendation_basis
-  });
-};
-
-// dist/shared/html/multi-variant.js
-import { isAbsolute as isAbsolute11, relative as relative11, resolve as resolve9 } from "node:path";
-import { pathToFileURL } from "node:url";
-var PREVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
-  ".gif",
-  ".htm",
-  ".html",
-  ".jpeg",
-  ".jpg",
-  ".pdf",
-  ".png",
-  ".svg",
-  ".webp"
-]);
-function withoutQueryOrHash(value) {
-  const queryIndex = value.search(/[?#]/);
-  return queryIndex === -1 ? value : value.slice(0, queryIndex);
-}
-function extensionForPath(value) {
-  const cleaned = withoutQueryOrHash(value).toLowerCase();
-  const dotIndex = cleaned.lastIndexOf(".");
-  if (dotIndex === -1)
-    return "";
-  const slashIndex = cleaned.lastIndexOf("/");
-  return dotIndex > slashIndex ? cleaned.slice(dotIndex) : "";
-}
-function isPreviewableArtifactPath(value) {
-  return PREVIEWABLE_EXTENSIONS.has(extensionForPath(value));
-}
-function toBrowserPath(value) {
-  return value.replace(/\\/g, "/");
-}
-function encodeUrlPath(value) {
-  return value.split("/").map((part) => part === ".." || part === "." ? part : encodeURIComponent(part)).join("/");
-}
-function isInside3(root, target) {
-  const fromRoot = relative11(root, target);
-  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute11(fromRoot);
-}
-function runIdFromFolder(runFolder) {
-  const parts = toBrowserPath(resolve9(runFolder)).split("/").filter((part) => part.length > 0);
-  return parts.at(-1);
-}
-function runArtifactPreviewHref(input) {
-  if (!isPreviewableArtifactPath(input.entryPath))
-    return void 0;
-  const reportsDir = resolve9(input.runFolder, "reports");
-  const runRoot = resolve9(input.runFolder);
-  if (isAbsolute11(input.entryPath)) {
-    const absoluteEntry = resolve9(input.entryPath);
-    if (!isInside3(runRoot, absoluteEntry))
-      return void 0;
-    return encodeUrlPath(toBrowserPath(relative11(reportsDir, absoluteEntry)));
-  }
-  const normalized = toBrowserPath(input.entryPath).replace(/^\.\//, "");
-  if (normalized.split("/").some((part) => part === ".."))
-    return void 0;
-  if (normalized.startsWith("prototype-files/"))
-    return encodeUrlPath(`../${normalized}`);
-  const runId = runIdFromFolder(input.runFolder);
-  const currentRunPrefix = runId === void 0 ? void 0 : `.circuit/runs/${runId}/`;
-  if (currentRunPrefix !== void 0 && normalized.startsWith(currentRunPrefix)) {
-    return encodeUrlPath(`../${normalized.slice(currentRunPrefix.length)}`);
-  }
-  if (input.projectRoot !== void 0) {
-    const projectRoot = resolve9(input.projectRoot);
-    const absoluteEntry = resolve9(projectRoot, normalized);
-    if (!isInside3(projectRoot, absoluteEntry))
-      return void 0;
-    return pathToFileURL(absoluteEntry).href;
-  }
-  return void 0;
-}
-function previewForEntryPoints(input) {
-  for (const entryPoint of input.entryPoints) {
-    const href = runArtifactPreviewHref({
-      entryPath: entryPoint,
-      runFolder: input.runFolder,
-      projectRoot: input.projectRoot
-    });
-    if (href !== void 0)
-      return { href, sourcePath: entryPoint };
-  }
-  return void 0;
-}
-function multiVariantStyles() {
-  return `.mv-wrap{--mv-pad:clamp(18px,2.4vw,44px);--mv-top:clamp(30px,3vw,50px);--mv-rail-width:clamp(420px,32vw,640px);--mv-rail-gap:clamp(34px,4vw,72px);max-width:1280px}.mv-wrap.mv-visual{max-width:none;width:100%;padding:var(--mv-top) calc(var(--mv-rail-width) + var(--mv-pad) + var(--mv-rail-gap)) 96px var(--mv-pad)}.mv-decision{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin:24px 0 28px;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}.mv-decision strong{display:block;font-size:15px;line-height:1.35;margin-bottom:3px;font-weight:560}.mv-decision span{color:var(--text-2)}.mv-count{font-size:12px;color:var(--text-3);white-space:nowrap}.mv-compare{display:block}.mv-list-head,.mv-row{display:grid;grid-template-columns:minmax(150px,190px) minmax(30ch,1fr) minmax(240px,.9fr);gap:clamp(18px,2vw,34px);align-items:start}.mv-list-head{padding:0 0 10px;color:var(--text-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0}.mv-row{position:relative;width:100%;padding:18px 0;border-top:1px solid var(--border)}.mv-row:last-child{border-bottom:1px solid var(--border)}.mv-row[data-selected="true"]::before{content:"";position:absolute;left:-14px;top:18px;bottom:18px;width:2px;border-radius:999px;background:var(--intent-positive)}.mv-name{display:flex;flex-direction:column;gap:6px}.mv-name strong{font-size:15.5px;line-height:1.3;font-weight:560}.mv-tag{width:max-content;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:11px;font-weight:500}.mv-tag.good{color:var(--intent-positive);border-color:var(--intent-positive)}.mv-copy p{margin:0 0 9px;color:var(--text)}.mv-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;color:var(--text-2);font-size:13px}.mv-facts b{display:block;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0;font-weight:600;margin-bottom:2px}.mv-evidence-cell{display:flex;flex-direction:column;gap:10px;min-width:0}.mv-actions{display:flex;gap:8px;flex-wrap:wrap}.mv-preview-trigger{font:500 13px/1 -apple-system,system-ui,sans-serif;padding:8px 12px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}.mv-preview-trigger:hover{background:var(--surface-2)}.mv-detail{position:fixed;top:var(--mv-top);right:var(--mv-pad);bottom:28px;width:var(--mv-rail-width);border-left:1px solid var(--border);padding-left:clamp(24px,2.4vw,40px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}.mv-detail h2{font-size:18px;line-height:1.3;margin:0 0 12px;letter-spacing:0;font-weight:560}.mv-frame{border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);min-height:clamp(280px,42vh,470px);box-shadow:0 16px 42px rgba(22,28,24,.07);overflow:hidden}.mv-frame iframe{display:block;width:100%;height:clamp(280px,42vh,470px);border:0;background:white}.mv-empty-preview{padding:18px;color:var(--text-2);font-size:13px}.mv-detail-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px}.mv-open-link{font-size:13px;color:var(--intent-info);text-decoration:none}.mv-open-link:hover{text-decoration:underline}.mv-detail-source{font:500 11px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text-3);overflow-wrap:anywhere}.mv-wrap.mv-evidence .mv-row{grid-template-columns:minmax(150px,210px) minmax(32ch,1fr) minmax(260px,.8fr)}@media (max-width:1320px){.mv-wrap.mv-visual{max-width:1280px;margin:0 auto;padding:var(--mv-top) var(--mv-pad) 96px}.mv-detail{position:static;width:auto;overflow:visible;border-left:0;border-top:1px solid var(--border);padding-left:0;padding-top:22px;margin-top:24px}.mv-frame iframe{height:420px}}@media (max-width:760px){.mv-decision{grid-template-columns:1fr}.mv-count{white-space:normal}.mv-list-head{display:none}.mv-row,.mv-wrap.mv-evidence .mv-row{grid-template-columns:1fr;gap:12px}.mv-facts{grid-template-columns:1fr}.mv-frame iframe{height:340px}}`;
-}
-function multiVariantScript() {
-  return `(()=>{const frame=document.querySelector('[data-mv-frame]');const title=document.querySelector('[data-mv-title]');const source=document.querySelector('[data-mv-source]');const link=document.querySelector('[data-mv-open]');const empty=document.querySelector('[data-mv-empty]');const rows=[...document.querySelectorAll('[data-mv-row]')];const triggers=[...document.querySelectorAll('[data-mv-preview-trigger]')];if(!frame||!title||!source||!link||!empty)return;function select(trigger){const id=trigger.dataset.mvVariantId||'';const src=trigger.dataset.mvPreviewSrc||'';title.textContent=trigger.dataset.mvPreviewTitle||'';source.textContent=trigger.dataset.mvPreviewSource||'';rows.forEach(row=>{row.dataset.selected=String(row.dataset.mvVariantId===id);});if(src.length>0){frame.hidden=false;empty.hidden=true;frame.setAttribute('src',src);link.hidden=false;link.setAttribute('href',src);}else{frame.hidden=true;empty.hidden=false;link.hidden=true;link.removeAttribute('href');}}triggers.forEach(trigger=>{trigger.addEventListener('click',()=>select(trigger));});})();`;
-}
-function renderFacts(facts) {
-  if (facts.length === 0)
-    return "";
-  return `<div class="mv-facts">
-          ${facts.map((fact) => `<span><b>${escapeHtml(fact.label)}</b>${escapeHtml(truncate(fact.value, MAX_BULLET_LEN))}</span>`).join("\n          ")}
-        </div>`;
-}
-function renderRisks(risks) {
-  if (risks === void 0 || risks.length === 0)
-    return "";
-  return `<div>
-          <p class="section-label">Risks</p>
-          <ul class="tradeoffs">
-            ${risks.map((risk) => `<li>${escapeHtml(truncate(risk, MAX_BULLET_LEN))}</li>`).join("\n            ")}
-          </ul>
-        </div>`;
-}
-function renderAction(action) {
-  if (action === void 0)
-    return "";
-  const classes = action.primary === false ? "copy" : "copy primary";
-  return `<button class="${classes}" data-prompt="${escapeHtml(truncate(action.prompt, MAX_PROMPT_LEN))}">${escapeHtml(action.label)}</button>`;
-}
-function renderVariantRow(input) {
-  const { selected, variant, visual } = input;
-  const previewButton = visual && variant.preview !== void 0 ? `<button class="mv-preview-trigger" type="button" data-mv-preview-trigger data-mv-variant-id="${escapeHtml(variant.id)}" data-mv-preview-src="${escapeHtml(variant.preview.href)}" data-mv-preview-title="${escapeHtml(variant.label)}" data-mv-preview-source="${escapeHtml(variant.preview.sourcePath)}">Preview</button>` : "";
-  const evidence2 = variant.evidence.length === 0 ? "" : variant.evidence.map((item) => chip(item)).join("\n          ");
-  return `      <article class="mv-row" data-mv-row data-mv-variant-id="${escapeHtml(variant.id)}" data-selected="${selected ? "true" : "false"}">
-        <div class="mv-name">
-          <strong>${escapeHtml(variant.label)}</strong>
-          <span class="mv-tag${variant.recommended ? " good" : ""}">${escapeHtml(variant.recommended ? "Recommended" : variant.id)}</span>
-        </div>
-        <div class="mv-copy">
-          <p>${escapeHtml(truncate(variant.description, MAX_BULLET_LEN))}</p>
-          ${renderFacts(variant.facts)}
-          ${renderRisks(variant.risks)}
-        </div>
-        <div class="mv-evidence-cell">
-          <div class="evidence">
-          ${evidence2}
-          </div>
-          <div class="mv-actions">
-            ${previewButton}
-            ${renderAction(variant.action)}
-          </div>
-        </div>
-      </article>`;
-}
-function renderVisualDetail(variant) {
-  const preview = variant.preview;
-  const frameHtml = preview === void 0 ? '<iframe data-mv-frame hidden title=""></iframe><p class="mv-empty-preview" data-mv-empty>No visual preview is available for this variant.</p>' : `<iframe data-mv-frame src="${escapeHtml(preview.href)}" title="${escapeHtml(`${variant.label} preview`)}" sandbox="allow-scripts allow-forms allow-pointer-lock" loading="lazy"></iframe><p class="mv-empty-preview" data-mv-empty hidden>No visual preview is available for this variant.</p>`;
-  const source = preview?.sourcePath ?? "No visual artifact path";
-  const link = preview === void 0 ? '<a class="mv-open-link" data-mv-open hidden>Open artifact</a>' : `<a class="mv-open-link" data-mv-open href="${escapeHtml(preview.href)}" target="_blank" rel="noreferrer">Open artifact</a>`;
-  return `    <aside class="mv-detail" aria-label="Selected variant preview">
-      <h2 data-mv-title>${escapeHtml(variant.label)}</h2>
-      <div class="mv-frame">
-        ${frameHtml}
-      </div>
-      <div class="mv-detail-meta">
-        ${link}
-        <div class="mv-detail-source" data-mv-source>${escapeHtml(source)}</div>
-      </div>
-    </aside>`;
-}
-function renderMultiVariantComparisonPage(input) {
-  if (input.variants.length === 0) {
-    throw new Error("multi-variant comparison requires at least one variant");
-  }
-  const recommended = input.variants.find((variant) => variant.recommended) ?? input.variants[0];
-  if (recommended === void 0) {
-    throw new Error("multi-variant comparison could not choose a default variant");
-  }
-  const visual = input.variants.some((variant) => variant.preview !== void 0);
-  const defaultVariant = visual ? input.variants.find((variant) => variant.recommended && variant.preview !== void 0) ?? input.variants.find((variant) => variant.preview !== void 0) ?? recommended : recommended;
-  const rows = input.variants.map((variant) => renderVariantRow({ variant, visual, selected: variant.id === defaultVariant.id })).join("\n");
-  const banner = verdictBanner({
-    intent: input.recommendation.intent,
-    badgeText: input.recommendation.badgeText,
-    mainHtml: `<strong>${escapeHtml(input.recommendation.label)}</strong> &mdash; ${escapeHtml(input.recommendation.rationale)}`,
-    ...input.recommendation.aside === void 0 ? {} : { aside: input.recommendation.aside }
-  });
-  const details = input.detailsHtml === void 0 ? "" : input.detailsHtml;
-  const bodyHtml = `${banner}
-
-  <section class="mv-decision" aria-label="Checkpoint decision">
-    <div>
-      <strong>Recommended: ${escapeHtml(recommended.label)}</strong>
-      <span>${escapeHtml(input.recommendation.rationale)}</span>
-    </div>
-    <div class="mv-count">${input.variants.length} variants compared</div>
-  </section>
-
-  <div class="mv-compare">
-    <section aria-label="Variant comparison">
-      <div class="mv-list-head">
-        <div>Variant</div>
-        <div>What changes</div>
-        <div>${visual ? "Evidence and preview" : "Evidence"}</div>
-      </div>
-${rows}
-    </section>
-${visual ? renderVisualDetail(defaultVariant) : ""}
-  </div>
-
-${details}
-`;
-  return renderPage({
-    title: input.title,
-    metaLine: input.metaLine,
-    headline: input.headline,
-    subtitle: input.subtitle,
-    bodyHtml,
-    ...input.footerLeft === void 0 ? {} : { footerLeft: input.footerLeft },
-    ...input.footerRight === void 0 ? {} : { footerRight: input.footerRight },
-    wrapClassName: visual ? "wrap mv-wrap mv-visual" : "wrap mv-wrap mv-evidence",
-    extraStyles: multiVariantStyles(),
-    ...visual ? { extraScript: multiVariantScript() } : {}
-  });
-}
-
-// dist/shared/html/prototype-checkpoint.js
-var PROTOTYPE_BRIEF_PATH = "reports/prototype/brief.json";
-var PROTOTYPE_PLAN_PATH = "reports/prototype/plan.json";
-var PROTOTYPE_ARTIFACT_PATH = "reports/prototype/artifact.json";
-var PROTOTYPE_VERIFICATION_PATH = "reports/prototype/verification.json";
-var PROTOTYPE_VARIANT_AGGREGATE_PATH = "reports/prototype/variant-aggregate.json";
-var PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH = "reports/prototype/variant-provider-evidence.json";
-var PROTOTYPE_VARIANT_VERIFICATION_PATH = "reports/prototype/variant-verification.json";
-var PROTOTYPE_VARIANT_REVIEW_PATH = "reports/prototype/variant-review.json";
-var PROTOTYPE_VARIANT_CHOICES_PATH = "reports/prototype/variant-choice-options.json";
-var CHOICES = [
-  {
-    id: "keep-prototype",
-    label: "Keep Prototype",
-    description: "Save the prototype as useful evidence and stop here.",
-    intent: "positive"
-  },
-  {
-    id: "save-build-input",
-    label: "Save Build Input",
-    description: "Close with a Build-ready follow-up prompt, without running Build.",
-    intent: "info"
-  },
-  {
-    id: "discard-prototype",
-    label: "Discard Prototype",
-    description: "Mark the prototype as discarded while keeping the evidence trail.",
-    intent: "attention"
-  }
-];
-function bulletList2(items) {
-  return `<ul class="tradeoffs">
-          ${items.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("\n          ")}
-        </ul>`;
-}
-function commandText2(command) {
-  return `${command.cwd}$ ${command.argv.join(" ")}`;
-}
-function shellSingleQuote2(value) {
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-function resumeCommandForChoice2(runFolder, choiceId) {
-  return `circuit resume --run-folder ${shellSingleQuote2(runFolder)} --checkpoint-choice ${shellSingleQuote2(choiceId)}`;
-}
-function load(readJsonRunRelative, relPath, parse3) {
-  const parsed = parse3(readJsonRunRelative(relPath));
-  return parsed.success ? parsed.data : void 0;
-}
-function renderArtifactCard2(artifact) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(artifact.summary)}</p>
-      <div>
-        <p class="section-label">Prototype root</p>
-        <div class="evidence">${chip(artifact.prototype_root)}</div>
-      </div>
-      <div>
-        <p class="section-label">Entry points</p>
-        <div class="evidence">
-          ${artifact.entry_points.map((entry) => chip(entry)).join("\n          ")}
-        </div>
-      </div>
-      <div>
-        <p class="section-label">Preview</p>
-        <p class="summary">${escapeHtml(artifact.preview_instructions)}</p>
-      </div>`;
-  return card({
-    intent: "positive",
-    eyebrow: "artifact",
-    title: "Prototype files",
-    bodyHtml
-  });
-}
-function renderVerificationCard(verification) {
-  const status = verification.overall_status;
-  const bodyHtml = `      <p class="summary">${escapeHtml(status === "passed" ? "Artifact integrity and target checks passed." : "One or more checks failed.")}</p>
-      <div>
-        <p class="section-label">Checks</p>
-        <div class="evidence">
-          ${verification.commands.map((command) => chip(commandText2(command))).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: status === "passed" ? "positive" : "negative",
-    eyebrow: status,
-    title: "Verification",
-    bodyHtml
-  });
-}
-function renderRiskCard2(artifact, brief) {
-  const limits = [...brief.claim_limits, ...artifact.claim_limits];
-  const bodyHtml = `      <p class="summary">Prototype is local evidence, not a production or deployed result.</p>
-      <div>
-        <p class="section-label">Known limitations</p>
-        ${artifact.known_limitations.length === 0 ? '<p class="summary">No limitations were reported.</p>' : bulletList2(artifact.known_limitations)}
-      </div>
-      <div>
-        <p class="section-label">Claim limits</p>
-        <div class="evidence">
-          ${Array.from(new Set(limits)).map((limit) => chip(limit)).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: "attention",
-    eyebrow: "limits",
-    title: "Read Before Reuse",
-    bodyHtml
-  });
-}
-function renderPlanCard(plan) {
-  const bodyHtml = `      <p class="summary">${escapeHtml(plan.preview_instructions)}</p>
-      <div>
-        <p class="section-label">Planned files</p>
-        <div class="evidence">
-          ${plan.files_to_create.map((file2) => chip(file2)).join("\n          ")}
-        </div>
-      </div>`;
-  return card({
-    intent: "neutral",
-    eyebrow: "plan",
-    title: "Artifact Plan",
-    bodyHtml
-  });
-}
-function renderChoice(choice, runFolder, recommendedId) {
-  const isRecommended = choice.id === recommendedId;
-  const bodyHtml = `      <p class="summary">${escapeHtml(choice.description)}</p>
-      <div class="actions">
-        <button class="copy primary" data-prompt="${escapeHtml(truncate(resumeCommandForChoice2(runFolder, choice.id), MAX_PROMPT_LEN))}">Copy resume command</button>
-      </div>`;
-  return card({
-    intent: isRecommended ? "positive" : choice.intent,
-    eyebrow: choice.id,
-    title: choice.label,
-    ...isRecommended ? { badge: { text: "Recommended", intent: "positive" } } : {},
-    bodyHtml
-  });
-}
-function filteredChoices2(allowedChoices) {
-  const allowed = new Set(allowedChoices);
-  return CHOICES.filter((choice) => allowed.has(choice.id));
-}
-function relaySelectionLine(evidence2) {
-  if (evidence2?.status === "captured" && evidence2.provider !== void 0 && evidence2.model !== void 0 && evidence2.effort !== void 0) {
-    return `${evidence2.provider}/${evidence2.model} (${evidence2.effort})`;
-  }
-  return "No captured relay selection evidence";
-}
-function renderVariantDetails(input) {
-  const missingEvidenceHtml = input.providerEvidence.missing_evidence.length === 0 && input.review.missing_evidence.length === 0 ? "" : `<p><strong>Missing evidence.</strong> ${escapeHtml([
-    ...input.providerEvidence.missing_evidence.map((item) => `${item.variant_id}: ${item.reason}`),
-    ...input.review.missing_evidence
-  ].join("; "))}</p>`;
-  const strengthsHtml = input.review.strengths.length === 0 ? "" : `<p><strong>Strengths.</strong></p><ul>${input.review.strengths.map((item) => `<li>${escapeHtml(`${item.variant_id}: ${item.note}`)}</li>`).join("")}</ul>`;
-  const risksHtml = input.review.risks.length === 0 ? "" : `<p><strong>Risks.</strong></p><ul>${input.review.risks.map((item) => `<li>${escapeHtml(truncate(item, MAX_BULLET_LEN))}</li>`).join("")}</ul>`;
-  return `  <details>
-    <summary>Comparison evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Comparison.</strong> ${escapeHtml(input.review.comparison_summary)}</p>
-      ${strengthsHtml}
-      ${risksHtml}
-      <p><strong>Verification.</strong> ${escapeHtml(input.verification.overall_status)}</p>
-      ${missingEvidenceHtml}
-      <p><strong>Resume command.</strong> <code>${escapeHtml(input.resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${[
-    PROTOTYPE_VARIANT_AGGREGATE_PATH,
-    PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH,
-    PROTOTYPE_VARIANT_VERIFICATION_PATH,
-    PROTOTYPE_VARIANT_REVIEW_PATH,
-    PROTOTYPE_VARIANT_CHOICES_PATH,
-    input.checkpointRequestPath ?? ""
-  ].filter((item) => item.length > 0).map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>`;
-}
-function variantComparisonItems(input) {
-  return input.choices.map((choice) => {
-    const branch = input.aggregate.branches.find((candidate) => candidate.branch_id === choice.id);
-    const artifact = branch?.result_body;
-    const evidence2 = input.providerEvidence.variants.find((candidate) => candidate.variant_id === choice.id);
-    const entryPoints = artifact?.entry_points ?? choice.entry_points;
-    const createdFiles = artifact?.created_files ?? [];
-    const artifactEvidence = artifact?.evidence ?? [];
-    const risks = artifact?.known_limitations ?? [];
-    const providerLine = evidence2?.status === "captured" ? relaySelectionLine(evidence2) : "No captured relay selection evidence";
-    const preview = previewForEntryPoints({
-      entryPoints,
-      runFolder: input.runFolder,
-      projectRoot: input.projectRoot
-    });
-    return {
-      id: choice.id,
-      label: choice.label,
-      description: artifact?.summary ?? choice.description,
-      recommended: choice.id === input.recommendedChoiceId,
-      facts: [
-        { label: "Relay", value: providerLine },
-        { label: "Verification", value: choice.verification_status },
-        { label: "Verdict", value: branch?.verdict ?? "not reported" },
-        { label: "Review", value: choice.review_recommendation ? "recommended" : "compared" }
-      ],
-      evidence: [...entryPoints, ...createdFiles, ...artifactEvidence],
-      risks,
-      ...preview === void 0 ? {} : { preview },
-      action: {
-        label: "Copy resume command",
-        prompt: resumeCommandForChoice2(input.runFolder, choice.id),
-        primary: true
-      }
-    };
-  });
-}
-function renderVariantCheckpoint(ctx) {
-  const aggregate2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_AGGREGATE_PATH, (raw) => PrototypeVariantAggregate.safeParse(raw));
-  const providerEvidence2 = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_PROVIDER_EVIDENCE_PATH, (raw) => PrototypeVariantProviderEvidence.safeParse(raw));
-  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_VERIFICATION_PATH, (raw) => PrototypeVariantVerification.safeParse(raw));
-  const review = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_REVIEW_PATH, (raw) => PrototypeVariantReview.safeParse(raw));
-  const choices = load(ctx.readJsonRunRelative, PROTOTYPE_VARIANT_CHOICES_PATH, (raw) => PrototypeVariantChoiceOptions.safeParse(raw));
-  if (aggregate2 === void 0 || providerEvidence2 === void 0 || verification === void 0 || review === void 0 || choices === void 0) {
-    return void 0;
-  }
-  const allowed = new Set(ctx.checkpoint?.allowed_choices ?? []);
-  const visibleChoices = choices.choices.filter((choice) => allowed.has(choice.id));
-  if (visibleChoices.length === 0)
-    return void 0;
-  const recommended = visibleChoices.find((choice) => choice.id === choices.recommended_variant_id) ?? visibleChoices.find((choice) => choice.recommended) ?? visibleChoices[0];
-  if (recommended === void 0)
-    return void 0;
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<variant-id>'`;
-  return renderMultiVariantComparisonPage({
-    title: "Prototype model comparison checkpoint",
-    metaLine: `Prototype model comparison - ${ctx.runId}`,
-    headline: "Choose a prototype variant",
-    subtitle: "Compare local prototype artifacts using captured relay selection evidence, then keep one variant.",
-    recommendation: {
-      label: recommended.label,
-      rationale: review.comparison_summary,
-      badgeText: review.verdict === "recommend" ? "Recommended variant" : "Operator choice",
-      intent: review.verdict === "recommend" ? "positive" : "attention",
-      aside: `${providerEvidence2.captured_count} relay selections captured`
-    },
-    variants: variantComparisonItems({
-      aggregate: aggregate2,
-      providerEvidence: providerEvidence2,
-      choices: visibleChoices,
-      recommendedChoiceId: recommended.id,
-      runFolder: ctx.runFolder,
-      projectRoot: ctx.projectRoot
-    }),
-    detailsHtml: renderVariantDetails({
-      review,
-      verification,
-      providerEvidence: providerEvidence2,
-      checkpointRequestPath: ctx.checkpoint?.request_path,
-      resumeCommand
-    }),
-    footerLeft: `circuit - prototype - ${ctx.runId}`,
-    footerRight: PROTOTYPE_VARIANT_AGGREGATE_PATH
-  });
-}
-var prototypeCheckpointProjector = (ctx) => {
-  if (ctx.flowId !== "prototype" || ctx.runOutcome !== "checkpoint_waiting")
-    return void 0;
-  if (ctx.checkpoint?.step_id === "prototype-variant-checkpoint-step") {
-    return renderVariantCheckpoint(ctx);
-  }
-  if (ctx.checkpoint?.step_id !== "prototype-checkpoint-step")
-    return void 0;
-  const brief = load(ctx.readJsonRunRelative, PROTOTYPE_BRIEF_PATH, (raw) => PrototypeBrief.safeParse(raw));
-  const plan = load(ctx.readJsonRunRelative, PROTOTYPE_PLAN_PATH, (raw) => PrototypePlan.safeParse(raw));
-  const artifact = load(ctx.readJsonRunRelative, PROTOTYPE_ARTIFACT_PATH, (raw) => PrototypeArtifact.safeParse(raw));
-  const verification = load(ctx.readJsonRunRelative, PROTOTYPE_VERIFICATION_PATH, (raw) => PrototypeVerification.safeParse(raw));
-  if (brief === void 0 || plan === void 0 || artifact === void 0 || verification === void 0) {
-    return void 0;
-  }
-  const choices = filteredChoices2(ctx.checkpoint.allowed_choices);
-  if (choices.length === 0)
-    return void 0;
-  const recommendedChoice = choices.find((choice) => choice.id === "keep-prototype") ?? choices[0];
-  if (recommendedChoice === void 0)
-    return void 0;
-  const banner = verdictBanner({
-    intent: "positive",
-    badgeText: "Verified local artifact",
-    mainHtml: `<strong>${escapeHtml(recommendedChoice.label)}</strong> &mdash; ${escapeHtml("Safe default: keep the prototype evidence and decide on Build separately.")}`,
-    aside: "waiting for choice"
-  });
-  const choiceCards = choices.map((choice) => renderChoice(choice, ctx.runFolder, recommendedChoice.id)).join("\n\n");
-  const resumeCommand = `circuit resume --run-folder ${shellSingleQuote2(ctx.runFolder)} --checkpoint-choice '<choice>'`;
-  const bodyHtml = `${banner}
-
-  <div class="grid">
-${renderArtifactCard2(artifact)}
-
-${renderVerificationCard(verification)}
-
-${renderRiskCard2(artifact, brief)}
-
-${renderPlanCard(plan)}
-  </div>
-
-  <div class="grid" style="margin-top:16px">
-${choiceCards}
-  </div>
-
-  <details>
-    <summary>Raw evidence and resume command</summary>
-    <div class="body">
-      <p><strong>Resume command.</strong> <code>${escapeHtml(resumeCommand)}</code></p>
-      <p><strong>Reports.</strong></p>
-      <div class="evidence">
-        ${[
-    PROTOTYPE_BRIEF_PATH,
-    PROTOTYPE_PLAN_PATH,
-    PROTOTYPE_ARTIFACT_PATH,
-    PROTOTYPE_VERIFICATION_PATH,
-    ctx.checkpoint.request_path
-  ].map((item) => chip(item)).join("\n        ")}
-      </div>
-    </div>
-  </details>
-`;
-  return renderPage({
-    title: `${brief.objective} - Circuit Prototype checkpoint`,
-    metaLine: `Prototype checkpoint - ${ctx.runId}`,
-    headline: brief.objective,
-    subtitle: "Choose whether to keep this local prototype, save it as Build input, or mark it discarded.",
-    bodyHtml,
-    footerLeft: `circuit - prototype - ${ctx.runId}`,
-    footerRight: PROTOTYPE_ARTIFACT_PATH
-  });
-};
-
-// dist/shared/html/index.js
-var HTML_PROJECTORS = {
-  build: buildCheckpointProjector,
-  explore: exploreTournamentProjector,
-  prototype: prototypeCheckpointProjector
-};
 
 // dist/shared/operator-summary/json.js
 import { existsSync as existsSync17, readFileSync as readFileSync31 } from "node:fs";
@@ -57595,7 +57600,7 @@ function writeOperatorSummary(input) {
   const outJsonPath = jsonPath(input.runFolder);
   const outMarkdownPath = markdownPath(input.runFolder);
   mkdirSync5(dirname8(outJsonPath), { recursive: true });
-  const projector = HTML_PROJECTORS[flowId];
+  const projector = getHtmlProjector(flowId);
   const candidateHtmlPath = htmlPath(input.runFolder);
   let outHtmlPath;
   let htmlEmitWarning;

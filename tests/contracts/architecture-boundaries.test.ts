@@ -67,4 +67,16 @@ describe('architecture boundary ratchets', () => {
     const offenders = collectTsFiles('src/flows').filter((file) => runtimeImport.test(read(file)));
     expect(offenders).toEqual([]);
   });
+
+  it('keeps shared/html free of flow imports', () => {
+    // The generic render leaves in shared/html (components, page, multi-variant,
+    // projector) must stay flow-agnostic. Flow-specific projectors live in their
+    // flow packages and register into the shared registry (CSR-3). Guard against
+    // a regression that re-introduces the shared/html -> flows cycle.
+    const flowImport = /from ['"][^'"]*\/flows\//;
+    const offenders = collectTsFiles('src/shared/html').filter((file) =>
+      flowImport.test(read(file)),
+    );
+    expect(offenders).toEqual([]);
+  });
 });

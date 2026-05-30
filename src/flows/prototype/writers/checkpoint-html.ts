@@ -1,3 +1,17 @@
+import { type Intent, card, chip, verdictBanner } from '../../../shared/html/components.js';
+import {
+  type MultiVariantItem,
+  previewForEntryPoints,
+  renderMultiVariantComparisonPage,
+} from '../../../shared/html/multi-variant.js';
+import {
+  MAX_BULLET_LEN,
+  MAX_PROMPT_LEN,
+  escapeHtml,
+  renderPage,
+  truncate,
+} from '../../../shared/html/page.js';
+import type { HtmlProjector, JsonObject } from '../../../shared/html/projector.js';
 import {
   PrototypeArtifact,
   PrototypeBrief,
@@ -9,15 +23,7 @@ import {
   PrototypeVariantReview,
   PrototypeVariantVerification,
   PrototypeVerification,
-} from '../../flows/prototype/reports.js';
-import { type Intent, card, chip, verdictBanner } from './components.js';
-import {
-  type MultiVariantItem,
-  previewForEntryPoints,
-  renderMultiVariantComparisonPage,
-} from './multi-variant.js';
-import { MAX_BULLET_LEN, MAX_PROMPT_LEN, escapeHtml, renderPage, truncate } from './page.js';
-import type { HtmlProjector, JsonObject } from './projector.js';
+} from '../reports.js';
 
 const PROTOTYPE_BRIEF_PATH = 'reports/prototype/brief.json';
 const PROTOTYPE_PLAN_PATH = 'reports/prototype/plan.json';

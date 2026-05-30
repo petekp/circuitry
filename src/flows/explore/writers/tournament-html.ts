@@ -5,16 +5,26 @@
 // reached a finalized decision. All operator-controlled strings are
 // HTML-escaped at render time.
 
+import { type Intent, card, chip, verdictBanner } from '../../../shared/html/components.js';
+import {
+  MAX_BULLET_LEN,
+  MAX_PROMPT_LEN,
+  escapeHtml,
+  renderPage,
+  truncate,
+} from '../../../shared/html/page.js';
+import type {
+  HtmlAutoResolution,
+  HtmlProjector,
+  JsonObject,
+} from '../../../shared/html/projector.js';
 import {
   ExploreDecision,
   type ExploreDecisionOption,
   ExploreDecisionOptions,
   ExploreTournamentReview,
   type ExploreTournamentReview as ExploreTournamentReviewType,
-} from '../../flows/explore/reports.js';
-import { type Intent, card, chip, verdictBanner } from './components.js';
-import { MAX_BULLET_LEN, MAX_PROMPT_LEN, escapeHtml, renderPage, truncate } from './page.js';
-import type { HtmlAutoResolution, HtmlProjector, JsonObject } from './projector.js';
+} from '../reports.js';
 
 function stringField(report: JsonObject | undefined, key: string): string | undefined {
   const value = report?.[key];
