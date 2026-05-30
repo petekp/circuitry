@@ -50855,6 +50855,161 @@ async function readRuntimeCompiledFlowManifestSnapshot(input) {
   return { snapshot, flowBytes, flow };
 }
 
+// dist/runtime/run/recovery-binding-verdict.js
+var OK = { kind: "ok" };
+function recoveryCauseAllowed(binding, cause) {
+  return binding.allowed_failure_causes.includes(cause);
+}
+function missingRecoveryBindingReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
+}
+function recoveryCauseNotAllowedReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(", ")}`;
+}
+function missingFailureEvidenceReason(input) {
+  return `step '${input.stepId}' selected recovery route '${input.route}' without failure evidence`;
+}
+function recoveryBindingVerdict(input) {
+  if (input.workContractRef === void 0)
+    return OK;
+  if (input.stepKind !== "checkpoint" && input.routeHasRecoveryMechanics && input.recoveryFailure === void 0) {
+    return {
+      kind: "abort",
+      reason: missingFailureEvidenceReason({ stepId: input.stepId, route: input.route })
+    };
+  }
+  if (input.recoveryFailure !== void 0) {
+    if (input.recoveryBinding === void 0) {
+      return {
+        kind: "abort",
+        reason: missingRecoveryBindingReason({
+          stepId: input.stepId,
+          route: input.route,
+          cause: input.recoveryFailure.cause
+        })
+      };
+    }
+    if (!recoveryCauseAllowed(input.recoveryBinding, input.recoveryFailure.cause)) {
+      return {
+        kind: "abort",
+        reason: recoveryCauseNotAllowedReason({
+          stepId: input.stepId,
+          route: input.route,
+          cause: input.recoveryFailure.cause,
+          binding: input.recoveryBinding
+        })
+      };
+    }
+  }
+  return OK;
+}
+
+// dist/runtime/run/recovery-corridor.js
+var RecoveryCorridor = class {
+  deps;
+  active;
+  constructor(deps) {
+    this.deps = deps;
+  }
+  /** True when `route` is the recovery route this corridor is currently traversing. */
+  isActiveRoute(route) {
+    return route !== void 0 && this.active?.route === route;
+  }
+  /**
+   * True when stepping into `stepId` via `route` is a return toward the corridor
+   * origin through non-recovery routes (so re-entering a completed step is legal).
+   */
+  isReturnToOrigin(input) {
+    const active = this.active;
+    if (active === void 0 || this.isActiveRoute(input.route))
+      return false;
+    return this.canReachStepViaNonRecoveryRoutes({
+      fromStepId: input.stepId,
+      targetStepId: active.originStepId
+    });
+  }
+  /** The "; last recovery reason: ..." suffix for cycle/budget abort messages. */
+  lastReasonSuffix() {
+    return this.active?.reason === void 0 ? "" : `; last recovery reason: ${this.active.reason}`;
+  }
+  /**
+   * Acceptance-retry feedback to surface when `stepId` re-enters as the corridor
+   * origin via the active recovery route.
+   */
+  acceptanceFeedbackForReentry(input) {
+    if (this.active?.originStepId !== input.stepId)
+      return void 0;
+    if (!this.isActiveRoute(input.incomingRoute))
+      return void 0;
+    return this.active.acceptanceFeedback;
+  }
+  /**
+   * Failure evidence derived from the active corridor (when the completed route
+   * has recovery mechanics but no direct failure evidence of its own).
+   */
+  evidenceFor(input) {
+    const active = this.active;
+    if (active?.failure === void 0)
+      return void 0;
+    const ref = this.deps.latestStepReportOrRelayRef({
+      stepId: input.stepId,
+      attempt: input.attempt
+    });
+    if (ref === void 0)
+      return void 0;
+    return { ref, cause: corridorCause(active, input.binding) };
+  }
+  /** Enter / advance the corridor when a step takes a recovery route. */
+  enter(input) {
+    const base = {
+      originStepId: input.originStepId,
+      route: input.route,
+      ...input.recoveryFailure === void 0 ? {} : { failure: input.recoveryFailure },
+      ...input.acceptanceFeedback === void 0 ? {} : { acceptanceFeedback: input.acceptanceFeedback }
+    };
+    this.active = typeof input.recoveryReason === "string" ? { ...base, reason: input.recoveryReason } : base;
+  }
+  /**
+   * Clear the corridor when its origin step completes without taking a recovery
+   * route (the corridor has returned and exited).
+   */
+  clearIfExitingOrigin(input) {
+    if (this.active !== void 0 && this.active.originStepId === input.stepId && !input.routeHasRecoveryMechanics) {
+      this.active = void 0;
+    }
+  }
+  canReachStepViaNonRecoveryRoutes(input) {
+    if (input.fromStepId === input.targetStepId)
+      return true;
+    const seen = /* @__PURE__ */ new Set();
+    const queue = [input.fromStepId];
+    for (let index = 0; index < queue.length; index += 1) {
+      const stepId = queue[index];
+      if (stepId === void 0 || seen.has(stepId))
+        continue;
+      seen.add(stepId);
+      const step = this.deps.steps.get(stepId);
+      if (step === void 0)
+        continue;
+      for (const [route, target] of Object.entries(step.routes)) {
+        if (this.deps.routeHasRecoveryMechanics({ step, route }) || target.kind !== "step") {
+          continue;
+        }
+        if (target.stepId === input.targetStepId)
+          return true;
+        queue.push(target.stepId);
+      }
+    }
+    return false;
+  }
+};
+function corridorCause(active, binding) {
+  if (binding?.kind === "checkpoint_authority" && binding.allowed_failure_causes.includes("checkpoint_boundary")) {
+    return "checkpoint_boundary";
+  }
+  return active.failure?.cause ?? "unknown_failure";
+}
+
 // dist/shared/result-path.js
 import { join as join10 } from "node:path";
 var RUN_RESULT_RELATIVE_PATH = "reports/result.json";
@@ -51970,73 +52125,6 @@ function reportSelectedCheckpointBoundaryEvidence(input) {
   const ref = latestStepReportOrRelayRef(input);
   return ref === void 0 ? void 0 : { ref, cause: "checkpoint_boundary" };
 }
-function activeRecoveryCorridorCause(input) {
-  if (input.binding?.kind === "checkpoint_authority" && input.binding.allowed_failure_causes.includes("checkpoint_boundary")) {
-    return "checkpoint_boundary";
-  }
-  return input.activeRecovery.failure?.cause ?? "unknown_failure";
-}
-function latestActiveRecoveryCorridorEvidence(input) {
-  if (input.activeRecovery?.failure === void 0)
-    return void 0;
-  const ref = latestStepReportOrRelayRef(input);
-  if (ref === void 0)
-    return void 0;
-  return {
-    ref,
-    cause: activeRecoveryCorridorCause({
-      activeRecovery: input.activeRecovery,
-      binding: input.binding
-    })
-  };
-}
-function recoveryCauseAllowed(binding, cause) {
-  return binding.allowed_failure_causes.includes(cause);
-}
-function missingRecoveryBindingReason(input) {
-  return `step '${input.stepId}' selected recovery route '${input.route}' after ${input.cause} but the WorkContract does not declare a matching recovery binding`;
-}
-function recoveryCauseNotAllowedReason(input) {
-  return `step '${input.stepId}' selected recovery route '${input.route}' for ${input.cause}, but its WorkContract binding only allows: ${input.binding.allowed_failure_causes.join(", ")}`;
-}
-function isActiveRecoveryRoute(activeRecovery, route) {
-  return route !== void 0 && activeRecovery?.route === route;
-}
-function canReachStepViaNonRecoveryRoutes(input) {
-  if (input.fromStepId === input.targetStepId)
-    return true;
-  const seen = /* @__PURE__ */ new Set();
-  const queue = [input.fromStepId];
-  for (let index = 0; index < queue.length; index += 1) {
-    const stepId = queue[index];
-    if (stepId === void 0 || seen.has(stepId))
-      continue;
-    seen.add(stepId);
-    const step = input.steps.get(stepId);
-    if (step === void 0)
-      continue;
-    for (const [route, target] of Object.entries(step.routes)) {
-      if (isRecoveryRouteForMechanics({ bindings: input.bindings, step, route }) || target.kind !== "step") {
-        continue;
-      }
-      if (target.stepId === input.targetStepId)
-        return true;
-      queue.push(target.stepId);
-    }
-  }
-  return false;
-}
-function isRecoveryReturnCorridor(input) {
-  if (input.activeRecovery === void 0 || isActiveRecoveryRoute(input.activeRecovery, input.route)) {
-    return false;
-  }
-  return canReachStepViaNonRecoveryRoutes({
-    steps: input.steps,
-    bindings: input.bindings,
-    fromStepId: input.stepId,
-    targetStepId: input.activeRecovery.originStepId
-  });
-}
 function configuredMaxAttempts(step) {
   const budgets = step.budgets;
   if (budgets === void 0 || budgets === null || typeof budgets !== "object")
@@ -52249,8 +52337,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
   }
   let currentStepId = options.resumeCheckpoint?.stepId ?? flow.entry;
   let incomingRouteTaken;
-  let activeRecovery;
   const recoveryRouteBindings = options.recoveryRouteBindings ?? (options.workContractRef === void 0 ? void 0 : []);
+  const corridor = new RecoveryCorridor({
+    steps,
+    bindings: recoveryRouteBindings,
+    routeHasRecoveryMechanics: ({ step, route }) => isRecoveryRouteForMechanics({ bindings: recoveryRouteBindings, step, route }),
+    latestStepReportOrRelayRef: ({ stepId, attempt }) => latestStepReportOrRelayRef({ context, stepId, attempt })
+  });
   for (let index = 0; index < maxSteps; index += 1) {
     const step = steps.get(currentStepId);
     if (step === void 0) {
@@ -52258,18 +52351,15 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     }
     const isResumedCheckpoint = options.resumeCheckpoint?.stepId === currentStepId;
     const completedCount = completedStepCounts.get(step.id) ?? 0;
-    const incomingIsActiveRecovery = isActiveRecoveryRoute(activeRecovery, incomingRouteTaken);
+    const incomingIsActiveRecovery = corridor.isActiveRoute(incomingRouteTaken);
     const maxAttempts = maxAttemptsForRoute(step, incomingIsActiveRecovery);
-    const isRecoveryOriginReentry = isRecoveryReturnCorridor({
-      steps,
-      bindings: recoveryRouteBindings,
-      activeRecovery,
+    const isRecoveryOriginReentry = corridor.isReturnToOrigin({
       stepId: step.id,
       route: incomingRouteTaken
     });
     const attempt = isResumedCheckpoint ? options.resumeCheckpoint.attempt : completedCount + 1;
     if (!isResumedCheckpoint && completedCount > 0 && !isRecoveryOriginReentry && (!incomingIsActiveRecovery || completedCount >= maxAttempts)) {
-      const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
+      const recoverySuffix = corridor.lastReasonSuffix();
       const reason = incomingRouteTaken === void 0 ? `route cycle detected at step '${step.id}'; aborting before re-entering an already completed step` : `route '${incomingRouteTaken}' for step '${step.id}' exhausted max_attempts=${maxAttempts}${recoverySuffix}`;
       await trace.append({
         run_id: runId,
@@ -52286,7 +52376,10 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     let route;
     let details;
     try {
-      const acceptanceRetryFeedback = activeRecovery?.originStepId === step.id && isActiveRecoveryRoute(activeRecovery, incomingRouteTaken) ? activeRecovery.acceptanceFeedback : void 0;
+      const acceptanceRetryFeedback = corridor.acceptanceFeedbackForReentry({
+        stepId: step.id,
+        incomingRoute: incomingRouteTaken
+      });
       const stepContext = {
         ...context,
         activeStepAttempt: attempt,
@@ -52354,56 +52447,29 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       details,
       binding: recoveryBinding
     });
-    const recoveryFailure = directRecoveryFailure ?? (routeHasRecoveryMechanics ? latestActiveRecoveryCorridorEvidence({
-      context,
+    const recoveryFailure = directRecoveryFailure ?? (routeHasRecoveryMechanics ? corridor.evidenceFor({
       stepId: step.id,
       attempt,
-      binding: recoveryBinding,
-      activeRecovery
+      binding: recoveryBinding
     }) : void 0);
-    if (context.workContractRef !== void 0 && step.kind !== "checkpoint" && routeHasRecoveryMechanics && recoveryFailure === void 0) {
-      const reason = `step '${step.id}' selected recovery route '${route}' without failure evidence`;
+    const bindingVerdict = recoveryBindingVerdict({
+      workContractRef: context.workContractRef,
+      stepId: step.id,
+      stepKind: step.kind,
+      route,
+      routeHasRecoveryMechanics,
+      recoveryFailure,
+      recoveryBinding
+    });
+    if (bindingVerdict.kind === "abort") {
       await trace.append({
         run_id: runId,
         kind: "step.aborted",
         step_id: step.id,
         attempt,
-        reason
+        reason: bindingVerdict.reason
       });
-      return await closeRun(context, "aborted", void 0, reason);
-    }
-    if (context.workContractRef !== void 0 && recoveryFailure !== void 0) {
-      if (recoveryBinding === void 0) {
-        const reason = missingRecoveryBindingReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause
-        });
-        await trace.append({
-          run_id: runId,
-          kind: "step.aborted",
-          step_id: step.id,
-          attempt,
-          reason
-        });
-        return await closeRun(context, "aborted", void 0, reason);
-      }
-      if (!recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
-        const reason = recoveryCauseNotAllowedReason({
-          stepId: step.id,
-          route,
-          cause: recoveryFailure.cause,
-          binding: recoveryBinding
-        });
-        await trace.append({
-          run_id: runId,
-          kind: "step.aborted",
-          step_id: step.id,
-          attempt,
-          reason
-        });
-        return await closeRun(context, "aborted", void 0, reason);
-      }
+      return await closeRun(context, "aborted", void 0, bindingVerdict.reason);
     }
     if (target.kind === "step" && target.stepId === step.id && route === "pass") {
       const reason = `route cycle detected: step '${step.id}' routes via '${route}' to itself`;
@@ -52419,16 +52485,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     if (target.kind === "step") {
       const targetCompletedCount = completedStepCounts.get(target.stepId) ?? 0;
       const targetStep = steps.get(target.stepId);
-      const isRecoveryReturnToOrigin = isRecoveryReturnCorridor({
-        steps,
-        bindings: recoveryRouteBindings,
-        activeRecovery,
+      const isRecoveryReturnToOrigin = corridor.isReturnToOrigin({
         stepId: target.stepId,
         route
       });
       const targetMaxAttempts = targetStep === void 0 ? maxAttemptsForRoute(step, routeHasRecoveryMechanics) : maxAttemptsForRoute(targetStep, routeHasRecoveryMechanics);
       if (targetCompletedCount > 0 && !isRecoveryReturnToOrigin && (!routeHasRecoveryMechanics || targetCompletedCount >= targetMaxAttempts)) {
-        const recoverySuffix = activeRecovery?.reason === void 0 ? "" : `; last recovery reason: ${activeRecovery.reason}`;
+        const recoverySuffix = corridor.lastReasonSuffix();
         const reason = routeHasRecoveryMechanics ? `route '${route}' for step '${target.stepId}' exhausted max_attempts=${targetMaxAttempts}${recoverySuffix}` : `route cycle detected: step '${step.id}' routes via '${route}' to already completed step '${target.stepId}'${recoverySuffix}`;
         await trace.append({
           run_id: runId,
@@ -52441,20 +52504,13 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
       }
     }
     if (routeHasRecoveryMechanics) {
-      const recoveryReason = details.reason;
-      const acceptanceFeedback = isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0;
-      activeRecovery = typeof recoveryReason === "string" ? {
+      corridor.enter({
         originStepId: step.id,
         route,
-        reason: recoveryReason,
-        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
-        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-      } : {
-        originStepId: step.id,
-        route,
-        ...recoveryFailure === void 0 ? {} : { failure: recoveryFailure },
-        ...acceptanceFeedback === void 0 ? {} : { acceptanceFeedback }
-      };
+        recoveryReason: details.reason,
+        recoveryFailure,
+        acceptanceFeedback: isAcceptanceRetryFeedback(details.acceptance_feedback) ? details.acceptance_feedback : void 0
+      });
     }
     if (recoveryBinding !== void 0) {
       if (recoveryFailure !== void 0 && recoveryCauseAllowed(recoveryBinding, recoveryFailure.cause)) {
@@ -52469,9 +52525,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
         });
       }
     }
-    if (activeRecovery !== void 0 && activeRecovery.originStepId === step.id && !routeHasRecoveryMechanics) {
-      activeRecovery = void 0;
-    }
+    corridor.clearIfExitingOrigin({ stepId: step.id, routeHasRecoveryMechanics });
     await trace.append({
       run_id: runId,
       kind: "step.completed",
