@@ -52,6 +52,15 @@ export const buildFlowData = {
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to implementation Build flow`;
     },
+    inferEntryMode(taskText) {
+      if (/^\s*develop\s*:/i.test(taskText)) {
+        return {
+          name: 'default',
+          reason: 'matched develop intent; selected default Build thoroughness',
+        };
+      }
+      return undefined;
+    },
   },
   schematic: {
     schema_version: '1',

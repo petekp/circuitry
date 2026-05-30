@@ -29583,6 +29583,15 @@ var buildFlowData = {
     skipOnPlanningReport: true,
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to implementation Build flow`;
+    },
+    inferEntryMode(taskText) {
+      if (/^\s*develop\s*:/i.test(taskText)) {
+        return {
+          name: "default",
+          reason: "matched develop intent; selected default Build thoroughness"
+        };
+      }
+      return void 0;
     }
   },
   schematic: {
@@ -31148,7 +31157,16 @@ var exploreFlowData = {
       throw new Error("explore is the default flow; reasonForMatch should not be called");
     },
     isDefault: true,
-    defaultReason: "no routed flow signal matched; routed to explore as the conservative default"
+    defaultReason: "no routed flow signal matched; routed to explore as the conservative default",
+    inferEntryMode(taskText) {
+      if (/^\s*decide\s*:/i.test(taskText)) {
+        return {
+          name: "tournament",
+          reason: "matched decide intent; selected Explore tournament mode"
+        };
+      }
+      return void 0;
+    }
   },
   schematic: {
     schema_version: "1",
@@ -33499,6 +33517,8 @@ var FIX_SIGNALS = [
     pattern: /\b(?:bug|buggy|broken|failing|fails|failed|wrong|incorrect|instead\s+of|regression|crash|crashes|throw|throws)\b[\s\S]{0,200}\bfix\s+(?:it|this|that|please)\b/i
   }
 ];
+var FIX_DEEP_SIGNAL = /\b(?:regression|flaky|intermittent|incident|outage|crash|failure|failing\s+(?:test|build)|debug|diagnose|reproduce|root\s+cause)\b/i;
+var FIX_QUICK_SIGNAL = /^\s*(?:(?:quick|small|tiny|simple)\s+fix\s*:|fix\s*:\s*(?:quick|small|tiny|simple)\b)/i;
 var fixFlowData = {
   id: "fix",
   visibility: "public",
@@ -33512,6 +33532,28 @@ var fixFlowData = {
     skipOnPlanningReport: true,
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to Fix flow`;
+    },
+    inferEntryMode(taskText) {
+      if (/\bflaky\b/i.test(taskText)) {
+        return {
+          name: "deep",
+          reason: "matched flaky signal; selected deep thoroughness"
+        };
+      }
+      const deepMatch = taskText.match(FIX_DEEP_SIGNAL);
+      if (deepMatch?.[0] !== void 0) {
+        return {
+          name: "deep",
+          reason: `matched ${deepMatch[0]} signal; selected deep thoroughness`
+        };
+      }
+      if (FIX_QUICK_SIGNAL.test(taskText)) {
+        return {
+          name: "lite",
+          reason: "matched quick Fix intent; selected lite thoroughness"
+        };
+      }
+      return void 0;
     }
   },
   schematic: {
@@ -54010,80 +54052,64 @@ var ROUTABLE_PACKAGES = buildRoutablePackages(flowPackages);
 var DEFAULT_PACKAGE = findDefaultRoutablePackage(ROUTABLE_PACKAGES);
 var ROUTABLE_WORKFLOWS = Object.freeze(ROUTABLE_PACKAGES.map((entry) => entry.pkg.id));
 var PLANNING_ARTIFACT_SIGNAL = /\b(?:proposal|plan|brief|matrix|evaluation\s+matrix|design\s+doc|design\s+document|spec|specification|rfc|memo|document|doc|guide|analysis|evaluation|selection|strategy|outline|report|comparison|recommendation|write-?up|options|approaches)\b/i;
-var QUICK_FIX_SIGNAL = /^\s*(?:(?:quick|small|tiny|simple)\s+fix\s*:|fix\s*:\s*(?:quick|small|tiny|simple)\b)/i;
-var DEEP_FIX_SIGNAL = /\b(?:regression|flaky|intermittent|incident|outage|crash|failure|failing\s+(?:test|build)|debug|diagnose|reproduce|root\s+cause)\b/i;
 var PLAN_EXECUTION_SIGNAL = /^\s*(?:execute|run|start|begin|work\s+through|carry\s+out|tackle)\s+(?:this\s+|the\s+)?(?:[\w-]+\s+){0,3}(?:plan|backlog|checklist|roadmap|doc|document)(?::|\b)/i;
-function classifyPlanExecutionRequest(taskText) {
+function resolvePlanExecutionFlowName(flowId, routables, defaultPackage) {
+  if (defaultPackage.pkg.id === flowId)
+    return defaultPackage.pkg.id;
+  const match = routables.find((entry) => entry.pkg.id === flowId);
+  if (match === void 0) {
+    throw new Error(`plan-execution target '${flowId}' is not a routable flow`);
+  }
+  return match.pkg.id;
+}
+function classifyPlanExecutionRequest(taskText, routables, defaultPackage) {
   if (!PLAN_EXECUTION_SIGNAL.test(taskText))
     return void 0;
   const lower = taskText.toLowerCase();
+  let target;
   if (/\b(?:decide|decision|choose|choice|option|options|tradeoff|trade-off)\b/.test(lower)) {
-    return {
-      flowName: "explore",
-      source: "classifier",
-      matched_signal: "plan-execution",
+    target = {
+      flowId: "explore",
       reason: "matched plan-execution request; selected Explore tournament for a blocking decision",
       inferredEntryModeName: "tournament",
       inferredEntryModeReason: "matched decision-oriented plan execution; selected Explore tournament mode"
     };
-  }
-  if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
-    return {
-      flowName: "fix",
-      source: "classifier",
-      matched_signal: "plan-execution",
+  } else if (/\b(?:fix|bug|regression|flaky|incident|outage|debug|diagnose|crash|failure)\b/.test(lower)) {
+    target = {
+      flowId: "fix",
       reason: "matched plan-execution request; selected Fix for the first bug-fix slice",
       inferredEntryModeName: "deep",
       inferredEntryModeReason: "matched bug-fix-oriented plan execution; selected deep thoroughness"
     };
+  } else {
+    target = {
+      flowId: "build",
+      reason: "matched plan-execution request; selected Build to start the first executable slice",
+      inferredEntryModeName: "default",
+      inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
+    };
   }
   return {
-    flowName: "build",
+    flowName: resolvePlanExecutionFlowName(target.flowId, routables, defaultPackage),
     source: "classifier",
     matched_signal: "plan-execution",
-    reason: "matched plan-execution request; selected Build to start the first executable slice",
-    inferredEntryModeName: "default",
-    inferredEntryModeReason: "matched general plan execution; selected default Build thoroughness"
+    reason: target.reason,
+    inferredEntryModeName: target.inferredEntryModeName,
+    inferredEntryModeReason: target.inferredEntryModeReason
   };
 }
-function inferEntryMode(flowName, taskText) {
-  if (flowName === "build" && /^\s*develop\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "default",
-      inferredEntryModeReason: "matched develop intent; selected default Build thoroughness"
-    };
-  }
-  if (flowName === "explore" && /^\s*decide\s*:/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "tournament",
-      inferredEntryModeReason: "matched decide intent; selected Explore tournament mode"
-    };
-  }
-  if (flowName !== "fix")
+function inferEntryMode(flowName, taskText, routables, defaultPackage) {
+  const entry = defaultPackage.pkg.id === flowName ? defaultPackage : routables.find((candidate) => candidate.pkg.id === flowName);
+  const inferred = entry?.routing.inferEntryMode?.(taskText);
+  if (inferred === void 0)
     return {};
-  if (/\bflaky\b/i.test(taskText)) {
-    return {
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: "matched flaky signal; selected deep thoroughness"
-    };
-  }
-  const deepMatch = taskText.match(DEEP_FIX_SIGNAL);
-  if (deepMatch?.[0] !== void 0) {
-    return {
-      inferredEntryModeName: "deep",
-      inferredEntryModeReason: `matched ${deepMatch[0]} signal; selected deep thoroughness`
-    };
-  }
-  if (QUICK_FIX_SIGNAL.test(taskText)) {
-    return {
-      inferredEntryModeName: "lite",
-      inferredEntryModeReason: "matched quick Fix intent; selected lite thoroughness"
-    };
-  }
-  return {};
+  return {
+    inferredEntryModeName: inferred.name,
+    inferredEntryModeReason: inferred.reason
+  };
 }
 function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
-  const planExecution = classifyPlanExecutionRequest(taskText);
+  const planExecution = classifyPlanExecutionRequest(taskText, routables, defaultPackage);
   if (planExecution !== void 0)
     return planExecution;
   const hasPlanningReport = PLANNING_ARTIFACT_SIGNAL.test(taskText);
@@ -54101,11 +54127,11 @@ function classifyTaskAgainstRoutables(taskText, routables, defaultPackage) {
         source: "classifier",
         matched_signal: signal.label,
         reason: routing.reasonForMatch(signal),
-        ...inferEntryMode(pkg.id, taskText)
+        ...inferEntryMode(pkg.id, taskText, routables, defaultPackage)
       };
     }
   }
-  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText);
+  const inferred = inferEntryMode(defaultPackage.pkg.id, taskText, routables, defaultPackage);
   return {
     flowName: defaultPackage.pkg.id,
     source: "classifier",

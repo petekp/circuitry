@@ -23,6 +23,14 @@ export interface CompiledFlowSignal {
   readonly pattern: RegExp;
 }
 
+// Entry-mode inference outcome a flow's routing block may produce for a
+// given task text. `name` is the axis-selection name (e.g. 'tournament',
+// 'deep', 'lite', 'default'); `reason` is the operator-facing rationale.
+export interface CompiledFlowEntryMode {
+  readonly name: string;
+  readonly reason: string;
+}
+
 export interface CompiledFlowRoutingMetadata {
   // Lower order = earlier consideration. Review goes first because
   // its signals are unambiguous; build goes last because its signals
@@ -50,6 +58,14 @@ export interface CompiledFlowRoutingMetadata {
 
   // Reason string when this package is selected as the default.
   readonly defaultReason?: string;
+
+  // Optional per-flow entry-mode inference. The router calls this for
+  // the selected flow (whether matched by signal or chosen as the
+  // default) to infer a thoroughness/tournament mode from the task
+  // text when the operator did not pin one. Returns undefined when no
+  // rule applies. Lives here so each flow owns its own mode signals
+  // instead of the router hardcoding flow-name conditionals.
+  inferEntryMode?(taskText: string): CompiledFlowEntryMode | undefined;
 }
 
 export interface CompiledFlowRelayReport {

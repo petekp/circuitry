@@ -44,6 +44,14 @@ const FIX_SIGNALS: readonly CompiledFlowSignal[] = [
   },
 ];
 
+// Entry-mode signals that map Fix intent to a thoroughness mode. Owned
+// by the Fix flow so the router infers depth via routing metadata
+// rather than hardcoding flow-name conditionals.
+const FIX_DEEP_SIGNAL =
+  /\b(?:regression|flaky|intermittent|incident|outage|crash|failure|failing\s+(?:test|build)|debug|diagnose|reproduce|root\s+cause)\b/i;
+const FIX_QUICK_SIGNAL =
+  /^\s*(?:(?:quick|small|tiny|simple)\s+fix\s*:|fix\s*:\s*(?:quick|small|tiny|simple)\b)/i;
+
 export const fixFlowData = {
   id: 'fix',
   visibility: 'public',
@@ -57,6 +65,28 @@ export const fixFlowData = {
     skipOnPlanningReport: true,
     reasonForMatch(signal) {
       return `matched ${signal.label}; routed to Fix flow`;
+    },
+    inferEntryMode(taskText) {
+      if (/\bflaky\b/i.test(taskText)) {
+        return {
+          name: 'deep',
+          reason: 'matched flaky signal; selected deep thoroughness',
+        };
+      }
+      const deepMatch = taskText.match(FIX_DEEP_SIGNAL);
+      if (deepMatch?.[0] !== undefined) {
+        return {
+          name: 'deep',
+          reason: `matched ${deepMatch[0]} signal; selected deep thoroughness`,
+        };
+      }
+      if (FIX_QUICK_SIGNAL.test(taskText)) {
+        return {
+          name: 'lite',
+          reason: 'matched quick Fix intent; selected lite thoroughness',
+        };
+      }
+      return undefined;
     },
   },
   schematic: {
