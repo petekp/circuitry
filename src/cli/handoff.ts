@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Command, CommanderError } from 'commander';
+import { Command } from 'commander';
 import { projectRunStatusFromRunFolder } from '../run-status/run-folder-projector.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
 import {
@@ -16,6 +16,7 @@ import type { ControlPlaneFileStem } from '../schemas/scalars.js';
 import type { Snapshot, SnapshotStatus } from '../schemas/snapshot.js';
 import { readManifestSnapshot } from '../shared/manifest-snapshot.js';
 import { progressPresentation } from '../shared/progress-output.js';
+import { parseCommanderOrThrow } from './commander-support.js';
 import { utilityProgress } from './utility-progress.js';
 
 type HandoffAction = 'save' | 'resume' | 'done' | 'brief' | 'hook' | 'hooks';
@@ -56,19 +57,6 @@ const CIRCUIT_HOOK_MARKER = 'CIRCUIT_HANDOFF_HOOK=1';
 type HandoffBriefRenderResult =
   | { readonly ok: true; readonly additionalContext: string }
   | { readonly ok: false; readonly code: string; readonly message: string };
-
-function parseCommander(program: Command, argv: readonly string[]): void {
-  try {
-    program
-      .exitOverride()
-      .configureOutput({ writeErr: () => {} })
-      .parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
-}
 
 type HandoffCommanderOptions = {
   host?: string;
@@ -146,7 +134,7 @@ function parseArgs(argv: readonly string[]): HandoffArgs {
   addHooksAction('uninstall');
   addHooksAction('doctor');
 
-  parseCommander(program, argv);
+  parseCommanderOrThrow(program, argv);
   if (parsed === undefined) throw new Error('handoff requires a subcommand');
 
   const { action, hooksAction, opts } = parsed;

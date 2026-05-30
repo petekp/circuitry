@@ -37,6 +37,7 @@ import { readPriorRoute, writeOperatorSummary } from '../shared/operator-summary
 import { progressDisplay, progressPresentation } from '../shared/progress-output.js';
 import type { ComposeWriterFn, RelayFn } from '../shared/relay-runtime-types.js';
 import { CLI_COMMAND_NAMES, type CliCommandName } from './command-vocabulary.js';
+import { parseCommanderOrThrow } from './commander-support.js';
 import { runCreateCommand } from './create.js';
 import { runHandoffCommand } from './handoff.js';
 import { runHistoryCommand } from './history.js';
@@ -234,19 +235,6 @@ function runVersionCommand(argv: readonly string[]): number {
   return 0;
 }
 
-function parseCommander(program: Command, argv: readonly string[]): void {
-  try {
-    program
-      .exitOverride()
-      .configureOutput({ writeErr: () => {} })
-      .parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
-}
-
 function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   let invocation: TopLevelInvocation | undefined;
   const program = new Command('circuit').exitOverride().configureOutput({ writeErr: () => {} });
@@ -262,13 +250,7 @@ function parseTopLevelInvocation(argv: readonly string[]): TopLevelInvocation {
   };
   for (const name of CLI_COMMAND_NAMES) addForwardingCommand(name);
 
-  try {
-    program.parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
+  parseCommanderOrThrow(program, argv);
 
   if (invocation === undefined) {
     throw new Error('missing command: use run, resume, handoff, history, create, runs, or version');
@@ -294,7 +276,7 @@ function addExecutionOptions(program: Command): Command {
 
 function parseExecutionArgs(command: 'run' | 'resume', argv: readonly string[]): ParsedArgs {
   const program = addExecutionOptions(new Command(`circuit ${command}`).argument('[flow-name]'));
-  parseCommander(program, argv);
+  parseCommanderOrThrow(program, argv);
 
   const opts = program.opts<{
     goal?: string;

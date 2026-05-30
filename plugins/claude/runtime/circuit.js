@@ -57590,6 +57590,28 @@ var CLI_COMMAND_NAMES = [
   "version"
 ];
 
+// dist/cli/commander-support.js
+function configureCommanderProgram(program2) {
+  return program2.exitOverride().configureOutput({ writeErr: () => {
+  } });
+}
+function commanderErrorMessage(err) {
+  if (err instanceof CommanderError)
+    return err.message.replace(/^error: /, "");
+  return err instanceof Error ? err.message : String(err);
+}
+function parseCommanderOrThrow(program2, argv) {
+  try {
+    configureCommanderProgram(program2).parse(argv, { from: "user" });
+  } catch (err) {
+    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
+      process.exit(0);
+    if (err instanceof CommanderError)
+      throw new Error(err.message.replace(/^error: /, ""));
+    throw err;
+  }
+}
+
 // dist/cli/create.js
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { existsSync as existsSync20, mkdirSync as mkdirSync5, readFileSync as readFileSync32, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
@@ -57706,21 +57728,9 @@ function utilityProgress(input) {
 
 // dist/cli/create.js
 var RESERVED_FLOW_IDS = /* @__PURE__ */ new Set([...catalogFlowIds, ...CLI_COMMAND_NAMES]);
-function parseCommander(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
 function parseArgs(argv) {
   const program2 = new Command("circuit create").option("--name <slug>").option("--description <flow idea>").option("--home <path>").option("--template-flow-root <path>").option("--created-at <iso>").option("--publish").option("--yes").option("--progress <format>");
-  parseCommander(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   if (program2.args.length > 0)
     throw new Error(`unexpected argument: ${program2.args[0]}`);
   const opts = program2.opts();
@@ -58670,18 +58680,6 @@ var HANDOFF_BRIEF_MAX_CHARS = 3e3;
 var HANDOFF_HOOKS_API_VERSION = "handoff-hooks-v1";
 var HANDOFF_HOOKS_SCHEMA_VERSION = 1;
 var CIRCUIT_HOOK_MARKER = "CIRCUIT_HANDOFF_HOOK=1";
-function parseCommander2(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
 function addHandoffOptions(program2) {
   return program2.option("--host <host>").option("--goal <goal>").option("--next <next>").option("--state-markdown <md>").option("--debt-markdown <md>").option("--run-folder <path>").option("--control-plane <path>").option("--project-root <path>").option("--hooks-file <path>").option("--launcher <path>").option("--record-id <stem>").option("--created-at <iso>").option("--progress <format>").option("--json");
 }
@@ -58715,7 +58713,7 @@ function parseArgs2(argv) {
   addHooksAction("install");
   addHooksAction("uninstall");
   addHooksAction("doctor");
-  parseCommander2(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   if (parsed === void 0)
     throw new Error("handoff requires a subcommand");
   const { action, hooksAction, opts } = parsed;
@@ -59754,11 +59752,6 @@ function operationalError(error51) {
   writeJson3(errorEnvelope(new HistoryCommandError("internal_error", error51 instanceof Error ? error51.message : String(error51))));
   return 1;
 }
-function commanderErrorMessage(err) {
-  if (err instanceof CommanderError)
-    return err.message.replace(/^error: /, "");
-  return err instanceof Error ? err.message : String(err);
-}
 function parsePositiveInteger(value, optionName) {
   if (value === void 0)
     return void 0;
@@ -59769,8 +59762,7 @@ function parsePositiveInteger(value, optionName) {
 }
 function parseHistoryArgs(argv) {
   let parsed;
-  const program2 = new Command("circuit history").exitOverride().configureOutput({ writeErr: () => {
-  } });
+  const program2 = configureCommanderProgram(new Command("circuit history"));
   program2.command("rebuild").option("--json").option("--runs-base <path>").option("--index-dir <path>").action((options) => {
     parsed = {
       command: "rebuild",
@@ -60085,22 +60077,16 @@ function invalidInvocation2(message, runFolder) {
   }));
   return 2;
 }
-function commanderErrorMessage2(err) {
-  if (err instanceof CommanderError)
-    return err.message.replace(/^error: /, "");
-  return err instanceof Error ? err.message : String(err);
-}
 function parseShowArgs(argv) {
   let showOptions;
-  const program2 = new Command("circuit runs").exitOverride().configureOutput({ writeErr: () => {
-  } });
+  const program2 = configureCommanderProgram(new Command("circuit runs"));
   const show = program2.command("show").option("--json").option("--run-folder <path>").action(() => {
     showOptions = show.opts();
   });
   try {
     program2.parse(argv, { from: "user" });
   } catch (err) {
-    return commanderErrorMessage2(err);
+    return commanderErrorMessage(err);
   }
   if (showOptions === void 0)
     return "runs requires a subcommand";
@@ -60218,18 +60204,6 @@ function runVersionCommand(argv) {
 `);
   return 0;
 }
-function parseCommander3(program2, argv) {
-  try {
-    program2.exitOverride().configureOutput({ writeErr: () => {
-    } }).parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
-}
 function parseTopLevelInvocation(argv) {
   let invocation;
   const program2 = new Command("circuit").exitOverride().configureOutput({ writeErr: () => {
@@ -60241,15 +60215,7 @@ function parseTopLevelInvocation(argv) {
   };
   for (const name of CLI_COMMAND_NAMES)
     addForwardingCommand(name);
-  try {
-    program2.parse(argv, { from: "user" });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === "commander.helpDisplayed")
-      process.exit(0);
-    if (err instanceof CommanderError)
-      throw new Error(err.message.replace(/^error: /, ""));
-    throw err;
-  }
+  parseCommanderOrThrow(program2, argv);
   if (invocation === void 0) {
     throw new Error("missing command: use run, resume, handoff, history, create, runs, or version");
   }
@@ -60260,7 +60226,7 @@ function addExecutionOptions(program2) {
 }
 function parseExecutionArgs(command, argv) {
   const program2 = addExecutionOptions(new Command(`circuit ${command}`).argument("[flow-name]"));
-  parseCommander3(program2, argv);
+  parseCommanderOrThrow(program2, argv);
   const opts = program2.opts();
   const flowName = program2.args[0];
   if (opts.dryRun === true) {

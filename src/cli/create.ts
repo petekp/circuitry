@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { Command, CommanderError } from 'commander';
+import { Command } from 'commander';
 import { parse as parseYaml } from 'yaml';
 import { catalogFlowIds } from '../flows/catalog.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
@@ -10,6 +10,7 @@ import { CustomFlowPackageDescriptor } from '../schemas/custom-flow-descriptor.j
 import { validateCompiledFlowKindPolicy } from '../shared/flow-kind-policy.js';
 import { progressPresentation } from '../shared/progress-output.js';
 import { CLI_COMMAND_NAMES } from './command-vocabulary.js';
+import { parseCommanderOrThrow } from './commander-support.js';
 import { CUSTOM_FLOW_ROOT_RUNTIME_POLICY } from './runtime-routing-policy.js';
 import { utilityProgress } from './utility-progress.js';
 
@@ -38,19 +39,6 @@ interface CreateMainOptions {
 // create/runs/version).
 const RESERVED_FLOW_IDS = new Set<string>([...catalogFlowIds, ...CLI_COMMAND_NAMES]);
 
-function parseCommander(program: Command, argv: readonly string[]): void {
-  try {
-    program
-      .exitOverride()
-      .configureOutput({ writeErr: () => {} })
-      .parse(argv, { from: 'user' });
-  } catch (err) {
-    if (err instanceof CommanderError && err.code === 'commander.helpDisplayed') process.exit(0);
-    if (err instanceof CommanderError) throw new Error(err.message.replace(/^error: /, ''));
-    throw err;
-  }
-}
-
 function parseArgs(argv: readonly string[]): CreateArgs {
   const program = new Command('circuit create')
     .option('--name <slug>')
@@ -61,7 +49,7 @@ function parseArgs(argv: readonly string[]): CreateArgs {
     .option('--publish')
     .option('--yes')
     .option('--progress <format>');
-  parseCommander(program, argv);
+  parseCommanderOrThrow(program, argv);
   if (program.args.length > 0) throw new Error(`unexpected argument: ${program.args[0]}`);
 
   const opts = program.opts<{
