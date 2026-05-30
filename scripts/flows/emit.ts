@@ -122,146 +122,6 @@ const OBSOLETE_ROOT_HOST_SURFACES = ['commands', 'hooks'];
 // src/flows/<id>/command.md or, for direct/router commands, under
 // src/commands/<id>.md. Host packages receive generated command copies.
 
-function copyMarkdownFile(
-  sourceRel: string,
-  destRel: string,
-  label: string,
-  transform: (content: string) => string = (content) => content,
-): void {
-  const sourceAbs = resolve(projectRoot, sourceRel);
-  const destAbs = resolve(projectRoot, destRel);
-  const sourceContent = transform(readFileSync(sourceAbs, 'utf8'));
-  mkdirSync(dirname(destAbs), { recursive: true });
-  writeFileSync(destAbs, sourceContent);
-  console.log(`emitted ${destRel} (${label})`);
-}
-
-function checkMarkdownMirror(
-  sourceRel: string,
-  destRel: string,
-  label: string,
-  transform: (content: string) => string = (content) => content,
-): boolean {
-  const sourceAbs = resolve(projectRoot, sourceRel);
-  const destAbs = resolve(projectRoot, destRel);
-  let sourceContent: string;
-  try {
-    sourceContent = transform(readFileSync(sourceAbs, 'utf8'));
-  } catch (_err) {
-    console.error(`✗ ${sourceRel} is missing on disk but ${label} references it.`);
-    return true;
-  }
-  let destContent: string;
-  try {
-    destContent = readFileSync(destAbs, 'utf8');
-  } catch (_err) {
-    console.error(
-      `✗ ${destRel} is missing on disk; run \`npm run emit-flows\` to regenerate, then commit.`,
-    );
-    return true;
-  }
-  if (sourceContent === destContent) {
-    console.log(`✓ ${destRel} is in sync with ${sourceRel}`);
-    return false;
-  }
-  console.error(`✗ ${destRel} drifted from ${sourceRel}; run \`npm run emit-flows\`.`);
-  return true;
-}
-
-function emitCommandFile(entry: SchematicEntry): void {
-  if (entry.visibility !== 'public') return;
-  if (entry.commandSourcePath === undefined) return;
-  copyMarkdownFile(
-    entry.commandSourcePath,
-    `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
-    `claude-code host command from ${entry.commandSourcePath}`,
-    renderClaudeHostCommand,
-  );
-  copyMarkdownFile(
-    entry.commandSourcePath,
-    `${CODEX_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
-    `codex host command from ${entry.commandSourcePath}`,
-    renderCodexHostCommand,
-  );
-  copyMarkdownFile(
-    entry.commandSourcePath,
-    `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.id}/SKILL.md`,
-    `codex host skill from ${entry.commandSourcePath}`,
-    (content) => renderCodexHostSkill(entry.id, content),
-  );
-}
-
-function emitHostDirectCommands(): void {
-  for (const command of HOST_DIRECT_COMMANDS) {
-    copyMarkdownFile(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
-      `claude-code host ${command} command`,
-      renderClaudeHostCommand,
-    );
-    copyMarkdownFile(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
-      `codex host ${command} command`,
-      renderCodexHostCommand,
-    );
-    copyMarkdownFile(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
-      `codex host ${command} skill`,
-      (content) => renderCodexHostSkill(command, content),
-    );
-  }
-}
-
-function checkCommandFile(entry: SchematicEntry): boolean {
-  if (entry.visibility !== 'public') return false;
-  if (entry.commandSourcePath === undefined) return false;
-  const claudeDrifted = checkMarkdownMirror(
-    entry.commandSourcePath,
-    `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
-    `${entry.id} claude-code host command`,
-    renderClaudeHostCommand,
-  );
-  const codexDrifted = checkMarkdownMirror(
-    entry.commandSourcePath,
-    `${CODEX_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
-    `${entry.id} codex host command`,
-    renderCodexHostCommand,
-  );
-  const codexSkillDrifted = checkMarkdownMirror(
-    entry.commandSourcePath,
-    `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.id}/SKILL.md`,
-    `${entry.id} codex host skill`,
-    (content) => renderCodexHostSkill(entry.id, content),
-  );
-  return claudeDrifted || codexDrifted || codexSkillDrifted;
-}
-
-function checkHostDirectCommands(): boolean {
-  return HOST_DIRECT_COMMANDS.some((command) => {
-    const claudeDrifted = checkMarkdownMirror(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
-      `claude-code host ${command} command`,
-      renderClaudeHostCommand,
-    );
-    const commandDrifted = checkMarkdownMirror(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
-      `codex host ${command} command`,
-      renderCodexHostCommand,
-    );
-    const skillDrifted = checkMarkdownMirror(
-      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
-      `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
-      `codex host ${command} skill`,
-      (content) => renderCodexHostSkill(command, content),
-    );
-    return claudeDrifted || commandDrifted || skillDrifted;
-  });
-}
-
 function markdownList(items: string[]): string {
   if (items.length === 0) return 'none';
   return items.map((item) => `\`${item}\``).join('<br>');
@@ -556,34 +416,6 @@ async function renderGeneratedSurfaceMap(): Promise<string> {
   ].join('\n')}\n`;
 }
 
-async function emitGeneratedSurfaceMap(): Promise<void> {
-  const outAbs = resolve(projectRoot, GENERATED_SURFACE_MAP_REL);
-  mkdirSync(dirname(outAbs), { recursive: true });
-  writeFileSync(outAbs, await renderGeneratedSurfaceMap());
-  console.log(`emitted ${GENERATED_SURFACE_MAP_REL}`);
-}
-
-async function checkGeneratedSurfaceMap(): Promise<boolean> {
-  const expected = await renderGeneratedSurfaceMap();
-  let actual: string;
-  try {
-    actual = readFileSync(resolve(projectRoot, GENERATED_SURFACE_MAP_REL), 'utf8');
-  } catch (_err) {
-    console.error(
-      `✗ ${GENERATED_SURFACE_MAP_REL} is missing on disk. Run \`npm run emit-flows\` to regenerate, then commit.`,
-    );
-    return true;
-  }
-  if (actual === expected) {
-    console.log(`✓ ${GENERATED_SURFACE_MAP_REL} is in sync with scripts/flows/emit.ts`);
-    return false;
-  }
-  console.error(
-    `✗ ${GENERATED_SURFACE_MAP_REL} drifted from scripts/flows/emit.ts. Run \`npm run emit-flows\`.`,
-  );
-  return true;
-}
-
 function expectedCodexSkillIds(): Set<string> {
   return new Set([
     ...SCHEMATICS.filter(
@@ -690,6 +522,80 @@ function biomeFormatInPlace(absolutePath: string): void {
     cwd: projectRoot,
     stdio: 'pipe',
   });
+}
+
+// Run the same biome formatter the artifacts use, but resolve to a string
+// instead of mutating a committed file in place. Writes raw bytes to a path
+// inside the shared scratch dir, biome-formats it there, and reads the result
+// back. Used so emit and check produce byte-identical formatted output through
+// one code path. The scratch path's basename is derived from relPath so biome
+// applies the same per-extension formatting it would for the real file.
+function biomeFormatToString(relPath: string, rawBytes: string, scratchDir: string): string {
+  const scratchFile = join(scratchDir, relPath.replace(/[/]/g, '_'));
+  writeFileSync(scratchFile, rawBytes);
+  biomeFormatInPlace(scratchFile);
+  return readFileSync(scratchFile, 'utf8');
+}
+
+// One declarative generated artifact. computeBytes() returns the FINAL intended
+// bytes (already biome-formatted for biome-managed kinds). The four message
+// fields are the exact console strings each mode prints, captured per-artifact
+// so emit and check stay byte-identical to the legacy per-kind functions.
+type ArtifactDescriptor = {
+  relPath: string;
+  computeBytes: () => string;
+  emitMessage: string;
+  checkOkMessage: string;
+  checkMissingMessage: string;
+  checkDriftMessage: readonly string[];
+  // Only the markdown mirrors have a meaningful source-missing path: their
+  // bytes are derived from a source file that could be absent. When set and
+  // computeBytes() throws, check reports this and counts as drift; emit
+  // re-throws (matching the legacy copy, which would fail outright).
+  sourceMissingMessage?: string;
+};
+
+// The single write-vs-compare primitive. Mirrors scripts/release/shared.ts's
+// writeOrCheck, but message-driven (each descriptor owns its exact strings) and
+// reporting drift via a boolean rather than throwing, because the drift check
+// aggregates across many artifacts before exiting once.
+//
+// emit:  mkdir -p, write final bytes, log emitMessage.
+// check: read committed bytes, compare to final bytes; log ok / missing /
+//        drift; return true on any drift so the caller can set its flag.
+function emitOrCheck(descriptor: ArtifactDescriptor, mode: 'emit' | 'check'): boolean {
+  const abs = resolve(projectRoot, descriptor.relPath);
+  let bytes: string;
+  try {
+    bytes = descriptor.computeBytes();
+  } catch (err) {
+    if (mode === 'check' && descriptor.sourceMissingMessage !== undefined) {
+      console.error(descriptor.sourceMissingMessage);
+      return true;
+    }
+    throw err;
+  }
+  if (mode === 'emit') {
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, bytes);
+    console.log(descriptor.emitMessage);
+    return false;
+  }
+  let committedBytes: string;
+  try {
+    committedBytes = readFileSync(abs, 'utf8');
+  } catch (_err) {
+    console.error(descriptor.checkMissingMessage);
+    return true;
+  }
+  if (bytes === committedBytes) {
+    console.log(descriptor.checkOkMessage);
+    return false;
+  }
+  for (const line of descriptor.checkDriftMessage) {
+    console.error(line);
+  }
+  return true;
 }
 
 // Stable structural identity for grouping per-mode flows. Two compiled flows
@@ -841,109 +747,254 @@ function findObsoleteRootHostSurfaces(): string[] {
   return surfaces;
 }
 
-function emitSchematicFile(entry: SchematicEntry): void {
-  const outAbs = resolve(projectRoot, entry.schematicPath);
-  mkdirSync(dirname(outAbs), { recursive: true });
-  writeFileSync(outAbs, stringifySchematic(entry.schematic));
-  biomeFormatInPlace(outAbs);
-  console.log(`emitted ${entry.schematicPath} from ${entry.definitionSourcePath}`);
+// ---------------------------------------------------------------------------
+// Declarative artifact descriptors.
+//
+// Each generated artifact is described once as an ArtifactDescriptor; both emit
+// and check iterate the same flat list through emitOrCheck. The descriptor list
+// is the single source of truth for what gets generated and for the
+// expected-paths set the stale/orphan sweep consumes. The genuinely asymmetric
+// sweep (emit deletes, check reports) stays in the walkers, fed by these
+// relPaths.
+// ---------------------------------------------------------------------------
+
+function blockCatalogDescriptor(catalog: unknown, scratchDir: string): ArtifactDescriptor {
+  return {
+    relPath: BLOCK_CATALOG_REL,
+    computeBytes: () => biomeFormatToString(BLOCK_CATALOG_REL, stringifyJson(catalog), scratchDir),
+    emitMessage: `emitted ${BLOCK_CATALOG_REL} from src/schemas/flow-block-definitions.ts`,
+    checkOkMessage: `✓ ${BLOCK_CATALOG_REL} is in sync with src/schemas/flow-block-definitions.ts`,
+    checkMissingMessage: `✗ ${BLOCK_CATALOG_REL} is missing on disk but src/schemas/flow-block-definitions.ts generates it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+    checkDriftMessage: [
+      `✗ ${BLOCK_CATALOG_REL} drifted from src/schemas/flow-block-definitions.ts`,
+      '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+    ],
+  };
 }
 
-function checkSchematicFile(entry: SchematicEntry, tmpDir: string): boolean {
-  const tmpFile = join(tmpDir, entry.schematicPath.replace(/[/]/g, '_'));
-  writeFileSync(tmpFile, stringifySchematic(entry.schematic));
-  biomeFormatInPlace(tmpFile);
-  const generatedBytes = readFileSync(tmpFile, 'utf8');
-  let committedBytes: string;
-  try {
-    committedBytes = readFileSync(resolve(projectRoot, entry.schematicPath), 'utf8');
-  } catch (_err) {
-    console.error(
-      `✗ ${entry.schematicPath} is missing on disk but ${entry.definitionSourcePath} generates it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-    );
-    return true;
-  }
-  if (generatedBytes === committedBytes) {
-    console.log(`✓ ${entry.schematicPath} is in sync with ${entry.definitionSourcePath}`);
-    return false;
-  }
-  console.error(`✗ ${entry.schematicPath} drifted from ${entry.definitionSourcePath}`);
-  console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-  return true;
+function schematicDescriptor(entry: SchematicEntry, scratchDir: string): ArtifactDescriptor {
+  return {
+    relPath: entry.schematicPath,
+    computeBytes: () =>
+      biomeFormatToString(entry.schematicPath, stringifySchematic(entry.schematic), scratchDir),
+    emitMessage: `emitted ${entry.schematicPath} from ${entry.definitionSourcePath}`,
+    checkOkMessage: `✓ ${entry.schematicPath} is in sync with ${entry.definitionSourcePath}`,
+    checkMissingMessage: `✗ ${entry.schematicPath} is missing on disk but ${entry.definitionSourcePath} generates it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+    checkDriftMessage: [
+      `✗ ${entry.schematicPath} drifted from ${entry.definitionSourcePath}`,
+      '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+    ],
+  };
 }
 
-async function emitBlockCatalog(): Promise<void> {
+// Per-flow compiled outputs, in the exact per-plan-item interleave the legacy
+// walkers produced: for each plan item, the canonical compiled JSON, its
+// WorkContract projection, then (public flows only) the Claude and Codex host
+// mirrors. The compiled bytes are biome-formatted once per plan item and reused
+// by the mirrors, matching the legacy emit (which copied the just-written
+// canonical file) and check (which compared host bytes to the canonical
+// compiled bytes).
+function flowCompiledDescriptors(
+  entry: SchematicEntry,
+  plan: SchematicFilePlan[],
+  projectWorkContractProjectionV0: typeof WorkContractProjectionModule.projectWorkContractProjectionV0,
+  scratchDir: string,
+): ArtifactDescriptor[] {
+  const descriptors: ArtifactDescriptor[] = [];
+  for (const { outRel, flow } of plan) {
+    const compiledBytes = (): string =>
+      biomeFormatToString(outRel, stringifyCompiledFlow(flow), scratchDir);
+    descriptors.push({
+      relPath: outRel,
+      computeBytes: compiledBytes,
+      emitMessage: `emitted ${outRel}`,
+      checkOkMessage: `✓ ${outRel} is in sync with ${entry.schematicPath}`,
+      checkMissingMessage: `✗ ${outRel} is missing on disk but the schematic compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+      checkDriftMessage: [
+        `✗ ${outRel} drifted from compiled output of ${entry.schematicPath}`,
+        '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+      ],
+    });
+    const contractRel = workContractRelForCompiledFlowRel(outRel);
+    descriptors.push({
+      relPath: contractRel,
+      computeBytes: () =>
+        biomeFormatToString(
+          contractRel,
+          stringifyJson(projectWorkContractProjectionV0({ flow, contractRefPath: contractRel })),
+          scratchDir,
+        ),
+      emitMessage: `emitted ${contractRel}`,
+      checkOkMessage: `✓ ${contractRel} is in sync with ${outRel}`,
+      checkMissingMessage: `✗ ${contractRel} is missing on disk but ${outRel} projects to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+      checkDriftMessage: [
+        `✗ ${contractRel} drifted from WorkContract projection of ${outRel}`,
+        '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+      ],
+    });
+    if (entry.visibility !== 'public') continue;
+    const hostRel = claudeHostRel(outRel);
+    descriptors.push({
+      relPath: hostRel,
+      computeBytes: compiledBytes,
+      emitMessage: `emitted ${hostRel} (claude-code host output)`,
+      checkOkMessage: `✓ ${hostRel} mirrors ${outRel}`,
+      checkMissingMessage: `✗ ${hostRel} is missing on disk but the claude-code host compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+      checkDriftMessage: [
+        `✗ ${hostRel} drifted from canonical ${outRel}`,
+        '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+      ],
+    });
+    const codexRel = codexHostRel(outRel);
+    descriptors.push({
+      relPath: codexRel,
+      computeBytes: compiledBytes,
+      emitMessage: `emitted ${codexRel} (codex host output)`,
+      checkOkMessage: `✓ ${codexRel} mirrors ${outRel}`,
+      checkMissingMessage: `✗ ${codexRel} is missing on disk but the codex host compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
+      checkDriftMessage: [
+        `✗ ${codexRel} drifted from canonical ${outRel}`,
+        '  Run `npm run emit-flows` to regenerate, then commit the diff.',
+      ],
+    });
+  }
+  return descriptors;
+}
+
+// A markdown mirror: copy a source markdown file (optionally transformed) to a
+// host destination, without biome formatting. Reproduces copyMarkdownFile /
+// checkMarkdownMirror byte-for-byte, including the distinct source-missing,
+// dest-missing, and single-line drift messages.
+function markdownMirrorDescriptor(
+  sourceRel: string,
+  destRel: string,
+  label: string,
+  transform: (content: string) => string = (content) => content,
+): ArtifactDescriptor {
+  return {
+    relPath: destRel,
+    computeBytes: () => transform(readFileSync(resolve(projectRoot, sourceRel), 'utf8')),
+    emitMessage: `emitted ${destRel} (${label})`,
+    checkOkMessage: `✓ ${destRel} is in sync with ${sourceRel}`,
+    checkMissingMessage: `✗ ${destRel} is missing on disk; run \`npm run emit-flows\` to regenerate, then commit.`,
+    checkDriftMessage: [`✗ ${destRel} drifted from ${sourceRel}; run \`npm run emit-flows\`.`],
+    sourceMissingMessage: `✗ ${sourceRel} is missing on disk but ${label} references it.`,
+  };
+}
+
+// Flow-owned command mirrors (public flows that declare a command source):
+// Claude host command, Codex host command, Codex host skill.
+function flowCommandDescriptors(entry: SchematicEntry): ArtifactDescriptor[] {
+  if (entry.visibility !== 'public') return [];
+  if (entry.commandSourcePath === undefined) return [];
+  return [
+    markdownMirrorDescriptor(
+      entry.commandSourcePath,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
+      `claude-code host command from ${entry.commandSourcePath}`,
+      renderClaudeHostCommand,
+    ),
+    markdownMirrorDescriptor(
+      entry.commandSourcePath,
+      `${CODEX_PLUGIN_ROOT_REL}/commands/${entry.id}.md`,
+      `codex host command from ${entry.commandSourcePath}`,
+      renderCodexHostCommand,
+    ),
+    markdownMirrorDescriptor(
+      entry.commandSourcePath,
+      `${CODEX_PLUGIN_ROOT_REL}/skills/${entry.id}/SKILL.md`,
+      `codex host skill from ${entry.commandSourcePath}`,
+      (content) => renderCodexHostSkill(entry.id, content),
+    ),
+  ];
+}
+
+// Direct host command mirrors (run, handoff): Claude host command, Codex host
+// command, Codex host skill, for each direct command in order.
+function hostDirectCommandDescriptors(): ArtifactDescriptor[] {
+  return HOST_DIRECT_COMMANDS.flatMap((command) => [
+    markdownMirrorDescriptor(
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
+      `${CLAUDE_PLUGIN_ROOT_REL}/commands/${command}.md`,
+      `claude-code host ${command} command`,
+      renderClaudeHostCommand,
+    ),
+    markdownMirrorDescriptor(
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
+      `${CODEX_PLUGIN_ROOT_REL}/commands/${command}.md`,
+      `codex host ${command} command`,
+      renderCodexHostCommand,
+    ),
+    markdownMirrorDescriptor(
+      `${SOURCE_COMMAND_ROOT_REL}/${command}.md`,
+      `${CODEX_PLUGIN_ROOT_REL}/skills/${command}/SKILL.md`,
+      `codex host ${command} skill`,
+      (content) => renderCodexHostSkill(command, content),
+    ),
+  ]);
+}
+
+// The generated surface map. Not biome-formatted; rendered directly to its
+// final bytes. Its check ok/missing/drift messages reference the emit script
+// rather than a source file.
+function surfaceMapDescriptor(renderedBytes: string): ArtifactDescriptor {
+  return {
+    relPath: GENERATED_SURFACE_MAP_REL,
+    computeBytes: () => renderedBytes,
+    emitMessage: `emitted ${GENERATED_SURFACE_MAP_REL}`,
+    checkOkMessage: `✓ ${GENERATED_SURFACE_MAP_REL} is in sync with scripts/flows/emit.ts`,
+    checkMissingMessage: `✗ ${GENERATED_SURFACE_MAP_REL} is missing on disk. Run \`npm run emit-flows\` to regenerate, then commit.`,
+    checkDriftMessage: [
+      `✗ ${GENERATED_SURFACE_MAP_REL} drifted from scripts/flows/emit.ts. Run \`npm run emit-flows\`.`,
+    ],
+  };
+}
+
+// Build the full flat descriptor list in the exact order the legacy walkers
+// produced messages: block catalog, then per flow [schematic, compiled outputs,
+// flow command mirrors], then the direct host command mirrors, then the surface
+// map. Also returns the per-flow plans so the stale/orphan sweep can consume the
+// same expected-paths the descriptors define.
+async function buildArtifactDescriptors(scratchDir: string): Promise<{
+  descriptors: ArtifactDescriptor[];
+  flowPlans: { entry: SchematicEntry; plan: SchematicFilePlan[] }[];
+}> {
   const { FLOW_BLOCK_CATALOG } = await loadFlowBlockDefinitionsModule();
-  const outAbs = resolve(projectRoot, BLOCK_CATALOG_REL);
-  writeFileSync(outAbs, stringifyJson(FLOW_BLOCK_CATALOG));
-  biomeFormatInPlace(outAbs);
-  console.log(`emitted ${BLOCK_CATALOG_REL} from src/schemas/flow-block-definitions.ts`);
-}
-
-async function checkBlockCatalog(tmpDir: string): Promise<boolean> {
-  const { FLOW_BLOCK_CATALOG } = await loadFlowBlockDefinitionsModule();
-  const tmpFile = join(tmpDir, BLOCK_CATALOG_REL.replace(/[/]/g, '_'));
-  writeFileSync(tmpFile, stringifyJson(FLOW_BLOCK_CATALOG));
-  biomeFormatInPlace(tmpFile);
-  const generatedBytes = readFileSync(tmpFile, 'utf8');
-  let committedBytes: string;
-  try {
-    committedBytes = readFileSync(resolve(projectRoot, BLOCK_CATALOG_REL), 'utf8');
-  } catch (_err) {
-    console.error(
-      `✗ ${BLOCK_CATALOG_REL} is missing on disk but src/schemas/flow-block-definitions.ts generates it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-    );
-    return true;
-  }
-  if (generatedBytes === committedBytes) {
-    console.log(`✓ ${BLOCK_CATALOG_REL} is in sync with src/schemas/flow-block-definitions.ts`);
-    return false;
-  }
-  console.error(`✗ ${BLOCK_CATALOG_REL} drifted from src/schemas/flow-block-definitions.ts`);
-  console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-  return true;
-}
-
-async function emitMode(): Promise<void> {
-  const expectedSkills = expectedCodexSkillIds();
-  const expectedHostCommands = expectedHostCommandIds();
   const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
-  await emitBlockCatalog();
+  const descriptors: ArtifactDescriptor[] = [
+    blockCatalogDescriptor(FLOW_BLOCK_CATALOG, scratchDir),
+  ];
+  const flowPlans: { entry: SchematicEntry; plan: SchematicFilePlan[] }[] = [];
   for (const entry of SCHEMATICS) {
-    emitSchematicFile(entry);
     const result = await compileOneSchematic(entry.schematic);
     const plan = planSchematicFiles(entry.id, result);
-    for (const { outRel, flow } of plan) {
-      const outAbs = resolve(projectRoot, outRel);
-      mkdirSync(dirname(outAbs), { recursive: true });
-      writeFileSync(outAbs, stringifyCompiledFlow(flow));
-      biomeFormatInPlace(outAbs);
-      console.log(`emitted ${outRel}`);
-      const contractRel = workContractRelForCompiledFlowRel(outRel);
-      const contractAbs = resolve(projectRoot, contractRel);
-      mkdirSync(dirname(contractAbs), { recursive: true });
-      writeFileSync(
-        contractAbs,
-        stringifyJson(projectWorkContractProjectionV0({ flow, contractRefPath: contractRel })),
-      );
-      biomeFormatInPlace(contractAbs);
-      console.log(`emitted ${contractRel}`);
-      if (entry.visibility !== 'public') continue;
-      const hostRel = claudeHostRel(outRel);
-      const hostAbs = resolve(projectRoot, hostRel);
-      mkdirSync(dirname(hostAbs), { recursive: true });
-      writeFileSync(hostAbs, readFileSync(outAbs, 'utf8'));
-      console.log(`emitted ${hostRel} (claude-code host output)`);
-      const codexRel = codexHostRel(outRel);
-      const codexAbs = resolve(projectRoot, codexRel);
-      mkdirSync(dirname(codexAbs), { recursive: true });
-      writeFileSync(codexAbs, readFileSync(outAbs, 'utf8'));
-      console.log(`emitted ${codexRel} (codex host output)`);
-    }
-    // Stale `<mode>.json` siblings would otherwise survive emit and silently
-    // drive runtime behavior via the CLI loader. Treat them as stale outputs
-    // of this build step and remove them.
-    for (const stale of [
+    flowPlans.push({ entry, plan });
+    descriptors.push(schematicDescriptor(entry, scratchDir));
+    descriptors.push(
+      ...flowCompiledDescriptors(entry, plan, projectWorkContractProjectionV0, scratchDir),
+    );
+    descriptors.push(...flowCommandDescriptors(entry));
+  }
+  descriptors.push(...hostDirectCommandDescriptors());
+  descriptors.push(surfaceMapDescriptor(await renderGeneratedSurfaceMap()));
+  return { descriptors, flowPlans };
+}
+
+// The asymmetric stale/orphan/obsolete sweep, expressed once. emit DELETES and
+// logs `removed ...`; check REPORTS via stderr and returns true on any finding.
+// Both modes consume the same expected-paths the descriptors define (via the
+// per-flow plans and the expected skill/command id sets), so the sweep can never
+// drift from what was generated. This stays separate from emitOrCheck on
+// purpose: it is the one place where emit and check genuinely diverge.
+function sweepStaleSurfaces(
+  mode: 'emit' | 'check',
+  flowPlans: { entry: SchematicEntry; plan: SchematicFilePlan[] }[],
+): boolean {
+  let drifted = false;
+  const expectedSkills = expectedCodexSkillIds();
+  const expectedHostCommands = expectedHostCommandIds();
+  for (const { entry, plan } of flowPlans) {
+    const staleSiblings = [
       ...findStaleSiblings(entry.id, plan, 'generated/flows'),
       ...(entry.visibility === 'public'
         ? [
@@ -951,204 +1002,99 @@ async function emitMode(): Promise<void> {
               entry.id,
               claudeHostPlan(plan),
               `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
-              { includeWorkContracts: false },
+              {
+                includeWorkContracts: false,
+              },
             ),
             ...findStaleSiblings(entry.id, codexHostPlan(plan), `${CODEX_PLUGIN_ROOT_REL}/flows`, {
               includeWorkContracts: false,
             }),
           ]
         : []),
-    ]) {
-      unlinkSync(resolve(projectRoot, stale));
-      console.log(`removed stale ${stale}`);
+    ];
+    for (const stale of staleSiblings) {
+      if (mode === 'emit') {
+        unlinkSync(resolve(projectRoot, stale));
+        console.log(`removed stale ${stale}`);
+      } else {
+        console.error(
+          `✗ ${stale} is not in the emit plan for ${entry.schematicPath}. Run \`npm run emit-flows\` to clean up stale siblings, then commit the deletion.`,
+        );
+        drifted = true;
+      }
     }
     for (const staleDir of findExistingInternalHostMirrorDirs(entry)) {
-      rmSync(resolve(projectRoot, staleDir), { recursive: true, force: true });
-      console.log(`removed internal host mirror ${staleDir}`);
+      if (mode === 'emit') {
+        rmSync(resolve(projectRoot, staleDir), { recursive: true, force: true });
+        console.log(`removed internal host mirror ${staleDir}`);
+      } else {
+        console.error(
+          `✗ ${staleDir} is a stale host mirror for internal flow '${entry.id}'. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
+        );
+        drifted = true;
+      }
     }
-    emitCommandFile(entry);
   }
-  emitHostDirectCommands();
-  await emitGeneratedSurfaceMap();
   for (const stale of findStaleCodexSkillDirs(expectedSkills)) {
-    rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
-    console.log(`removed stale ${stale}`);
+    if (mode === 'emit') {
+      rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
+      console.log(`removed stale ${stale}`);
+    } else {
+      console.error(
+        `✗ ${stale} is not an expected Codex skill. Run \`npm run emit-flows\` to clean up stale skills, then commit the deletion.`,
+      );
+      drifted = true;
+    }
   }
   for (const stale of findStaleHostCommandFiles(expectedHostCommands)) {
-    unlinkSync(resolve(projectRoot, stale));
-    console.log(`removed stale ${stale}`);
+    if (mode === 'emit') {
+      unlinkSync(resolve(projectRoot, stale));
+      console.log(`removed stale ${stale}`);
+    } else {
+      console.error(
+        `✗ ${stale} is not an expected host command. Run \`npm run emit-flows\` to clean up stale commands, then commit the deletion.`,
+      );
+      drifted = true;
+    }
   }
   for (const stale of findObsoleteRootHostSurfaces()) {
-    rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
-    console.log(`removed obsolete root host surface ${stale}`);
+    if (mode === 'emit') {
+      rmSync(resolve(projectRoot, stale), { recursive: true, force: true });
+      console.log(`removed obsolete root host surface ${stale}`);
+    } else {
+      console.error(
+        `✗ ${stale} is an obsolete root host surface. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
+      );
+      drifted = true;
+    }
+  }
+  return drifted;
+}
+
+async function emitMode(): Promise<void> {
+  const tmpDir = mkdtempSync(join(tmpdir(), 'flow-emit-'));
+  try {
+    const { descriptors, flowPlans } = await buildArtifactDescriptors(tmpDir);
+    for (const descriptor of descriptors) {
+      emitOrCheck(descriptor, 'emit');
+    }
+    sweepStaleSurfaces('emit', flowPlans);
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
 async function checkMode(): Promise<void> {
   const tmpDir = mkdtempSync(join(tmpdir(), 'flow-drift-'));
   let drifted = false;
-  const expectedSkills = expectedCodexSkillIds();
-  const expectedHostCommands = expectedHostCommandIds();
-  const { projectWorkContractProjectionV0 } = await loadWorkContractProjectionModule();
   try {
-    if (await checkBlockCatalog(tmpDir)) {
-      drifted = true;
-    }
-    for (const entry of SCHEMATICS) {
-      if (checkSchematicFile(entry, tmpDir)) {
-        drifted = true;
-      }
-      const result = await compileOneSchematic(entry.schematic);
-      const plan = planSchematicFiles(entry.id, result);
-      for (const { outRel, flow } of plan) {
-        const tmpFile = join(tmpDir, outRel.replace(/[/]/g, '_'));
-        writeFileSync(tmpFile, stringifyCompiledFlow(flow));
-        biomeFormatInPlace(tmpFile);
-        const compiledBytes = readFileSync(tmpFile, 'utf8');
-        const committedAbs = resolve(projectRoot, outRel);
-        let committedBytes: string;
-        try {
-          committedBytes = readFileSync(committedAbs, 'utf8');
-        } catch (_err) {
-          console.error(
-            `✗ ${outRel} is missing on disk but the schematic compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-          );
-          drifted = true;
-          continue;
-        }
-        if (compiledBytes === committedBytes) {
-          console.log(`✓ ${outRel} is in sync with ${entry.schematicPath}`);
-        } else {
-          console.error(`✗ ${outRel} drifted from compiled output of ${entry.schematicPath}`);
-          console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-          drifted = true;
-        }
-        const contractRel = workContractRelForCompiledFlowRel(outRel);
-        const contractTmpFile = join(tmpDir, contractRel.replace(/[/]/g, '_'));
-        writeFileSync(
-          contractTmpFile,
-          stringifyJson(projectWorkContractProjectionV0({ flow, contractRefPath: contractRel })),
-        );
-        biomeFormatInPlace(contractTmpFile);
-        const contractBytes = readFileSync(contractTmpFile, 'utf8');
-        let committedContractBytes: string;
-        try {
-          committedContractBytes = readFileSync(resolve(projectRoot, contractRel), 'utf8');
-        } catch (_err) {
-          console.error(
-            `✗ ${contractRel} is missing on disk but ${outRel} projects to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-          );
-          drifted = true;
-          continue;
-        }
-        if (contractBytes === committedContractBytes) {
-          console.log(`✓ ${contractRel} is in sync with ${outRel}`);
-        } else {
-          console.error(`✗ ${contractRel} drifted from WorkContract projection of ${outRel}`);
-          console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-          drifted = true;
-        }
-        if (entry.visibility === 'public') {
-          const hostRel = claudeHostRel(outRel);
-          let hostBytes: string;
-          try {
-            hostBytes = readFileSync(resolve(projectRoot, hostRel), 'utf8');
-          } catch (_err) {
-            console.error(
-              `✗ ${hostRel} is missing on disk but the claude-code host compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-            );
-            drifted = true;
-            continue;
-          }
-          if (compiledBytes === hostBytes) {
-            console.log(`✓ ${hostRel} mirrors ${outRel}`);
-          } else {
-            console.error(`✗ ${hostRel} drifted from canonical ${outRel}`);
-            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-            drifted = true;
-          }
-          const codexRel = codexHostRel(outRel);
-          let codexBytes: string;
-          try {
-            codexBytes = readFileSync(resolve(projectRoot, codexRel), 'utf8');
-          } catch (_err) {
-            console.error(
-              `✗ ${codexRel} is missing on disk but the codex host compiles to it. Run \`npm run emit-flows\` to regenerate, then commit.`,
-            );
-            drifted = true;
-            continue;
-          }
-          if (compiledBytes === codexBytes) {
-            console.log(`✓ ${codexRel} mirrors ${outRel}`);
-          } else {
-            console.error(`✗ ${codexRel} drifted from canonical ${outRel}`);
-            console.error('  Run `npm run emit-flows` to regenerate, then commit the diff.');
-            drifted = true;
-          }
-        }
-      }
-      // Stale `<mode>.json` siblings in this skill dir would silently drive
-      // runtime behavior via the CLI loader, while the byte-by-byte check
-      // above only ranges over files in the current emit plan.
-      const stale = [
-        ...findStaleSiblings(entry.id, plan, 'generated/flows'),
-        ...(entry.visibility === 'public'
-          ? [
-              ...findStaleSiblings(
-                entry.id,
-                claudeHostPlan(plan),
-                `${CLAUDE_PLUGIN_ROOT_REL}/skills`,
-                { includeWorkContracts: false },
-              ),
-              ...findStaleSiblings(
-                entry.id,
-                codexHostPlan(plan),
-                `${CODEX_PLUGIN_ROOT_REL}/flows`,
-                {
-                  includeWorkContracts: false,
-                },
-              ),
-            ]
-          : []),
-      ];
-      for (const rel of stale) {
-        console.error(
-          `✗ ${rel} is not in the emit plan for ${entry.schematicPath}. Run \`npm run emit-flows\` to clean up stale siblings, then commit the deletion.`,
-        );
-        drifted = true;
-      }
-      for (const rel of findExistingInternalHostMirrorDirs(entry)) {
-        console.error(
-          `✗ ${rel} is a stale host mirror for internal flow '${entry.id}'. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
-        );
-        drifted = true;
-      }
-      if (checkCommandFile(entry)) {
+    const { descriptors, flowPlans } = await buildArtifactDescriptors(tmpDir);
+    for (const descriptor of descriptors) {
+      if (emitOrCheck(descriptor, 'check')) {
         drifted = true;
       }
     }
-    if (checkHostDirectCommands()) {
-      drifted = true;
-    }
-    if (await checkGeneratedSurfaceMap()) {
-      drifted = true;
-    }
-    for (const stale of findStaleCodexSkillDirs(expectedSkills)) {
-      console.error(
-        `✗ ${stale} is not an expected Codex skill. Run \`npm run emit-flows\` to clean up stale skills, then commit the deletion.`,
-      );
-      drifted = true;
-    }
-    for (const stale of findStaleHostCommandFiles(expectedHostCommands)) {
-      console.error(
-        `✗ ${stale} is not an expected host command. Run \`npm run emit-flows\` to clean up stale commands, then commit the deletion.`,
-      );
-      drifted = true;
-    }
-    for (const stale of findObsoleteRootHostSurfaces()) {
-      console.error(
-        `✗ ${stale} is an obsolete root host surface. Run \`npm run emit-flows\` to remove it, then commit the deletion.`,
-      );
+    if (sweepStaleSurfaces('check', flowPlans)) {
       drifted = true;
     }
   } finally {
