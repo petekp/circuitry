@@ -143,22 +143,6 @@ function renderCodexNativeSkillBody(body: string): string {
     .replace(/<!--[\s\S]*?-->\s*/g, '')
     .trimStart()
     .replace(/^#\s+\/circuit:[^\n]*\n+/, '')
-    .replace(
-      /The safe construction rule matches\n\s+`\/circuit:[^\n]+:\n/g,
-      'Use the same single-quote construction rule as the other Circuit host skills:\n',
-    )
-    .replace(
-      /Use the same safe construction rule as\n\s+`\/circuit:[^\n]+:\n/g,
-      'Use the same safe construction rule as the other Circuit host skills:\n',
-    )
-    .replace(
-      /Explicit flow commands remain available as[\s\S]*?(?=\n\nPursue is routable)/,
-      'Direct Circuit flow skills are expert controls for users who already know the flow.',
-    )
-    .replace(
-      /\n## Direct Flow (?:Bypass|Expert Controls)\n[\s\S]*?(?=\n## Authority|\n## |\s*$)/g,
-      '\n',
-    )
     .replace(/\n## Authority\n[\s\S]*$/g, '\n')
     .replace(/`\/circuit:run`/g, 'Circuit Run')
     .replace(/`\/circuit:<command>`/g, 'a Circuit host command')
