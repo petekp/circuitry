@@ -9,8 +9,11 @@ import type { ConnectorRelayInput, RelayResult } from '../shared/connector-relay
 import { extractJsonObject } from '../shared/json-extraction.js';
 import {
   type ConnectorSubprocessResult,
+  cappedSuffix,
   isConnectorSubprocessSpawnError,
+  parseNdjsonObjects,
   runConnectorSubprocess,
+  spawnErrorVerb,
 } from './subprocess.js';
 
 // Codex CLI connector. Invokes Codex as a Node subprocess (no external SDK
@@ -449,22 +452,21 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
       });
     } catch (error) {
       if (isConnectorSubprocessSpawnError(error)) {
-        const verb = error.phase === 'spawn-failed' ? 'spawn failed' : 'spawn error';
-        throw new Error(`codex subprocess ${verb}: ${error.message}`);
+        throw new Error(`codex subprocess ${spawnErrorVerb(error)}: ${error.message}`);
       }
       throw error;
     }
 
     if (result.timedOut) {
-      const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+      const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
       throw new Error(
         `codex subprocess timed out after ${timeoutMs}ms; group-kill ${result.killGroupSucceeded ? 'sent' : 'failed'}; final signal=${result.signal ?? 'none'}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2000)}${stderrSuffix}`,
       );
     }
     if (result.code !== 0) {
-      const stdoutSuffix = result.stdoutCapped ? ' [stdout capped]' : '';
-      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, 'stdout');
+      const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
       throw new Error(
         `codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ''}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2000)}${stderrSuffix}`,
       );
@@ -477,7 +479,7 @@ export async function relayCodex(input: CodexRelayInput): Promise<RelayResult> {
     try {
       return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
     } catch (error) {
-      const stderrSuffix = result.stderrCapped ? ' [stderr capped]' : '';
+      const stderrSuffix = cappedSuffix(result.stderrCapped, 'stderr');
       throw new Error(
         `codex subprocess: ${(error as Error).message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`,
       );
@@ -539,24 +541,9 @@ export function parseCodexStdout(
   duration_ms: number,
   cli_version: string,
 ): RelayResult {
-  const lines = stdout.split('\n').filter((line) => line.length > 0);
-  if (lines.length === 0) {
+  const trace_entries = parseNdjsonObjects(stdout, 'codex --json');
+  if (trace_entries.length === 0) {
     throw new Error('codex --json stdout is empty');
-  }
-  const trace_entries: Array<Record<string, unknown>> = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(
-        `codex --json line ${idx + 1} is not valid JSON: ${(err as Error).message}; line[:200]=${line.slice(0, 200)}`,
-      );
-    }
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed as Record<string, unknown>);
   }
 
   // Top-level trace_entry-type gating.

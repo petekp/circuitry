@@ -46094,6 +46094,29 @@ function appendCapped(current, currentBytes, chunk, maxBytes) {
     capped: true
   };
 }
+function spawnErrorVerb(error51) {
+  return error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
+}
+function cappedSuffix(capped, stream) {
+  return capped ? ` [${stream} capped]` : "";
+}
+function parseNdjsonObjects(stdout, label) {
+  const lines = stdout.split("\n").filter((line) => line.length > 0);
+  const objects = [];
+  for (const [idx, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      throw new Error(`${label} line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error(`${label} line ${idx + 1} is not a JSON object`);
+    }
+    objects.push(parsed);
+  }
+  return objects;
+}
 async function runConnectorSubprocess(input) {
   const start = performance.now();
   return await new Promise((resolve17, reject) => {
@@ -46263,19 +46286,18 @@ async function relayClaudeCode(input) {
     });
   } catch (error51) {
     if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`claude-code subprocess ${verb}: ${error51.message}`);
+      throw new Error(`claude-code subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
     }
     throw error51;
   }
   if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
     throw new Error(`claude-code subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
   }
   if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
     const stdoutDiagnostic = claudeCodeStdoutDiagnostic(result.stdout);
     const diagnosticText = stdoutDiagnostic === void 0 ? "" : `; stdout_diagnostic=${stdoutDiagnostic}`;
     throw new Error(`claude-code subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}${diagnosticText}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
@@ -46286,27 +46308,14 @@ async function relayClaudeCode(input) {
   try {
     return parseClaudeCodeStdout(result.stdout, input.prompt, result.durationMs);
   } catch (error51) {
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
     throw new Error(`claude-code subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
   }
 }
 function parseClaudeCodeStdout(stdout, prompt, duration_ms) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
+  const trace_entries = parseNdjsonObjects(stdout, "stream-json");
+  if (trace_entries.length === 0) {
     throw new Error("stream-json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`stream-json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`stream-json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
   }
   const initTraceEntry = trace_entries.find((e) => e.type === "system" && e.subtype === "init");
   const resultTraceEntries = trace_entries.filter((e) => e.type === "result");
@@ -46617,19 +46626,18 @@ async function relayCodex(input) {
       });
     } catch (error51) {
       if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`codex subprocess ${verb}: ${error51.message}`);
+        throw new Error(`codex subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
       }
       throw error51;
     }
     if (result.timedOut) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
       throw new Error(`codex subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
     }
     if (result.code !== 0) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
       throw new Error(`codex subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:2000]=${result.stderr.slice(0, 2e3)}${stderrSuffix}`);
     }
     if (result.stdoutCapped) {
@@ -46638,7 +46646,7 @@ async function relayCodex(input) {
     try {
       return parseCodexStdout(result.stdout, input.prompt, result.durationMs, cli_version);
     } catch (error51) {
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
       throw new Error(`codex subprocess: ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
     }
   } finally {
@@ -46662,22 +46670,9 @@ var KNOWN_CODEX_EVENT_TYPES = /* @__PURE__ */ new Set([
 ]);
 var CODEX_FAILURE_EVENT_TYPES = /* @__PURE__ */ new Set(["turn.failed", "error"]);
 function parseCodexStdout(stdout, prompt, duration_ms, cli_version) {
-  const lines = stdout.split("\n").filter((line) => line.length > 0);
-  if (lines.length === 0) {
+  const trace_entries = parseNdjsonObjects(stdout, "codex --json");
+  if (trace_entries.length === 0) {
     throw new Error("codex --json stdout is empty");
-  }
-  const trace_entries = [];
-  for (const [idx, line] of lines.entries()) {
-    let parsed;
-    try {
-      parsed = JSON.parse(line);
-    } catch (err) {
-      throw new Error(`codex --json line ${idx + 1} is not valid JSON: ${err.message}; line[:200]=${line.slice(0, 200)}`);
-    }
-    if (typeof parsed !== "object" || parsed === null) {
-      throw new Error(`codex --json line ${idx + 1} is not a JSON object`);
-    }
-    trace_entries.push(parsed);
   }
   for (const [idx, trace_entry] of trace_entries.entries()) {
     const type = trace_entry.type;
@@ -46839,19 +46834,18 @@ async function relayCursorAgent(input) {
     });
   } catch (error51) {
     if (isConnectorSubprocessSpawnError(error51)) {
-      const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-      throw new Error(`cursor-agent subprocess ${verb}: ${error51.message}`);
+      throw new Error(`cursor-agent subprocess ${spawnErrorVerb(error51)}: ${error51.message}`);
     }
     throw error51;
   }
   if (result.timedOut) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
     throw new Error(`cursor-agent subprocess timed out after ${timeoutMs2}ms; group-kill ${result.killGroupSucceeded ? "sent" : "failed"}; final signal=${result.signal ?? "none"}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
   }
   if (result.code !== 0) {
-    const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-    const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+    const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+    const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
     throw new Error(`cursor-agent subprocess exited with code ${result.code}${result.signal ? ` (signal ${result.signal})` : ""}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:500]=${result.stderr.slice(0, 500)}${stderrSuffix}`);
   }
   if (result.stdoutCapped) {
@@ -46922,8 +46916,7 @@ async function relayCustom(input) {
       });
     } catch (error51) {
       if (isConnectorSubprocessSpawnError(error51)) {
-        const verb = error51.phase === "spawn-failed" ? "spawn failed" : "spawn error";
-        throw new Error(`custom connector '${descriptor.name}' ${verb}: ${error51.message}`);
+        throw new Error(`custom connector '${descriptor.name}' ${spawnErrorVerb(error51)}: ${error51.message}`);
       }
       throw error51;
     }
@@ -46943,8 +46936,8 @@ async function relayCustom(input) {
         cli_version: `custom:${descriptor.name}`
       };
     } catch (error51) {
-      const stdoutSuffix = result.stdoutCapped ? " [stdout capped]" : "";
-      const stderrSuffix = result.stderrCapped ? " [stderr capped]" : "";
+      const stdoutSuffix = cappedSuffix(result.stdoutCapped, "stdout");
+      const stderrSuffix = cappedSuffix(result.stderrCapped, "stderr");
       throw new Error(`custom connector '${descriptor.name}': ${error51.message}; stdout[:500]=${result.stdout.slice(0, 500)}${stdoutSuffix}; stderr[:200]=${result.stderr.slice(0, 200)}${stderrSuffix}`);
     }
   } finally {
