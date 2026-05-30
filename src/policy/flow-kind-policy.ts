@@ -14,7 +14,7 @@ export { FLOW_KIND_CANONICAL_SETS, EXEMPT_FLOW_IDS };
 export type { CompiledFlowKindPolicyCheckResult };
 
 export type ValidateCompiledFlowKindPolicyResult =
-  | { ok: true; kind: 'green' | 'exempt' | 'pass_through'; detail: string }
+  | { ok: true; kind: Exclude<CompiledFlowKindPolicyCheckResult['kind'], 'red'>; detail: string }
   | { ok: false; reason: string };
 
 function humanizeZodIssueMessage(message: string): string {

@@ -1,11 +1,11 @@
+import type { FanoutStep } from '../../schemas/step.js';
 import type { RunClosedOutcome } from '../domain/run.js';
 export { NO_VERDICT_SENTINEL } from '../../shared/relay-support.js';
 
-export type FanoutJoinPolicy =
-  | 'pick-winner'
-  | 'disjoint-merge'
-  | 'aggregate-only'
-  | 'aggregate-survivors';
+// Single-sourced from the flow schema: the join-policy names are exactly the
+// discriminant of FanoutStep.check.join, so a policy added to the schema flows
+// here automatically rather than being re-spelled.
+export type FanoutJoinPolicy = FanoutStep['check']['join']['policy'];
 
 export interface ResolvedSubRunBranch {
   readonly kind: 'sub-run';

@@ -21,6 +21,7 @@
 import { BUILTIN_CONNECTOR_CAPABILITIES } from '../../schemas/connector.js';
 import { EnabledConnector, type ResolvedConnector } from '../../schemas/connector.js';
 import type { FilesystemCapability } from '../../schemas/connector.js';
+import type { FanoutStep } from '../../schemas/step.js';
 import { RunClosedOutcome } from '../../schemas/trace-entry.js';
 import type { TraceEntry } from '../domain/trace.js';
 
@@ -192,7 +193,8 @@ export function connectorFilesystemCapability(connector: ResolvedConnector): Fil
 
 // --- Fanout --------------------------------------------------------------
 
-type FanoutJoinPolicy = 'pick-winner' | 'disjoint-merge' | 'aggregate-only' | 'aggregate-survivors';
+// Single-sourced from the flow schema rather than re-spelling the literals.
+type FanoutJoinPolicy = FanoutStep['check']['join']['policy'];
 
 const FANOUT_JOIN_POLICIES: readonly FanoutJoinPolicy[] = [
   'pick-winner',

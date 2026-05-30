@@ -108,25 +108,35 @@ export function evaluateFanoutJoinPolicy(input: FanoutJoinInput): FanoutJoinResu
     };
   }
 
-  const allClosed = outcomes.every((outcome) =>
-    (RunClosedOutcomeEnum.options as readonly string[]).includes(outcome.child_outcome),
-  );
-  const allParseable = parseableSurvivors.length === outcomes.length;
-  if (!allClosed) {
-    return {
-      joinedSuccessfully: false,
-      failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`,
-    };
+  if (policy === 'aggregate-only') {
+    const allClosed = outcomes.every((outcome) =>
+      (RunClosedOutcomeEnum.options as readonly string[]).includes(outcome.child_outcome),
+    );
+    const allParseable = parseableSurvivors.length === outcomes.length;
+    if (!allClosed) {
+      return {
+        joinedSuccessfully: false,
+        failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`,
+      };
+    }
+    if (!allParseable) {
+      const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== undefined);
+      return {
+        joinedSuccessfully: false,
+        failureReason:
+          failedOutcome?.failure_reason === undefined
+            ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body`
+            : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`,
+      };
+    }
+    return { joinedSuccessfully: true };
   }
-  if (!allParseable) {
-    const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== undefined);
-    return {
-      joinedSuccessfully: false,
-      failureReason:
-        failedOutcome?.failure_reason === undefined
-          ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body`
-          : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`,
-    };
-  }
-  return { joinedSuccessfully: true };
+
+  return assertNever(policy);
+}
+
+// Compile-time exhaustiveness guard: if a join policy is added to the schema
+// without a branch above, `policy` is no longer `never` here and tsc fails.
+function assertNever(value: never): never {
+  throw new Error(`evaluateFanoutJoinPolicy: unhandled join policy ${JSON.stringify(value)}`);
 }

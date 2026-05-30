@@ -45843,22 +45843,28 @@ function evaluateFanoutJoinPolicy(input) {
       failureReason: `tournament collapsed: fanout step '${stepId}' had ${parseableSurvivors.length} parseable survivor(s), need at least 2${detail}`
     };
   }
-  const allClosed = outcomes.every((outcome) => RunClosedOutcome.options.includes(outcome.child_outcome));
-  const allParseable = parseableSurvivors.length === outcomes.length;
-  if (!allClosed) {
-    return {
-      joinedSuccessfully: false,
-      failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`
-    };
+  if (policy2 === "aggregate-only") {
+    const allClosed = outcomes.every((outcome) => RunClosedOutcome.options.includes(outcome.child_outcome));
+    const allParseable = parseableSurvivors.length === outcomes.length;
+    if (!allClosed) {
+      return {
+        joinedSuccessfully: false,
+        failureReason: `fanout step '${stepId}' aggregate-only: at least one branch did not close cleanly`
+      };
+    }
+    if (!allParseable) {
+      const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== void 0);
+      return {
+        joinedSuccessfully: false,
+        failureReason: failedOutcome?.failure_reason === void 0 ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body` : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`
+      };
+    }
+    return { joinedSuccessfully: true };
   }
-  if (!allParseable) {
-    const failedOutcome = outcomes.find((outcome) => outcome.failure_reason !== void 0);
-    return {
-      joinedSuccessfully: false,
-      failureReason: failedOutcome?.failure_reason === void 0 ? `fanout step '${stepId}' aggregate-only: at least one branch did not produce a parseable result body` : `fanout step '${stepId}' aggregate-only: ${failedOutcome.failure_reason}`
-    };
-  }
-  return { joinedSuccessfully: true };
+  return assertNever2(policy2);
+}
+function assertNever2(value) {
+  throw new Error(`evaluateFanoutJoinPolicy: unhandled join policy ${JSON.stringify(value)}`);
 }
 
 // dist/shared/fanout-aggregate-report.js
