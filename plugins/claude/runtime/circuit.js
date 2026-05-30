@@ -26707,8 +26707,7 @@ var RunRelativePath = external_exports.string().min(1, { message: "run-relative 
 }).brand();
 
 // dist/schemas/ref.js
-var SHA256_HEX = /^[0-9a-f]{64}$/;
-var Sha256 = external_exports.string().regex(SHA256_HEX, {
+var Sha256 = external_exports.string().regex(/^[0-9a-f]{64}$/, {
   message: "must be a 64-character lowercase hex SHA-256 digest"
 });
 var RefKind = external_exports.enum([
