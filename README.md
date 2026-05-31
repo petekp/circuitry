@@ -203,4 +203,6 @@ Contribute or verify:
 
 ## License
 
-No reuse license has been selected yet.
+Circuit is released under the [MIT License](LICENSE). You are free to use,
+modify, and redistribute it, including commercially, as long as you keep the
+copyright and license notice.
