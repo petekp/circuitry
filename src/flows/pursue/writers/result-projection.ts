@@ -47,9 +47,11 @@ export function projectPursuitResult(inputs: PursuitResultProjectorInputs): Purs
   const verificationOk = inputs.verification.overall_status === 'passed';
 
   const outcome =
-    failedCount > 0 || !verificationOk || inputs.review.verdict === 'blocked'
+    failedCount > 0 || !verificationOk
       ? 'failed'
-      : blockedCount > 0 || inputs.batch.verdict === 'blocked'
+      : blockedCount > 0 ||
+          inputs.batch.verdict === 'blocked' ||
+          inputs.review.verdict === 'blocked'
         ? 'blocked'
         : skippedCount > 0 ||
             inputs.review.verdict === 'needs-followup' ||

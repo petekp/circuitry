@@ -1,6 +1,9 @@
 # Slice 3 Spec: Earned-Precision Injection (first behavior change)
 
-Status: build spec
+Status: implemented. Run-start recall now uses flow-scoped earned-precision
+gating through `src/app/history/run-start-recall.ts`,
+`src/app/history/recall-precision.ts`, and `src/shared/relay-support.ts`. Some
+path references below use the pre-`src/app/history` location from writing time.
 Date: 2026-05-29
 Parent design: [`self-auditing-memory.md`](./self-auditing-memory.md) (section 4 step 2, inject by earned precision; section 6, delivery model; section 8, build sequence item 3)
 Depends on: [`self-auditing-memory-slice-1-spec.md`](./self-auditing-memory-slice-1-spec.md) (the `content_id` identity) and [`self-auditing-memory-slice-2-spec.md`](./self-auditing-memory-slice-2-spec.md) (the `history.memory-effect@v1` per-`(group_key, flow_id)` verdicts)

@@ -40277,7 +40277,7 @@ var pursuitReviewShapeHint = {
     "Respond with a single raw JSON object for pursuit.review@v1.",
     'Shape: { "verdict": "<clean|needs-followup|blocked>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line>"] }] }.',
     "Review whether the batch followed the pursuit contract, serialized code-changing work, preserved the difference between estimated and actual touch sets, and surfaced skipped or blocked pursuits honestly.",
-    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow retries before closing.',
+    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow closes honestly as blocked instead of reporting completion.',
     "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences."
   ].join(" ")
 };
@@ -40647,7 +40647,7 @@ function projectPursuitResult(inputs) {
   const blockedCount = inputs.batch.blocked.length;
   const failedCount = inputs.batch.failed.length;
   const verificationOk = inputs.verification.overall_status === "passed";
-  const outcome = failedCount > 0 || !verificationOk || inputs.review.verdict === "blocked" ? "failed" : blockedCount > 0 || inputs.batch.verdict === "blocked" ? "blocked" : skippedCount > 0 || inputs.review.verdict === "needs-followup" || inputs.batch.verdict === "partial" ? "needs_attention" : "complete";
+  const outcome = failedCount > 0 || !verificationOk ? "failed" : blockedCount > 0 || inputs.batch.verdict === "blocked" || inputs.review.verdict === "blocked" ? "blocked" : skippedCount > 0 || inputs.review.verdict === "needs-followup" || inputs.batch.verdict === "partial" ? "needs_attention" : "complete";
   return PursuitResult.parse({
     summary: `Pursuits result for ${inputs.contract.objective}: ${inputs.batch.summary}`,
     outcome,
@@ -41198,7 +41198,7 @@ var pursueFlowData = {
         requestPath: "reports/relay/pursuit-review.request.json",
         receiptPath: "reports/relay/pursuit-review.receipt.txt",
         resultPath: "reports/relay/pursuit-review.result.json",
-        pass: ["clean", "needs-followup"],
+        pass: ["clean", "needs-followup", "blocked"],
         routes: {
           continue: "close-step",
           retry: "batch-step",
@@ -54557,6 +54557,17 @@ function mtimeMs(path) {
 import { existsSync as existsSync15, lstatSync as lstatSync6, readFileSync as readFileSync27, readdirSync as readdirSync3, realpathSync as realpathSync5 } from "node:fs";
 import { basename, isAbsolute as isAbsolute10, relative as relative10, resolve as resolve10 } from "node:path";
 
+// dist/shared/outcome.js
+var FAILURE_OUTCOMES = /* @__PURE__ */ new Set([
+  "aborted",
+  "escalated",
+  "failed",
+  "blocked"
+]);
+function isFailureOutcome(outcome) {
+  return outcome !== void 0 && FAILURE_OUTCOMES.has(outcome);
+}
+
 // dist/app/history/run-source-files.js
 import { existsSync as existsSync14, lstatSync as lstatSync5, readdirSync as readdirSync2, realpathSync as realpathSync4 } from "node:fs";
 import { isAbsolute as isAbsolute9, relative as relative9, resolve as resolve9 } from "node:path";
@@ -54859,7 +54870,7 @@ function buildFacets(input) {
   if (input.stepId !== void 0)
     facets.add(`step:${input.stepId}`);
   const haystack = `${input.sourcePath} ${input.reportSchema ?? ""} ${input.traceKind ?? ""}`.toLowerCase();
-  if (input.outcome === "aborted" || input.traceKind === "relay.failed" || input.traceKind === "step.aborted" || input.checkOutcome === "fail") {
+  if (isFailureOutcome(input.outcome) || input.traceKind === "relay.failed" || input.traceKind === "step.aborted" || input.checkOutcome === "fail") {
     facets.add("failure");
   }
   if (haystack.includes("checkpoint"))
@@ -54959,7 +54970,8 @@ function makeRunDocument(input) {
   const sourceMtime = input.resultPath === void 0 ? input.traceMtime : mtimeMs(sourceAbs);
   const extraction = extractText(input.result ?? {}, { allowCheckpointResponseFields: false });
   const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === "run.closed");
-  const summary = firstHighValue(extraction, ["summary", "reason", "goal", "outcome", "verdict"]) ?? stringValue(closed?.reason) ?? input.identity.goal ?? `Circuit ${input.identity.flowId ?? "run"} ${input.identity.outcome ?? "history"}`;
+  const summaryFields = isFailureOutcome(input.identity.outcome) ? ["reason", "summary", "goal", "outcome", "verdict"] : ["summary", "reason", "goal", "outcome", "verdict"];
+  const summary = firstHighValue(extraction, summaryFields) ?? stringValue(closed?.reason) ?? input.identity.goal ?? `Circuit ${input.identity.flowId ?? "run"} ${input.identity.outcome ?? "history"}`;
   const textParts = [
     `goal: ${input.identity.goal ?? ""}`,
     `flow: ${input.identity.flowId ?? ""}`,
@@ -55567,7 +55579,9 @@ function appliesTo(hit) {
 }
 function hintText(hit) {
   const caution = hit.doc.facets.includes("checkpoint") || hit.doc.facets.includes("verification") ? " This is prior-run context only; rerun current checks before relying on it." : "";
-  const base = hit.snippet.trim().length > 0 ? hit.snippet.trim() : hit.doc.summary;
+  const snippet2 = hit.snippet.trim();
+  const summary = hit.doc.summary.trim();
+  const base = appliesTo(hit) === "prior_failure" ? summary.length > 0 ? summary : snippet2 : snippet2.length > 0 ? snippet2 : summary;
   return `${base}
 Source: ${hit.doc.run_id} ${hit.doc.source_path}.${caution}`.trim();
 }
@@ -55707,8 +55721,12 @@ function facetBoost(queryTerms, doc) {
   const reasons = [];
   const facets = new Set(doc.facets);
   if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has("failure")) {
-    score += 3;
+    score += 5;
     reasons.push("failure facet matched");
+    if (doc.doc_kind === "trace" || doc.doc_kind === "run") {
+      score += 3;
+      reasons.push("failure trace/run prioritized");
+    }
   }
   if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has("checkpoint")) {
     score += 2;
@@ -56721,6 +56739,13 @@ function surfaceFor(input) {
       ...base,
       status_text: `Handoff ready: ${input.processId} paused with handoff evidence.`,
       next_action: "resume from handoff"
+    };
+  }
+  if (input.outcome === "failed") {
+    return {
+      ...base,
+      status_text: `Failed: ${input.processId} could not close with the required process evidence.`,
+      next_action: "Inspect the process evidence and rerun with a corrected goal."
     };
   }
   return {
@@ -58232,7 +58257,10 @@ function writeOperatorSummary(input) {
   if (input.runResult.outcome === "aborted" && input.runResult.reason !== void 0) {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
-  const headline = input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : projection.headline;
+  if (input.runResult.outcome === "escalated" && input.runResult.reason !== void 0) {
+    details.push(`Escalation reason: ${input.runResult.reason}`);
+  }
+  const headline = input.runResult.outcome === "checkpoint_waiting" ? "Circuit: Waiting for a checkpoint choice." : input.runResult.outcome === "aborted" ? "Circuit: Run aborted." : input.runResult.outcome === "escalated" ? "Circuit: Run escalated." : projection.headline;
   const candidate = OperatorSummary.parse({
     schema_version: 1,
     run_id: input.runResult.run_id,
@@ -60434,7 +60462,7 @@ var RUN_ENVELOPE_RELATIVE_PATH2 = "reports/run-envelope.json";
 var RECALL_REPORT_RELATIVE_PATH = "reports/history/recall.json";
 var EFFECT_NOTE = "Report-only linkage (Slice 1). Effect requires cross-run aggregation over comparable runs (Slice 2).";
 function deriveAbortReason(envelope) {
-  const attempt = envelope.process_attempts.find((entry) => entry.outcome === "blocked" || entry.outcome === "failed");
+  const attempt = envelope.process_attempts.find((entry) => isFailureOutcome(entry.outcome));
   if (attempt === void 0)
     return void 0;
   return attempt.blocked_reason ?? attempt.summary;
@@ -60637,7 +60665,7 @@ function buildArm(runs) {
     counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
     if (outcome === "complete")
       complete += 1;
-    else if (outcome === "blocked" || outcome === "failed")
+    else if (isFailureOutcome(outcome))
       adverse += 1;
     else
       neutral += 1;

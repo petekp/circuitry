@@ -234,7 +234,7 @@
         "result_path": "reports/relay/pursuit-review.result.json"
       },
       "check": {
-        "pass": ["clean", "needs-followup"]
+        "pass": ["clean", "needs-followup", "blocked"]
       }
     },
     {

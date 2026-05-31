@@ -61,7 +61,13 @@ function createFixture(options: FixtureOptions = {}): string {
       'publish:plugins:local': 'node scripts/plugins/publish.ts local',
       'publish:plugins:release':
         'node scripts/plugins/publish.ts release --codex-source petekp/circuit --codex-marketplace circuit',
+      'sync:claude-plugin-cache': 'node scripts/plugins/sync-claude-cache.ts',
+      'check:claude-plugin-cache': 'node scripts/plugins/sync-claude-cache.ts --check',
       'doctor:plugins:installed': 'node scripts/plugins/installed-doctor.ts',
+      'sync:host-plugin-caches':
+        'npm run sync:claude-plugin-cache && npm run sync:codex-plugin-cache',
+      'check:host-plugin-caches':
+        'npm run check:claude-plugin-cache && npm run check:codex-plugin-cache',
     },
   });
   writeJson(join(root, 'plugins/version.json'), { version });
@@ -272,8 +278,20 @@ describe('plugin publish automation', () => {
     expect(pkg.scripts['publish:plugins:release']).toBe(
       'node scripts/plugins/publish.ts release --codex-source petekp/circuit --codex-marketplace circuit',
     );
+    expect(pkg.scripts['sync:claude-plugin-cache']).toBe(
+      'node scripts/plugins/sync-claude-cache.ts',
+    );
+    expect(pkg.scripts['check:claude-plugin-cache']).toBe(
+      'node scripts/plugins/sync-claude-cache.ts --check',
+    );
     expect(pkg.scripts['doctor:plugins:installed']).toBe(
       'node scripts/plugins/installed-doctor.ts',
+    );
+    expect(pkg.scripts['sync:host-plugin-caches']).toBe(
+      'npm run sync:claude-plugin-cache && npm run sync:codex-plugin-cache',
+    );
+    expect(pkg.scripts['check:host-plugin-caches']).toBe(
+      'npm run check:claude-plugin-cache && npm run check:codex-plugin-cache',
     );
   });
 

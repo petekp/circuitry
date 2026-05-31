@@ -26,6 +26,64 @@ function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function writeManualHistoryIndex(input: {
+  root: string;
+  runsBase: string;
+  indexDir: string;
+  documents: readonly Record<string, unknown>[];
+}): void {
+  mkdirSync(input.runsBase, { recursive: true });
+  mkdirSync(input.indexDir, { recursive: true });
+  writeFileSync(
+    join(input.indexDir, 'documents.v1.jsonl'),
+    `${input.documents.map((doc) => JSON.stringify(doc)).join('\n')}\n`,
+  );
+  writeJson(join(input.indexDir, 'manifest.v1.json'), {
+    api_version: 'history-index-v1',
+    schema_version: 1,
+    created_at: RECORDED_AT,
+    repo_root: input.root,
+    runs_base: input.runsBase,
+    index_dir: input.indexDir,
+    documents_path: 'documents.v1.jsonl',
+    run_count: 1,
+    document_count: input.documents.length,
+    source_fingerprint: {
+      run_folder_names_sha256: '0'.repeat(64),
+      latest_source_mtime_ms: 0,
+    },
+    warnings: [],
+  });
+}
+
+function historyDoc(overrides: Record<string, unknown>): Record<string, unknown> {
+  return {
+    api_version: 'history-document-v1',
+    schema_version: 1,
+    doc_id: 'doc-base',
+    doc_kind: 'report',
+    run_id: RUN_ID,
+    flow_id: 'build',
+    run_folder: 'runs/manual',
+    source_path: 'reports/result.json',
+    source_ref: {
+      kind: 'report',
+      ref: 'reports/result.json',
+      run_id: RUN_ID,
+      flow_id: 'build',
+      sha256: '1'.repeat(64),
+    },
+    recorded_at: RECORDED_AT,
+    title: 'Circuit build history',
+    summary: 'Generic history document',
+    text: '',
+    extracted_from: [{ field_role: 'summary' }],
+    facets: ['flow:build', 'kind:report'],
+    memory_safe: true,
+    ...overrides,
+  };
+}
+
 function writeFixture(root: string): { runsBase: string; indexDir: string; runFolder: string } {
   const runsBase = join(root, '.circuit', 'runs');
   const indexDir = join(root, '.circuit', 'history');
@@ -289,5 +347,63 @@ describe('history indexer and query', () => {
     expect(result.index_state).toBe('possibly_stale');
     expect(result.warnings.some((warning) => warning.code === 'source_invalid')).toBe(true);
     expect(result.results[0]?.staleness.status).toBe('stale');
+  });
+
+  it('prioritizes failure trace and run evidence over generic reports for broad failure queries', () => {
+    const root = tempRoot('circuit-history-failure-ranking-');
+    const runsBase = join(root, '.circuit', 'runs');
+    const indexDir = join(root, '.circuit', 'history');
+    writeManualHistoryIndex({
+      root,
+      runsBase,
+      indexDir,
+      documents: [
+        historyDoc({
+          doc_id: 'generic-proof-report',
+          doc_kind: 'report',
+          source_path: 'reports/proof.json',
+          source_ref: {
+            kind: 'report',
+            ref: 'reports/proof.json',
+            run_id: RUN_ID,
+            flow_id: 'build',
+            sha256: '2'.repeat(64),
+          },
+          title: 'Proof report',
+          summary: 'empty result body connector relay fix',
+          text: 'empty result body connector relay fix',
+          facets: ['flow:build', 'kind:report', 'schema:proof@v1'],
+        }),
+        historyDoc({
+          doc_id: 'failure-trace',
+          doc_kind: 'trace',
+          source_path: 'trace.ndjson',
+          source_ref: {
+            kind: 'trace',
+            ref: 'trace.ndjson#sequence=3',
+            run_id: RUN_ID,
+            flow_id: 'build',
+            sequence: 3,
+          },
+          sequence: 3,
+          title: 'Circuit build failure',
+          summary: 'empty result body connector relay failure',
+          text: 'connector relay failure',
+          facets: ['failure', 'flow:build', 'kind:trace', 'outcome:failed'],
+        }),
+      ],
+    });
+
+    const result = queryHistory({
+      repoRoot: root,
+      runsBase,
+      indexDir,
+      query: 'empty result body connector relay failure fix',
+      perRunLimit: 5,
+      now: () => new Date(RECORDED_AT),
+    });
+
+    expect(result.results[0]?.doc.doc_id).toBe('failure-trace');
+    expect(result.results[0]?.ranking_reasons).toContain('failure trace/run prioritized');
   });
 });

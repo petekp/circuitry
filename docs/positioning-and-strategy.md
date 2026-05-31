@@ -171,17 +171,18 @@ This is also where the *"smarter models will subsume this"* counter-argument is 
 | Per-run reports (brief, plan, verification, review, result) written to `reports/` | **Real** |
 | Schema-versioned, machine-readable JSON | **Real** |
 | Within-run continuity (pause/resume single run) | **Real** (`runtime/checkpoint.ts`, `schemas/continuity.ts`) |
-| Cross-run query / recall surface | **Gap** — reports pile up but no `circuit history` / `circuit recall` to ask questions across them |
-| Agent-side consumption (load relevant past reports at session start) | **Gap** — bridge from architecture-supports-it to capability-actually-shipping |
+| Cross-run query / recall surface | **Real but bounded** — `circuit history query` and `circuit history pull` can retrieve cited prior-run records; exact prior-failure queries are the strongest current case |
+| Agent-side consumption (load relevant past reports at session start) | **Partial** — run-start recall can surface cited hints; broad recall quality and measured usefulness still need release evidence |
 
-Closing those last two gaps is small relative to the leverage they unlock. Likely 1–2 weeks of focused work.
+The next gap is not "make memory exist." It is proving that broad recall is
+useful instead of noisy, and then reflecting that proof in release copy.
 
 ### The pitch this enables
 
 The marketing now has two distinct payoffs operating on different time horizons:
 
 1. **Day-one value (flow shape).** *Stop reinventing your flow. Ship the product.* Hooks the user.
-2. **Compounding value (project memory).** *Your project gets smarter every time you use it, instead of forgetting.* Justifies long-term commitment.
+2. **Compounding value (project memory).** *Circuit can build cited prior-run context over time, instead of leaving the next agent cold.* Justifies long-term commitment without overclaiming broad intelligence.
 
 ### Strategic implications
 
@@ -201,7 +202,7 @@ What new capabilities are unlocked by queryable reports? Compared honestly again
 1. **Failed-attempt memory.** Agents repeat failed approaches because they can't see the past failures. Git doesn't preserve abandoned attempts; MEMORY.md compresses them out. Circuit captures every run including `@stop` and `revise` outcomes. *Uniquely Circuit territory.*
 2. **Intent recovery for agents.** *"Why does the auth module retry 3 times?"* — agent retrieves the actual recorded brief instead of reverse-engineering from code. Database lookup, not reasoning under uncertainty.
 3. **Trust calibration analytics.** *"How often does my agent's claimed completion actually pass verification on first try?"* Cannot be computed without structured runs. No git or MEMORY.md equivalent.
-4. **Pre-task context loading for agents.** Before a new task, agent loads relevant past reports from related code. Invisible UX, compounding payoff. The longer you use Circuit on a codebase, the better future runs are.
+4. **Pre-task context loading for agents.** Before a new task, agent loads cited, relevant past reports from related work. Invisible UX, compounding payoff. Exact prior-failure hints are the current strongest case; broad usefulness still needs proof.
 
 ### Marginal (real but redundant with existing tools)
 
@@ -345,7 +346,7 @@ Don't ship the aspirational stuff in marketing. The near-term capabilities are e
 In order:
 
 1. **Build the proof demo** (comparison demo: bug-fix run with vs. without Circuit, annotated blog post format).
-2. **Spec and ship `circuit history` / cross-run recall** to make project-memory positioning demonstrable.
+2. **Prove broad `circuit history` recall quality** with release evidence before using stronger project-memory claims.
 3. **Polish the first-run experience** until it's friction-free for new users.
 4. **Build (or sunset) the keep-up channel.**
 5. **Then invest in marketing.** Marketing without proof, polish, and target is what makes formative products feel like vapor.

@@ -1,6 +1,9 @@
 # Slice 2 Spec: Cross-Run Effect Aggregation (report-only)
 
-Status: build spec
+Status: implemented. Current code lives under `src/app/history/memory-effect.ts`,
+`src/app/history/memory-effect-read.ts`, `src/schemas/history.ts`, and the
+`circuit history memory-effect` CLI path. Some path references below use the
+pre-`src/app/history` location from writing time.
 Date: 2026-05-29
 Parent design: [`self-auditing-memory.md`](./self-auditing-memory.md) (section 8, build sequence item 2; section 13, open questions 1-3)
 Depends on: [`self-auditing-memory-slice-1-spec.md`](./self-auditing-memory-slice-1-spec.md) (the `history.memory-merge@v1` artifact, the `content_id` grouping key, and the frozen `MemoryMergeEffectStatusV1` enum)

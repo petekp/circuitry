@@ -120,8 +120,12 @@ function facetBoost(
   const reasons: string[] = [];
   const facets = new Set(doc.facets);
   if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has('failure')) {
-    score += 3;
+    score += 5;
     reasons.push('failure facet matched');
+    if (doc.doc_kind === 'trace' || doc.doc_kind === 'run') {
+      score += 3;
+      reasons.push('failure trace/run prioritized');
+    }
   }
   if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has('checkpoint')) {
     score += 2;

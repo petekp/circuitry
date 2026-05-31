@@ -79,7 +79,8 @@ describe('documentation surface', () => {
       '`plugins/claude/commands/<id>.md`',
       '`plugins/codex/commands/<id>.md`',
       '`plugins/codex/skills/<id>/SKILL.md`',
-      'npm run sync:codex-plugin-cache',
+      'npm run sync:host-plugin-caches',
+      'npm run check:host-plugin-caches',
       'npm run check-release-infra',
       'npm run check-flow-drift',
       'npm run verify',
@@ -132,6 +133,16 @@ describe('documentation surface', () => {
       .map(({ path, matches }) => `${path}: ${matches?.[0]}`);
 
     expect(offenders).toEqual([]);
+  });
+
+  it('does not publish rejected connector shorthand in configuration examples', () => {
+    const configuration = readRepoFile('docs/configuration.md');
+
+    expect(configuration).not.toContain('reviewer: codex');
+    expect(configuration).not.toContain('researcher: codex');
+    expect(configuration).not.toContain('explore: codex');
+    expect(configuration).toContain('kind: builtin');
+    expect(configuration).toContain('name: codex');
   });
 
   it('keeps progressive repository maps wired from docs to source layers', () => {

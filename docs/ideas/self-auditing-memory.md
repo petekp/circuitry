@@ -1,6 +1,8 @@
 # Self-Auditing Memory: Circuit's Effectiveness Ratchet
 
-Status: design thesis
+Status: partially implemented design thesis. Slices 1-4 are implemented and
+Slice 5 is partly implemented; lifecycle promotion/retirement and automatic
+run-close fact write-back remain future work.
 Date: 2026-05-29
 
 This doc is the synthesis of an extended design pass: a first-cut design panel, three competing investigations (a pull-query "History Ask" proposal, a capture-feasibility prototype, and an other-model capture report), a cited deep-research survey of the memory field, and a first-principles critique of the popular compound-engineering plugin. It pins down the best approach Circuit can take, framed around the advantages only Circuit's architecture has.
@@ -38,7 +40,7 @@ Each step leverages a named advantage and defends a named pitfall from the resea
 
 1. **Produce cited facts from typed evidence, not reflective prose.** Distill facts like the repo's verification command (from `verification.command_evaluated`) and recurring abort reasons (from clustered `step.aborted`). Each is cited to a real run artifact with a hash. (A third candidate — "risky subsystems from source paths recurring across aborted runs" — turned out not to be grounded: the Slice 5 spec found `source_path` names a run-artifact slot, not a repo file, so that signal is deferred until a repo-path-bearing primitive exists, the same honesty correction as the `verification.command_evaluated` coverage note in section 3.) *Advantage: typed evidence. Pitfall defended: over-generalization and self-reinforcing loops, which the research tied specifically to narrative "lessons" memory.*
 2. **Inject by earned precision, not guessed relevance.** Push only a tiny set of hints with a non-negative measured effect and a fresh source. Everything else is reachable by pull. *Advantage: the measurement loop. Pitfall defended: the distractor effect, where a topically similar but wrong hint costs real accuracy. The precision gate the research demanded, grounded in outcome rather than a heuristic.*
-3. **Measure on comparable runs.** `memory_context.memory_input_ids` records which memory inputs a run used (the `memory_id` of each input, not the inner hint id). Tie those ids to that run's objective outcome and compare against comparable runs (same flow, same intent class) that did not use them. *Advantage: commensurability. This is the unique unlock and the field's open frontier.* Prerequisite, not yet built: today the recorded `memory_id` is run-scoped (`prior-run-<run_id>-<hash>`, where the hash is over a `doc_id` that also leads with the run id, `src/history/memory-preview.ts`), so the same fact in two runs gets two different ids. Cross-run grouping needs a content-addressed, run-independent memory identity added first. Until then there is no key to group "runs that used the same memory item."
+3. **Measure on comparable runs.** `memory_context.memory_input_ids` records which memory inputs a run used (the `memory_id` of each input, not the inner hint id). Tie those ids to that run's objective outcome and compare against comparable runs (same flow, same intent class) that did not use them. *Advantage: commensurability. This is the unique unlock and the field's open frontier.* Implementation update: the content-addressed identity now exists in `src/app/history/memory-identity.ts`, and `history memory-merge` / `history memory-effect` use it. The broader effectiveness claim is still bounded by corpus size and recurrence.
 4. **Judge effect as a cited artifact, not a self-report.** Write a memory-merge report whose verdict is an explicit `effect_status` (`not_enough_data`, `correlated_positive`, `correlated_negative`, or `unresolved`), derived from cited outcomes and defaulting to `not_enough_data`, never from asking the model whether it helped. The idea originates in [`longitudinal-evidence-memory.md`](./longitudinal-evidence-memory.md); the new point is that Circuit can populate it from comparable runs once enough of them exist. *Pitfall defended: unfaithful self-report.*
 5. **Prune and promote from the judgment.** Hints that never correlate with better runs decay. Hints that repeatedly help get promoted. Memory earns its place instead of accumulating. *Pitfall defended: stale drift and prompt bloat.*
 
@@ -78,7 +80,10 @@ Hybrid, as the research endorsed. A tiny earned push at run start, plus a gated 
 
 This also fixes the push-only weakness directly. A hint that gets evicted from context mid-run can be re-fetched by pull at the exact decision point where it matters, rather than relying on it surviving the whole run.
 
-One current limitation to close: run-start recall does not yet pass `options.flow` to `queryHistory` (`src/history/run-start-recall.ts`), even though the history query CLI supports the filter. So today's recall is goal-lexical and not flow-scoped, and flow-scoping is part of the work, not an existing property.
+Implementation update: run-start recall now passes the selected flow into
+`queryHistory` through `src/app/history/run-start-recall.ts`, so recall is
+flow-scoped. A run with no prior same-flow hits may now receive no prior-run
+hints, which is the intended narrower behavior.
 
 ## 7. The keystone slice
 
@@ -99,14 +104,30 @@ Smallest shippable first. Each slice stands alone and is report-only until the d
 
 Slice 1 is the keystone. Slices 3 and 4 are the only ones that change behavior, and they only do so once slices 1 and 2 have shown the effect is real.
 
-Each slice now has a build-ready spec keyed to current source, each resolving its slice's open questions with the default-and-flag pattern (conservative inline decisions marked for operator veto): Slice 1 [`self-auditing-memory-slice-1-spec.md`](./self-auditing-memory-slice-1-spec.md) (built; `verify:fast` green), Slice 2 [`self-auditing-memory-slice-2-spec.md`](./self-auditing-memory-slice-2-spec.md), Slice 3 [`self-auditing-memory-slice-3-spec.md`](./self-auditing-memory-slice-3-spec.md), Slice 4 [`self-auditing-memory-slice-4-spec.md`](./self-auditing-memory-slice-4-spec.md), Slice 5 [`self-auditing-memory-slice-5-spec.md`](./self-auditing-memory-slice-5-spec.md). The specs share one identity space (`content_id`/`group_key`), one frozen `effect_status` enum, and one fail-open, push-only-suppression posture so the behavior-changing slices never blank memory or seize authority.
+Each slice has a build-ready spec keyed to source. Current status: Slice 1
+[`self-auditing-memory-slice-1-spec.md`](./self-auditing-memory-slice-1-spec.md)
+is implemented; Slice 2
+[`self-auditing-memory-slice-2-spec.md`](./self-auditing-memory-slice-2-spec.md)
+is implemented; Slice 3
+[`self-auditing-memory-slice-3-spec.md`](./self-auditing-memory-slice-3-spec.md)
+is implemented; Slice 4
+[`self-auditing-memory-slice-4-spec.md`](./self-auditing-memory-slice-4-spec.md)
+is implemented; Slice 5
+[`self-auditing-memory-slice-5-spec.md`](./self-auditing-memory-slice-5-spec.md)
+is partially implemented. The implemented pieces share one identity space
+(`content_id`/`group_key`), one frozen `effect_status` enum, and one fail-open,
+push-only-suppression posture so behavior-changing memory never blanks recall
+or seizes authority.
 
 Sequencing against the in-flight architecture-hardening work: scope Slice 1 to read only the stable on-disk `run.envelope@v0` record (its `outcome` and `memory_context.memory_input_ids` are not being moved) and avoid importing the runtime trace consumers, the private `sourceStaleness` helper, or history hashing internals while SD-FIX-1/2 are unlanded (REP-R1 and REP-R2 have since landed; only the SD-FIX hashing/enumerator work remains in flight). Target stable contracts (schemas, report paths, refs, run and flow ids, trace kinds, history documents), not current file locations. Prefer implementing Slice 1 as a standalone read-only history command that scans completed run folders, rather than a new post-run writer hook, because the architecture-hardening branch is actively refactoring the post-run artifact extraction path and a read-only scan is far less likely to collide with that work.
 
 ## 9. What it refuses to do
 
 - No authority creep. Memory stays hint-only, so a wrong or poisoned fact degrades attention at worst, never control. Project and flow scope removes the shared-bank precondition that memory-poisoning attacks need.
-- No user invocation. If "capture" or "recall" ever becomes a command the operator must remember, Circuit has reproduced the exact failure it set out to avoid.
+- No required operator invocation for automatic capture or recall. Operator-filed
+  `circuit memory note` facts and agent-invoked `circuit history pull` are
+  explicit, auditable exceptions; normal run-start recall still happens without
+  the operator remembering a separate command.
 - No reflective prose lessons. Cited facts from typed evidence only.
 - No routing changes and no self-evolving flows yet. Execution first.
 - Never a silent meaningful update. When memory is proposed or recorded, surface a one-line `memory_indicator`. The `RunMemoryUpdateEvent` contract already requires an operator indicator, but note it is defined and not yet emitted in practice: every run's `memory_update_events` is empty today.

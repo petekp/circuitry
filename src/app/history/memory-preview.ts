@@ -27,7 +27,20 @@ function hintText(hit: HistoryQueryHit): string {
     hit.doc.facets.includes('checkpoint') || hit.doc.facets.includes('verification')
       ? ' This is prior-run context only; rerun current checks before relying on it.'
       : '';
-  const base = hit.snippet.trim().length > 0 ? hit.snippet.trim() : hit.doc.summary;
+  const snippet = hit.snippet.trim();
+  const summary = hit.doc.summary.trim();
+  // On a prior-failure hit, lead with the failure summary (what went wrong and
+  // how it was resolved) rather than the lexical snippet that matched the
+  // query. The snippet is whatever fragment scored the match — often
+  // low-signal — so it buries the reason recall exists to surface.
+  const base =
+    appliesTo(hit) === 'prior_failure'
+      ? summary.length > 0
+        ? summary
+        : snippet
+      : snippet.length > 0
+        ? snippet
+        : summary;
   return `${base}\nSource: ${hit.doc.run_id} ${hit.doc.source_path}.${caution}`.trim();
 }
 

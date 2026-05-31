@@ -416,13 +416,22 @@ export function writeOperatorSummary(input: {
   if (input.runResult.outcome === 'aborted' && input.runResult.reason !== undefined) {
     details.push(`Abort reason: ${input.runResult.reason}`);
   }
+  // An escalated run is a failure (it ran out of recovery and handed up), but
+  // its per-flow projection headline reads as a neutral/complete result and
+  // hides the reason. Surface it the way an abort is surfaced so the operator
+  // sees the failure, not a false "complete".
+  if (input.runResult.outcome === 'escalated' && input.runResult.reason !== undefined) {
+    details.push(`Escalation reason: ${input.runResult.reason}`);
+  }
 
   const headline =
     input.runResult.outcome === 'checkpoint_waiting'
       ? 'Circuit: Waiting for a checkpoint choice.'
       : input.runResult.outcome === 'aborted'
         ? 'Circuit: Run aborted.'
-        : projection.headline;
+        : input.runResult.outcome === 'escalated'
+          ? 'Circuit: Run escalated.'
+          : projection.headline;
 
   const candidate = OperatorSummary.parse({
     schema_version: 1,

@@ -573,6 +573,15 @@ function surfaceFor(input: {
       next_action: 'resume from handoff',
     };
   }
+  if (input.outcome === 'failed') {
+    return {
+      ...base,
+      status_text: `Failed: ${input.processId} could not close with the required process evidence.`,
+      next_action: 'Inspect the process evidence and rerun with a corrected goal.',
+    };
+  }
+  // Defensive default: every RunEnvelopeOutcome above is handled, so this only
+  // fires if a new outcome is added without a branch.
   return {
     ...base,
     status_text: `Stopped: ${input.processId} could not close with enough process evidence.`,

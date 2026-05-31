@@ -1,6 +1,9 @@
 # Slice 1 Spec: The Report-Only Memory-Merge Artifact
 
-Status: build spec
+Status: implemented. Current code lives under `src/app/history/memory-merge.ts`,
+`src/app/history/memory-identity.ts`, `src/schemas/history.ts`, and the
+`circuit history memory-merge` CLI path. Some path references below use the
+pre-`src/app/history` location from writing time.
 Date: 2026-05-29
 Parent design: [`self-auditing-memory.md`](./self-auditing-memory.md) (section 7, the keystone slice; section 8, build sequence item 1)
 

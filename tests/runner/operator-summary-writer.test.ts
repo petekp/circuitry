@@ -2206,4 +2206,29 @@ describe('operator summary writer', () => {
       'relay result failed schema validation',
     );
   });
+
+  it('surfaces the failure reason and headline for an escalated run', () => {
+    const result = RunResult.parse({
+      ...baseResult('review'),
+      outcome: 'escalated',
+      summary: 'review escalated',
+      reason: 'recovery exceeded the allowed attempts',
+    });
+
+    const written = writeOperatorSummary({
+      runFolder,
+      runResult: result,
+      route: { selectedFlow: 'review' },
+    });
+
+    // An escalated run is a failure; it must not read as a neutral/complete
+    // per-flow headline, and its reason must be surfaced like an abort.
+    expect(written.summary.headline).toBe('Circuit: Run escalated.');
+    expect(written.summary.details).toContain(
+      'Escalation reason: recovery exceeded the allowed attempts',
+    );
+    expect(readFileSync(written.markdownPath, 'utf8')).toContain(
+      'recovery exceeded the allowed attempts',
+    );
+  });
 });

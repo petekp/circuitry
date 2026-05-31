@@ -134,6 +134,81 @@ describe('Claude Code host plugin package', () => {
     expect(existsSync(resolve(PLUGIN_ROOT, 'skills/runtime-proof'))).toBe(false);
   });
 
+  it('syncs and checks the local Claude plugin cache package', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-cache-'));
+    const versionManifest = VersionManifest.parse(
+      JSON.parse(readFileSync(resolve(REPO_ROOT, 'plugins/version.json'), 'utf8')),
+    );
+    try {
+      const cachePath = join(tempDir, `plugins/cache/circuit/circuit/${versionManifest.version}`);
+      const syncResult = spawnSync(
+        process.execPath,
+        [resolve(REPO_ROOT, 'scripts/plugins/sync-claude-cache.ts'), '--cache-path', cachePath],
+        { cwd: REPO_ROOT, encoding: 'utf8' },
+      );
+      expect(syncResult.status, syncResult.stderr).toBe(0);
+
+      const syncSummary = JSON.parse(syncResult.stdout) as {
+        status: string;
+        source: string;
+        commands: string[];
+        skills: string[];
+      };
+      expect(syncSummary.status).toBe('synced');
+      expect(syncSummary.source).toBe(PLUGIN_ROOT);
+      expect(syncSummary.commands).toEqual([...EXPECTED_CLAUDE_COMMANDS].sort());
+      expect(syncSummary.skills).toContain('pursue');
+      expect(syncSummary.skills).toContain('review');
+      expect(existsSync(join(cachePath, 'commands/run.md'))).toBe(true);
+      expect(existsSync(join(cachePath, 'skills/pursue/circuit.json'))).toBe(true);
+
+      const cleanCheck = spawnSync(
+        process.execPath,
+        [
+          resolve(REPO_ROOT, 'scripts/plugins/sync-claude-cache.ts'),
+          '--check',
+          '--cache-path',
+          cachePath,
+        ],
+        { cwd: REPO_ROOT, encoding: 'utf8' },
+      );
+      expect(cleanCheck.status, cleanCheck.stderr).toBe(0);
+      expect(JSON.parse(cleanCheck.stdout)).toMatchObject({ status: 'ok' });
+
+      writeFileSync(join(cachePath, 'commands/run.md'), 'stale cache');
+      const staleCheck = spawnSync(
+        process.execPath,
+        [
+          resolve(REPO_ROOT, 'scripts/plugins/sync-claude-cache.ts'),
+          '--check',
+          '--cache-path',
+          cachePath,
+        ],
+        { cwd: REPO_ROOT, encoding: 'utf8' },
+      );
+      expect(staleCheck.status).toBe(1);
+      expect(JSON.parse(staleCheck.stdout)).toMatchObject({ status: 'stale' });
+
+      for (const unsafePath of [
+        tempDir,
+        join(tempDir, 'plugins/cache/circuit'),
+        join(tempDir, 'plugins/cache/circuit/circuit/wrong-version'),
+        REPO_ROOT,
+      ]) {
+        const unsafeSync = spawnSync(
+          process.execPath,
+          [resolve(REPO_ROOT, 'scripts/plugins/sync-claude-cache.ts'), '--cache-path', unsafePath],
+          { cwd: REPO_ROOT, encoding: 'utf8' },
+        );
+
+        expect(unsafeSync.status).toBe(2);
+        expect(unsafeSync.stderr).toContain('refusing');
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('wrapper uses the bundled runtime when PATH has no circuit binary', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'circuit-claude-host-bundled-'));
     try {

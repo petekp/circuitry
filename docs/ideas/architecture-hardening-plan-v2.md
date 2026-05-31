@@ -1,6 +1,6 @@
 # Circuit Architecture Hardening — Authoritative Plan (v2)
 
-> Supersedes `architecture-hardening-plan.md` (v1, the first within-architecture pass). v2 is the architecture-questioning re-analysis: 10 staff-architect agents judged each area sound/flawed, 47 proposals were adversarially stress-tested (3-lens panels for redesigns), all 32 first-pass `needs-scoping` findings were re-verdicted, and a completeness+over-reach critic gated the result. Generated 2026-05-29 from workflow `w30d3obyl` (38 agents, ~3.1M tokens). **Read-only — no code changed.** Corrections from the critic are applied below.
+> Supersedes the removed v1 architecture-hardening plan. v2 is the architecture-questioning re-analysis: 10 staff-architect agents judged each area sound/flawed, 47 proposals were adversarially stress-tested (3-lens panels for redesigns), all 32 first-pass `needs-scoping` findings were re-verdicted, and a completeness+over-reach critic gated the result. Generated 2026-05-29 from workflow `w30d3obyl` (38 agents, ~3.1M tokens). **Read-only — no code changed.** Corrections from the critic are applied below.
 
 ## The verdict: the architecture is sound
 

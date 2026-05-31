@@ -19,7 +19,7 @@ export const pursuitReviewShapeHint: SchemaShapeHint = {
     'Respond with a single raw JSON object for pursuit.review@v1.',
     'Shape: { "verdict": "<clean|needs-followup|blocked>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line>"] }] }.',
     'Review whether the batch followed the pursuit contract, serialized code-changing work, preserved the difference between estimated and actual touch sets, and surfaced skipped or blocked pursuits honestly.',
-    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow retries before closing.',
+    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow closes honestly as blocked instead of reporting completion.',
     'Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences.',
   ].join(' '),
 };

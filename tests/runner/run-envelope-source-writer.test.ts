@@ -359,7 +359,7 @@ describe('Run envelope source writer', () => {
     expect(record.surface_output.status_text).not.toMatch(/\b(?:done|complete|completed)\b/i);
   });
 
-  it('records aborted child processes as stopped without claiming completion', () => {
+  it('records an aborted child process as a failed run without claiming completion', () => {
     const runFolder = join(tempDir, 'aborted-review-run');
     const resultPath = join(runFolder, 'reports/result.json');
     const abortedResult = RunResult.parse({
@@ -395,7 +395,7 @@ describe('Run envelope source writer', () => {
     });
     expect(record.process_attempts[0]?.outcome).toBe('failed');
     expect(record.surface_output.status_text).toBe(
-      'Stopped: review could not close with enough process evidence.',
+      'Failed: review could not close with the required process evidence.',
     );
     expect(record.surface_output.status_text).not.toMatch(/\b(?:done|complete|completed)\b/i);
   });

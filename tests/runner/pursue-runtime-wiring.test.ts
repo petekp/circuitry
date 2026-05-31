@@ -57,6 +57,18 @@ const DEFAULT_REVIEW_BODY = JSON.stringify({
   findings: [],
 });
 
+const BLOCKED_REVIEW_BODY = JSON.stringify({
+  verdict: 'blocked',
+  summary: 'The batch has untrusted touch-set evidence',
+  findings: [
+    {
+      severity: 'medium',
+      text: 'actual_touch_set lists paths that were only inspected, not changed',
+      file_refs: ['reports/pursuit/batch.json'],
+    },
+  ],
+});
+
 function relayerWith(
   options: {
     batchBody?: string;
@@ -204,5 +216,40 @@ describe('Pursue runtime wiring', () => {
       'pursuit.verification',
       'pursuit.review',
     ]);
+  });
+
+  it('surfaces blocked Pursue review findings instead of aborting on retry exhaustion', async () => {
+    const { bytes } = loadFixture();
+    const runFolder = join(runFolderBase, 'blocked-review');
+
+    const outcome = await runCompiledFlow({
+      runDir: runFolder,
+      flowBytes: bytes,
+      runId: '58000000-0000-0000-0000-000000000001',
+      goal: 'pursue: Update src/example.ts',
+      depth: 'standard',
+      now: deterministicNow(Date.UTC(2026, 4, 15, 9, 5, 0)),
+      relayer: relayerWith({ reviewBody: BLOCKED_REVIEW_BODY }),
+      projectRoot: makeVerificationProjectRoot(),
+    });
+
+    expect(outcome.outcome).toBe('complete');
+    const labels = (await readTraceEntries(runFolder)).map(traceEntryLabel);
+    expect(labels).toContain('relay.completed:review-step');
+    expect(labels).toContain('step.report_written:close-step');
+    expect(labels).not.toContain('run.aborted');
+
+    const review = PursuitReview.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports/pursuit/review.json'), 'utf8')),
+    );
+    expect(review.verdict).toBe('blocked');
+    expect(review.findings[0]?.severity).toBe('medium');
+
+    const result = PursuitResult.parse(
+      JSON.parse(readFileSync(join(runFolder, 'reports/pursuit-result.json'), 'utf8')),
+    );
+    expect(result.outcome).toBe('blocked');
+    expect(result.review_verdict).toBe('blocked');
+    expect(result.verification_status).toBe('passed');
   });
 });

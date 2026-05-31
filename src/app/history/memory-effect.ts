@@ -15,6 +15,7 @@ import {
   type MemoryMergeRunLinkageV1,
   type RunEnvelopeOutcome,
 } from '../../schemas/index.js';
+import { isFailureOutcome } from '../../shared/outcome.js';
 import { HISTORY_MEMORY_EFFECT_FILE, type HistoryPaths } from './indexer.js';
 import { type BuildMemoryMergeReportOptions, buildMemoryMergeReport } from './memory-merge.js';
 
@@ -61,7 +62,7 @@ function buildArm(runs: readonly MemoryMergeRunLinkageV1[]): MemoryEffectArmV1 {
   for (const outcome of outcomeByRun.values()) {
     counts.set(outcome, (counts.get(outcome) ?? 0) + 1);
     if (outcome === 'complete') complete += 1;
-    else if (outcome === 'blocked' || outcome === 'failed') adverse += 1;
+    else if (isFailureOutcome(outcome)) adverse += 1;
     else neutral += 1; // needs_attention | handoff — counted, neither success nor failure
   }
 

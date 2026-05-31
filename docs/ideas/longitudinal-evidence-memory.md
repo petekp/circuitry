@@ -1,5 +1,10 @@
 # Longitudinal Evidence Memory
 
+Status: archived in place. This idea seed has been absorbed into the
+self-auditing memory specs, the effective-memory program, and current history
+memory implementation. Keep it only as historical lineage for cited memory
+design ideas.
+
 Idea seed for evolving Circuit's longitudinal evidence and memory system.
 Captured 2026-05-27 from a discussion about Karl Friston's Free Energy
 Principle, active inference, and evidence-based context engineering.

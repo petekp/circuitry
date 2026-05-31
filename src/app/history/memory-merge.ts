@@ -13,6 +13,7 @@ import {
   type RunEnvelopeOutcome,
   RunEnvelopeRecord,
 } from '../../schemas/index.js';
+import { isFailureOutcome } from '../../shared/outcome.js';
 import {
   HISTORY_MEMORY_MERGE_FILE,
   type HistoryPathOptions,
@@ -51,9 +52,7 @@ export interface RunMemoryLinkageResult {
 // first blocked/failed attempt. Token counts and elapsed time are not captured
 // anywhere today, so they are deliberately omitted rather than faked.
 function deriveAbortReason(envelope: RunEnvelopeRecord): string | undefined {
-  const attempt = envelope.process_attempts.find(
-    (entry) => entry.outcome === 'blocked' || entry.outcome === 'failed',
-  );
+  const attempt = envelope.process_attempts.find((entry) => isFailureOutcome(entry.outcome));
   if (attempt === undefined) return undefined;
   return attempt.blocked_reason ?? attempt.summary;
 }
