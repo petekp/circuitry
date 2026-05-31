@@ -59,11 +59,11 @@ These are the extra proof points from the execution-plan gap review:
 - `REL-PUB-001`: verify the manifest names current commands plus Pursue
   wording.
 - `REL-PUB-004`: host-trial evidence must include setup evidence from
-  [docs/host-trial-checklist.md](../host-trial-checklist.md): regenerated host output, Codex cache refresh
-  when Codex local dogfooding is used, Codex doctor from a normal temp repo, and
-  confirmation that `circuit` on `PATH` points at the intended checkout. Smoke
-  scripts may return `pass`, `fail`, or `skip`; skipped prerequisites must be
-  named.
+  [docs/host-trial-checklist.md](../host-trial-checklist.md): regenerated host
+  output, installed host cache refresh when local dogfooding is used, Codex
+  doctor from a normal temp repo, and confirmation that `circuit` on `PATH`
+  points at the intended checkout. Smoke scripts may return `pass`, `fail`, or
+  `skip`; skipped prerequisites must be named.
 - `REL-PUB-006`: record the proof-refresh decision. If the release diff only
   changes manifest or command prose without changing command semantics, flow
   behavior, progress, summaries, reports, checkpoints, or scenarios, note that

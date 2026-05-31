@@ -1,6 +1,9 @@
 # Pull Query Memory
 
-Status: investigation only.
+Status: archived in place, superseded by implementation. The investigation led to
+[`pull-query-memory-engineering-proposal.md`](pull-query-memory-engineering-proposal.md)
+and then to the implemented `circuit history pull` surface documented in
+[`../reference/history-pull.md`](../reference/history-pull.md).
 
 Date: 2026-05-29.
 

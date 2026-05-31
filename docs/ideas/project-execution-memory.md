@@ -1,5 +1,10 @@
 # Project Execution Memory
 
+Status: partially implemented. `circuit memory note|list|forget`, the local
+project fact store, project identity, project-fact injection, and the deterministic
+distiller exist. Automatic run-close write-back and richer promotion/retirement
+behavior remain future work.
+
 Idea seed for the first concrete cut of Circuit's effectiveness ratchet:
 a small, project-scoped store of cited execution facts that makes the
 selected flow run better in this repo over time. Captured 2026-05-28

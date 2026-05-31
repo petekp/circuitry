@@ -1,6 +1,8 @@
 # Pull Query Memory Engineering Proposal
 
-Status: proposal only
+Status: partially implemented. The bounded `history pull` substrate exists and
+is documented in [`../reference/history-pull.md`](../reference/history-pull.md).
+The broader host-facing "History Ask" wrapper remains proposal material.
 Date: 2026-05-29
 
 ## Decision

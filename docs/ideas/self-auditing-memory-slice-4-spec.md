@@ -1,6 +1,11 @@
 # Slice 4 Spec: The Gated Pull Surface (cited, hint-only, logged)
 
-Status: build spec
+Status: implemented. The `circuit history pull` command, pull-log schema,
+pull-log writer, suppression path, and relay affordance now exist under
+`src/cli/history.ts`, `src/app/history/pull-log.ts`,
+`src/app/history/pull-suppression.ts`, `src/schemas/history.ts`, and
+`src/shared/relay-support.ts`. Some path references below use the
+pre-`src/app/history` location from writing time.
 Date: 2026-05-29
 Parent design: [`self-auditing-memory.md`](./self-auditing-memory.md) (section 4 step 2 and section 6, the hybrid pull at decision points; section 8, build sequence item 4; section 13, open question 4)
 Depends on: the existing `circuit history query --format memory-input` surface, the shared `content_id` identity (introduced in [`self-auditing-memory-slice-3-spec.md`](./self-auditing-memory-slice-3-spec.md), D4), and the Slice 2 effect verdicts ([`self-auditing-memory-slice-2-spec.md`](./self-auditing-memory-slice-2-spec.md)) for negative suppression.

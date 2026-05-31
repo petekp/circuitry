@@ -1,6 +1,9 @@
 # The Effective Memory Program
 
-Status: strategic direction, adversarially judged
+Status: active direction, partially implemented. The branch now has the
+report-only memory substrate, earned-precision recall, pull logs, failure
+legibility fixes, and local project facts. Broader automatic lesson capture and
+measured value claims remain unproven.
 Date: 2026-05-30
 Updated: 2026-05-31 after an independent Codex second opinion
 ([`effective-memory-program-review-codex.md`](./effective-memory-program-review-codex.md))
@@ -52,12 +55,13 @@ reconciliation, which depend on none of the contested construction.
 
 ## 2. Why this is the most effective work, not the cheapest
 
-The cheap plan wires more producers into a verdict engine that has never
-produced a verdict. Verified state of the ratchet today: exactly one
-`run-envelope.json` in the whole repo, zero `memory-effect.v1.json` ever written,
-`distillProjectFacts` with zero non-test callers, a 2-run cluster threshold thin
-projects rarely hit, and `classifyEffect` gated at `DEFAULT_MIN_ARM_SIZE = 2`
-that nothing has ever fed. Building on that compounds faith.
+The cheap plan wires more producers into a verdict engine that had not yet
+produced a verdict. Verified state of the ratchet when this note was written:
+exactly one `run-envelope.json` in the whole repo, zero
+`memory-effect.v1.json` ever written, `distillProjectFacts` with zero non-test
+callers, a 2-run cluster threshold thin projects rarely hit, and
+`classifyEffect` gated at `DEFAULT_MIN_ARM_SIZE = 2` that nothing had ever fed.
+Building on that compounds faith.
 
 The value this session's debugging delivered came from reasoning written down
 where the next reader looks (design notes, code comments, legible diagnostics).
@@ -174,11 +178,11 @@ bytes moved," not "condition resolved." Carry an operator or agent resolve marke
 on a lesson, and age a lesson out when the flow's newest run in this repo no
 longer carries that failure facet. Do not trust recency alone.
 
-Experiment: on the live circuit-land corpus, confirm the baseline goal query at
+Experiment captured against the live circuit-land corpus: confirm the baseline goal query at
 `--per-run-limit 1` returns only the goal-echo `run-envelope.json` docs (summary
 "Run closed with outcome aborted"), and that a symptom-worded query already
 retrieves the gap-bearing `step.aborted` trace docs (it returns three results
-topped by the missing-script reason today, which is why the bottleneck is
+topped by the then-current missing-script reason, which is why the bottleneck is
 relation and curation, not reach). Then confirm the new failure-aware ranker
 surfaces the gap-bearing doc as rank 1 under the goal query too, and under a
 synthetic build run with a deliberately different goal ("add a pricing section").

@@ -98,6 +98,7 @@ not active instructions unless one of the sources above links to a live section.
 | Release QA | [docs/host-trial-checklist.md](host-trial-checklist.md) | Checklist for validating host readiness before broader use. |
 | Active pivot reference | [docs/pivot/contract-guidance-proof-recovery/](pivot/contract-guidance-proof-recovery/) | Consolidated reference for the contract, guidance, proof, and recovery pivot. Validate claims against code, tests, and generated surfaces before treating them as current behavior. |
 | Working strategy | [docs/positioning-and-strategy.md](positioning-and-strategy.md) | Internal strategy context. Not polished external copy; validate claims against code and release evidence before reuse. |
+| Audit records | [docs/audits/](audits/) | Source-backed cleanup and inventory reports. Use as evidence records, not active operating guidance. |
 | Research note | [docs/ideas/](ideas/) and [docs/learnings/](learnings/) | Prior-art or product-shape material. Useful context, not current behavior. |
 | Archived | Completed or historical files in [docs/specs/](specs/) and [docs/internal/archive/](internal/archive/) | Dated target specs, design records, and local-only historical notes. Do not treat as active instructions unless a current doc links to a live section. |
 

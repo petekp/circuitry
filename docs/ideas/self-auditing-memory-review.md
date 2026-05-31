@@ -1,5 +1,10 @@
 # Self-Auditing Memory: Soundness and Durability Review
 
+Status: archived in place. This dated review caused corrections in
+`self-auditing-memory.md`, but several blocked findings are now implemented.
+Prefer the parent memory docs, the slice specs, and current code for active
+guidance.
+
 Reviewed: 2026-05-29. Subject: [`docs/ideas/self-auditing-memory.md`](./self-auditing-memory.md). Repo state at review: branch `architecture-hardening` checked out, REP-R2 landed as commit `a9649e94`, REP-R1 and SD-FIX-1/2/3 not yet landed, working tree clean of code (only this review and its subject untracked).
 
 ## 1. Top-line verdict

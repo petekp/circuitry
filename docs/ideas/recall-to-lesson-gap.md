@@ -1,6 +1,9 @@
 # Closing the Recall-to-Lesson Gap
 
-Status: design, ready to build
+Status: partially implemented. Failure facet/legibility work, memory-merge,
+memory-effect, earned-precision recall, `history pull`, and project-fact
+storage/injection now exist. The remaining gap is automatic lesson write-back
+from run close into durable project facts.
 Date: 2026-05-30
 
 The first real-world exercise of Circuit's memory system was the circuit-land

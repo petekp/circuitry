@@ -1,7 +1,12 @@
 # Implementation spec: failure-outcome reconciliation + Phase 0 legibility
 
-Status: ready to execute. Scope: the first uncontested slice of the
-effective-memory program (see [`effective-memory-program.md`](effective-memory-program.md)).
+Status: implemented. This slice is now represented in
+`src/shared/outcome.ts`, `src/app/history/extract.ts`,
+`src/app/history/query.ts`, `src/app/history/memory-preview.ts`,
+`src/app/run-envelope/source-record.ts`, and the focused
+`memory-failure-legibility` / history tests. Scope: the first uncontested slice
+of the effective-memory program
+(see [`effective-memory-program.md`](effective-memory-program.md)).
 Does **not** include Phase 2 (canonical-report capture), which stays gated on
 its prerequisite.
 

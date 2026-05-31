@@ -1,6 +1,9 @@
 # Slice 5 Spec: The Cited-Fact Producer (`kind:"project"`, propose-first)
 
-Status: build spec
+Status: partially implemented. The operator-filed core, project store,
+project identity, project-fact injection, deterministic distiller, envelope
+schema prerequisites, and `circuit memory note|list|forget` exist. The
+run-close auto write-back / full envelope-event integration remains deferred.
 Date: 2026-05-29
 Parent design: [`self-auditing-memory.md`](./self-auditing-memory.md) (section 4 step 1, produce cited facts from typed evidence; section 8, build sequence item 5, "in parallel"; section 9, refusals)
 Source design: [`project-execution-memory.md`](./project-execution-memory.md) (the full producer design and its internal build sequence; this spec is its build-ready distillation in the Slice 1 shape)

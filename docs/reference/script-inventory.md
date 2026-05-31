@@ -14,7 +14,7 @@ produced the current layout.
 | Owner | Current paths | Responsibility |
 | --- | --- | --- |
 | Flow generation | `scripts/flows/*` | Emit generated flow surfaces, generated-surface maps, host command mirrors, skill mirrors, schematics, and block catalogs. |
-| Plugin packaging | `scripts/plugins/*` | Build plugin runtime bundles, compare package trees, publish local or release plugin copies, sync Codex cache, and diagnose installed plugins. |
+| Plugin packaging | `scripts/plugins/*` | Build plugin runtime bundles, compare package trees, publish local or release plugin copies, sync installed host caches, and diagnose installed plugins. |
 | Host smoke checks | `scripts/hosts/smoke/*` | Run live or preflight host handoff smoke checks. |
 | Eval operations | `scripts/evals/*` | List evals, validate eval registry and fixtures, run dry-run matrices, score fix-vs-vanilla output, and share eval runner helpers. |
 | Release checks | `scripts/release/*` | Emit release truth, check release parity and public claims, capture golden proof runs, and render release reports. |
@@ -68,7 +68,8 @@ scripts/sync-codex-plugin-cache.mjs
 
 ## After Inventory
 
-Source: `git ls-tree -r --name-only origin/main scripts | sort`
+Source: current checkout, after the script ownership cleanup plus installed-host
+cache hardening.
 
 ```text
 scripts/evals/check.ts
@@ -90,6 +91,7 @@ scripts/hosts/smoke/codex-handoff.ts
 scripts/plugins/installed-doctor.ts
 scripts/plugins/package-tree.ts
 scripts/plugins/publish.ts
+scripts/plugins/sync-claude-cache.ts
 scripts/plugins/runtime-bundle.ts
 scripts/plugins/sync-codex-cache.ts
 scripts/release/audit-marketplace-safe-paths.ts
