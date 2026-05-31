@@ -40277,7 +40277,7 @@ var pursuitReviewShapeHint = {
     "Respond with a single raw JSON object for pursuit.review@v1.",
     'Shape: { "verdict": "<clean|needs-followup|blocked>", "summary": "<review summary>", "findings": [{ "severity": "<critical|high|medium|low>", "text": "<finding text>", "file_refs": ["<file:line>"] }] }.',
     "Review whether the batch followed the pursuit contract, serialized code-changing work, preserved the difference between estimated and actual touch sets, and surfaced skipped or blocked pursuits honestly.",
-    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow retries before closing.',
+    'Use verdict "clean" only when there are no findings. Use "needs-followup" only for low-severity findings. Use "blocked" when any finding is medium, high, or critical so the flow closes honestly as blocked instead of reporting completion.',
     "Do not include extra top-level keys. Do not wrap the JSON in Markdown code fences."
   ].join(" ")
 };
@@ -40647,7 +40647,7 @@ function projectPursuitResult(inputs) {
   const blockedCount = inputs.batch.blocked.length;
   const failedCount = inputs.batch.failed.length;
   const verificationOk = inputs.verification.overall_status === "passed";
-  const outcome = failedCount > 0 || !verificationOk || inputs.review.verdict === "blocked" ? "failed" : blockedCount > 0 || inputs.batch.verdict === "blocked" ? "blocked" : skippedCount > 0 || inputs.review.verdict === "needs-followup" || inputs.batch.verdict === "partial" ? "needs_attention" : "complete";
+  const outcome = failedCount > 0 || !verificationOk ? "failed" : blockedCount > 0 || inputs.batch.verdict === "blocked" || inputs.review.verdict === "blocked" ? "blocked" : skippedCount > 0 || inputs.review.verdict === "needs-followup" || inputs.batch.verdict === "partial" ? "needs_attention" : "complete";
   return PursuitResult.parse({
     summary: `Pursuits result for ${inputs.contract.objective}: ${inputs.batch.summary}`,
     outcome,
@@ -41198,7 +41198,7 @@ var pursueFlowData = {
         requestPath: "reports/relay/pursuit-review.request.json",
         receiptPath: "reports/relay/pursuit-review.receipt.txt",
         resultPath: "reports/relay/pursuit-review.result.json",
-        pass: ["clean", "needs-followup"],
+        pass: ["clean", "needs-followup", "blocked"],
         routes: {
           continue: "close-step",
           retry: "batch-step",
@@ -55721,8 +55721,12 @@ function facetBoost(queryTerms, doc) {
   const reasons = [];
   const facets = new Set(doc.facets);
   if (queryTerms.some((term) => FAILURE_TERMS.has(term)) && facets.has("failure")) {
-    score += 3;
+    score += 5;
     reasons.push("failure facet matched");
+    if (doc.doc_kind === "trace" || doc.doc_kind === "run") {
+      score += 3;
+      reasons.push("failure trace/run prioritized");
+    }
   }
   if (queryTerms.some((term) => CHECKPOINT_TERMS.has(term)) && facets.has("checkpoint")) {
     score += 2;

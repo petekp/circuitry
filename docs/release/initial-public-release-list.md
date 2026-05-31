@@ -50,7 +50,7 @@ no errors, Claude tag `circuit--v0.1.0-alpha.6`, and Codex marketplace source
 | --- | --- | --- | --- |
 | REL-PUB-008 | Produce a short external proof demo for the reliability claim. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) says the strongest claim is externally unproven and recommends a same-task comparison demo. | Capture one focused Build/Fix/Review example showing the evidence trail and a concrete verification or review moment. |
 | REL-PUB-009 | Add a tiny release-notes page that links the exact proof and check commands used for this alpha. | The release truth exists across generated reports, claims, proofs, and plugin publish output, but there is no single reader-facing release note yet. | Draft release notes after blockers are fixed, with links to proof scenarios and the final command transcript. |
-| REL-PUB-010 | Refresh installed Codex cache after the final release diff, if using a local dogfood install. | [docs/contracts/host-adapter.md](../contracts/host-adapter.md) documents `npm run sync:codex-plugin-cache` and `npm run check:codex-plugin-cache`; local caches can drift. | Run the sync/check pair only for local dogfooding. Do not treat it as marketplace publication. |
+| REL-PUB-010 | Refresh installed host caches after the final release diff, if using local dogfood installs. | [docs/contracts/host-adapter.md](../contracts/host-adapter.md) documents `npm run sync:host-plugin-caches` and `npm run check:host-plugin-caches`; local caches can drift. | Run the sync/check pair only for local dogfooding. Do not treat it as marketplace publication. |
 
 ## Gap-Audit Acceptance Additions
 
@@ -72,22 +72,23 @@ These are the extra proof points from the execution-plan gap review:
   [docs/release/claims/public-claims.yaml](claims/public-claims.yaml) as the public-claim checklist. Any
   claim they make needs either the listed source/proof backing or explicit
   non-shipping wording.
-- `REL-PUB-010`: if a local Codex host trial is part of `REL-PUB-004`, run the
-  Codex cache sync/check pair after the final generated diff and before that
-  trial.
+- `REL-PUB-010`: if a local installed-host trial is part of `REL-PUB-004`, run
+  the host cache sync/check pair after the final generated diff and before that
+  trial. Use the narrower Codex or Claude pair only when that is the only host
+  under test.
 - Final `publish:plugins:check`: inspect the fresh
   `.circuit/release/plugin-publish-report.json` for `status`, version alignment,
   and warnings/errors instead of treating command success alone as sufficient.
-  Inspect cache-target evidence from `sync:codex-plugin-cache` or
-  `check:codex-plugin-cache` when local Codex dogfooding is part of the release
-  pass.
+  Inspect cache-target evidence from `sync:host-plugin-caches` or
+  `check:host-plugin-caches` when local installed-host dogfooding is part of the
+  release pass.
 
 ## Not In Scope Or Deferred
 
 | ID | Item | Why it is not in the initial release |
 | --- | --- | --- |
 | REL-PUB-011 | Native Codex App Server and Claude Agent SDK adapters. | These are not current roadmap items. Release truth should not list them as planned capabilities, and public copy should not imply they are pending support. |
-| REL-PUB-013 | Cross-run project-memory query and recall surfaces. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) treats structured project-memory records as real, but cross-run query and recall surfaces as gaps. Do not claim them as shipping. |
+| REL-PUB-013 | Broad smart-memory claims. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) treats `circuit history` query/pull and cited run-start hints as real but bounded. Exact prior-failure recall is the strongest current case; broad recall quality still needs proof, so do not claim automatic project intelligence, broad semantic recall, or measured value improvement until release evidence proves it. |
 | REL-PUB-014 | Keep-up-for-you update channel. | [docs/positioning-and-strategy.md](../positioning-and-strategy.md) says the update-channel claim is not yet supported. Do not use launch copy that implies automatic methodology updates. |
 | REL-PUB-015 | Public `/circuit:pursue` slash command. | Pursue is a public routable flow and has generated flow mirrors, but [docs/generated-surfaces.md](../generated-surfaces.md) and `src/commands/run.md` say it has no dedicated command surface yet. |
 

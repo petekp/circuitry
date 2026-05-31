@@ -41,8 +41,12 @@ schema_version: 1
 relay:
   default: claude-code
   roles:
-    reviewer: codex
-    researcher: codex
+    reviewer:
+      kind: builtin
+      name: codex
+    researcher:
+      kind: builtin
+      name: codex
 ```
 
 Codex has two separate Circuit roles:
@@ -155,9 +159,13 @@ schema_version: 1
 relay:
   default: claude-code
   roles:
-    reviewer: codex
+    reviewer:
+      kind: builtin
+      name: codex
   circuits:
-    explore: codex
+    explore:
+      kind: builtin
+      name: codex
 ```
 
 In that config, reviewer steps use `codex` first because role routing wins.

@@ -279,7 +279,7 @@ export const pursueFlowData = {
         requestPath: 'reports/relay/pursuit-review.request.json',
         receiptPath: 'reports/relay/pursuit-review.receipt.txt',
         resultPath: 'reports/relay/pursuit-review.result.json',
-        pass: ['clean', 'needs-followup'],
+        pass: ['clean', 'needs-followup', 'blocked'],
         routes: {
           continue: 'close-step',
           retry: 'batch-step',
