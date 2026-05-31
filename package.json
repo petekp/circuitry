@@ -2,6 +2,7 @@
   "name": "circuit",
   "version": "0.0.1",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Claude Code and Codex plugin that runs structured developer flows with per-step configurability, evidence, checks, traces, and reports.",
   "bin": {
