@@ -11,6 +11,7 @@ import {
   StepId,
 } from '../../schemas/index.js';
 import { sha256Hex } from '../../shared/connector-relay.js';
+import { isFailureOutcome } from '../../shared/outcome.js';
 import { mtimeMs } from '../../shared/run-artifact-io.js';
 import { resolveRunFilePath, validateRunFilePath } from '../../shared/run-file-paths.js';
 import { collectRunSourceFiles } from './run-source-files.js';
@@ -329,7 +330,7 @@ function buildFacets(input: {
   const haystack =
     `${input.sourcePath} ${input.reportSchema ?? ''} ${input.traceKind ?? ''}`.toLowerCase();
   if (
-    input.outcome === 'aborted' ||
+    isFailureOutcome(input.outcome) ||
     input.traceKind === 'relay.failed' ||
     input.traceKind === 'step.aborted' ||
     input.checkOutcome === 'fail'
@@ -500,8 +501,14 @@ function makeRunDocument(input: {
   const sourceMtime = input.resultPath === undefined ? input.traceMtime : mtimeMs(sourceAbs);
   const extraction = extractText(input.result ?? {}, { allowCheckpointResponseFields: false });
   const closed = [...input.traceEntries].reverse().find((entry) => entry.kind === 'run.closed');
+  // For a failure run the operator wants to know what went wrong, so the
+  // failure reason leads; otherwise an outcome restatement ("Run closed with
+  // outcome aborted.") tends to win the `summary` slot and bury the signal.
+  const summaryFields = isFailureOutcome(input.identity.outcome)
+    ? (['reason', 'summary', 'goal', 'outcome', 'verdict'] as const)
+    : (['summary', 'reason', 'goal', 'outcome', 'verdict'] as const);
   const summary =
-    firstHighValue(extraction, ['summary', 'reason', 'goal', 'outcome', 'verdict']) ??
+    firstHighValue(extraction, summaryFields) ??
     stringValue(closed?.reason) ??
     input.identity.goal ??
     `Circuit ${input.identity.flowId ?? 'run'} ${input.identity.outcome ?? 'history'}`;

@@ -395,7 +395,7 @@ describe('Run envelope source writer', () => {
     });
     expect(record.process_attempts[0]?.outcome).toBe('failed');
     expect(record.surface_output.status_text).toBe(
-      'Stopped: review could not close with enough process evidence.',
+      'Failed: review could not close with the required process evidence.',
     );
     expect(record.surface_output.status_text).not.toMatch(/\b(?:done|complete|completed)\b/i);
   });
