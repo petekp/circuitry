@@ -178,4 +178,53 @@ describe('memory-preview hintText leads with summary on a prior_failure hit', ()
     const hintTextOut = preview.memory_inputs[0]?.hints[0]?.text ?? '';
     expect(hintTextOut.startsWith(summary)).toBe(true);
   });
+
+  it('keeps leading with the snippet on a non-failure hit (unchanged behavior)', () => {
+    const summary = 'Decision: index history before runtime injection.';
+    const snippet = 'cited the explicit history index design over runtime injection';
+    const doc = HistoryDocumentV1.parse({
+      api_version: 'history-document-v1',
+      schema_version: 1,
+      doc_id: `${RUN_ID}/run/fedcba543210`,
+      doc_kind: 'run',
+      run_id: RUN_ID,
+      flow_id: 'build',
+      run_folder: '/tmp/run',
+      source_path: 'reports/result.json',
+      source_ref: { kind: 'report', ref: 'reports/result.json', sha256: SHA },
+      source_sha256: SHA,
+      recorded_at: RECORDED_AT,
+      outcome: 'complete',
+      title: 'build run complete',
+      summary,
+      // No 'failure' facet -> appliesTo is not prior_failure -> snippet leads.
+      text: 'goal: ...\noutcome: complete',
+      extracted_from: [{ field_role: 'summary' }],
+      facets: ['flow:build', 'kind:run', 'outcome:complete'],
+      memory_safe: true,
+    });
+    const hit = HistoryQueryHitV1.parse({
+      rank: 1,
+      score: 8,
+      doc,
+      snippet,
+      matched_terms: ['history'],
+      ranking_reasons: [],
+      staleness: {
+        status: 'fresh',
+        reason_codes: ['source_match'],
+        checked_at: RECORDED_AT,
+      },
+    });
+    const preview = historyMemoryInputPreview({
+      query: 'history index design',
+      indexState: 'fresh',
+      rebuilt: false,
+      warnings: [],
+      hits: [hit],
+      capturedAt: RECORDED_AT,
+    });
+    const hintTextOut = preview.memory_inputs[0]?.hints[0]?.text ?? '';
+    expect(hintTextOut.startsWith(snippet)).toBe(true);
+  });
 });
