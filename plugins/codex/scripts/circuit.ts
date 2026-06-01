@@ -34,6 +34,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'flows');
 const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit.js');
+const CIRCUIT_HOST_KIND_ENV = 'CIRCUIT_HOST_KIND';
 const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 const CODEX_FEATURES_TIMEOUT_MS = 5_000;
 
@@ -501,6 +502,7 @@ const forwardedArgs = injectPackagedFlowRoot
     ? [...rawArgs, '--template-flow-root', packagedFlowRoot]
     : rawArgs;
 const childEnv = { ...process.env };
+childEnv[CIRCUIT_HOST_KIND_ENV] = 'codex';
 if (injectPackagedFlowRoot) {
   childEnv[GENERATED_FLOW_MIRROR_ROOT_ENV] = packagedFlowRoot;
 } else {

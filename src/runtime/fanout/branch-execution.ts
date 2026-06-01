@@ -492,6 +492,7 @@ export async function executeSubRunFanoutBranch(
       worktreeRunner,
       ...(context.relayConnector === undefined ? {} : { relayConnector: context.relayConnector }),
       ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
+      ...(context.hostKind === undefined ? {} : { hostKind: context.hostKind }),
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: context.selectionConfigLayers }),

@@ -8,12 +8,21 @@ describe('Config strict surface (CONFIG-I1)', () => {
     const ok = Config.safeParse({ schema_version: 1 });
     expect(ok.success).toBe(true);
     if (ok.success) {
+      expect(ok.data.host).toBeUndefined();
       expect(ok.data.relay.default).toBe('auto');
       expect(ok.data.skills).toEqual({ bindings: {} });
       expect(ok.data.moments).toEqual({ policy: {}, detection: { disabled_patterns: {} } });
       expect(ok.data.circuits).toEqual({});
       expect(ok.data.defaults).toEqual({});
     }
+  });
+
+  it('distinguishes omitted host from an explicit generic-shell host', () => {
+    const omitted = Config.parse({ schema_version: 1 });
+    const explicit = Config.parse({ schema_version: 1, host: {} });
+
+    expect(omitted.host).toBeUndefined();
+    expect(explicit.host?.kind).toBe('generic-shell');
   });
 
   it('rejects surplus top-level key (CONFIG-I1 — `defuults` typo at root)', () => {

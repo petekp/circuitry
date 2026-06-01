@@ -11,6 +11,7 @@ import { composePolicyHardConstraints } from '../../policy/policy-envelope.js';
 import type { ResolvedConnector } from '../../schemas/connector.js';
 import type { RelayResolutionSource } from '../../schemas/connector.js';
 import type { Depth } from '../../schemas/depth.js';
+import type { HostKind } from '../../schemas/host.js';
 import type { CompiledFlowId } from '../../schemas/ids.js';
 import type {
   PolicyConnectorRef,
@@ -274,6 +275,7 @@ function resolveRelayGuidanceExecution(input: {
   readonly suppliedConnector?: RelayConnector;
   readonly configLayers?: Parameters<typeof resolveConnectorForGuidanceInput>[0]['configLayers'];
   readonly policyLayers?: readonly PolicyLayerValue[];
+  readonly hostKind?: HostKind;
 }): {
   readonly role: string;
   readonly connectorName: string;
@@ -300,12 +302,14 @@ function resolveRelayGuidanceExecution(input: {
           flowId: input.flowId,
           role,
           ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
+          ...(input.hostKind === undefined ? {} : { hostKind: input.hostKind }),
         }))
       : resolveConnectorForGuidanceInput({
           flowId: input.flowId,
           role,
           ...(input.configLayers === undefined ? {} : { configLayers: input.configLayers }),
           explicitConnector,
+          ...(input.hostKind === undefined ? {} : { hostKind: input.hostKind }),
         });
   const resolvedConnector = resolved.connector;
   assertPolicyAllowsRelayExecutionInput({
@@ -356,6 +360,7 @@ export function planRelayGuidanceDecision(input: {
       ? {}
       : { configLayers: context.selectionConfigLayers }),
     ...(context.policyLayers === undefined ? {} : { policyLayers: context.policyLayers }),
+    ...(context.hostKind === undefined ? {} : { hostKind: context.hostKind }),
     ...(step.connector === undefined ? {} : { stepConnector: step.connector }),
   });
   const resolvedSelection = deriveResolvedSelection(

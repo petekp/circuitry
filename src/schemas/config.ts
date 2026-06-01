@@ -204,7 +204,9 @@ export const Config = z
     // Optional so a minimal `{schema_version: 1}` still parses; absent means
     // "infer the project identity from the git remote, then the runs base".
     project_id: ProjectId.optional(),
-    host: HostConfig.default({ kind: 'generic-shell' }),
+    // Optional at the layer level so composition can distinguish "this layer
+    // has no host opinion" from an explicit `host: {kind: generic-shell}` reset.
+    host: HostConfig.optional(),
     relay: RelayConfig.default({
       default: 'auto',
       roles: {},

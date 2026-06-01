@@ -18,6 +18,7 @@ import {
   type ConnectorProvider,
   EnabledConnector as EnabledConnectorSchema,
 } from '../schemas/connector.js';
+import type { HostKind } from '../schemas/host.js';
 import type { CompiledFlowId } from '../schemas/ids.js';
 import type { ResolvedSelection } from '../schemas/selection-policy.js';
 import type { RelayRole } from '../schemas/step.js';
@@ -41,6 +42,17 @@ function mergedRelayConfig(layers: readonly LayeredConfigValue[] | undefined): R
     merged.connectors = { ...merged.connectors, ...layer.config.relay.connectors };
   }
   return merged;
+}
+
+function mergedHostKind(layers: readonly LayeredConfigValue[] | undefined): HostKind {
+  let hostKind: HostKind | undefined;
+  for (const layer of layers ?? []) {
+    const configuredHostKind = layer.config.host?.kind;
+    if (configuredHostKind !== undefined) {
+      hostKind = configuredHostKind;
+    }
+  }
+  return hostKind ?? 'generic-shell';
 }
 
 export function connectorCapabilities(connector: ResolvedConnector): ConnectorCapabilities {
@@ -157,11 +169,17 @@ function decision(
   };
 }
 
+function autoConnectorForHost(hostKind: HostKind | undefined): ResolvedConnector {
+  if (hostKind === 'codex') return { kind: 'builtin', name: 'codex' };
+  return { kind: 'builtin', name: 'claude-code' };
+}
+
 export function resolveConnectorForGuidanceInput(input: {
   readonly flowId: string;
   readonly role: RelayRole;
   readonly configLayers?: readonly LayeredConfigValue[];
   readonly explicitConnector?: ResolvedConnector;
+  readonly hostKind?: HostKind;
 }): ResolvedConnectorDecision {
   if (input.explicitConnector !== undefined) {
     return decision(input.explicitConnector, { source: 'explicit' }, input.role);
@@ -201,7 +219,11 @@ export function resolveConnectorForGuidanceInput(input: {
     );
   }
 
-  return decision({ kind: 'builtin', name: 'claude-code' }, { source: 'auto' }, input.role);
+  return decision(
+    autoConnectorForHost(input.hostKind ?? mergedHostKind(input.configLayers)),
+    { source: 'auto' },
+    input.role,
+  );
 }
 
 // Provider / supported-effort lookups are now registry-driven. A custom

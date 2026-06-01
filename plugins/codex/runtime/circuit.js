@@ -37376,7 +37376,9 @@ var Config = external_exports.object({
   // Optional so a minimal `{schema_version: 1}` still parses; absent means
   // "infer the project identity from the git remote, then the runs base".
   project_id: ProjectId.optional(),
-  host: HostConfig.default({ kind: "generic-shell" }),
+  // Optional at the layer level so composition can distinguish "this layer
+  // has no host opinion" from an explicit `host: {kind: generic-shell}` reset.
+  host: HostConfig.optional(),
   relay: RelayConfig.default({
     default: "auto",
     roles: {},
@@ -38475,6 +38477,16 @@ function mergedRelayConfig(layers) {
   }
   return merged;
 }
+function mergedHostKind(layers) {
+  let hostKind;
+  for (const layer of layers ?? []) {
+    const configuredHostKind = layer.config.host?.kind;
+    if (configuredHostKind !== void 0) {
+      hostKind = configuredHostKind;
+    }
+  }
+  return hostKind ?? "generic-shell";
+}
 function connectorCapabilities(connector) {
   if (connector.kind === "builtin")
     return BUILTIN_CONNECTOR_CAPABILITIES[connector.name];
@@ -38519,6 +38531,11 @@ function decision(connector, resolvedFrom, role) {
     resolvedFrom
   };
 }
+function autoConnectorForHost(hostKind) {
+  if (hostKind === "codex")
+    return { kind: "builtin", name: "codex" };
+  return { kind: "builtin", name: "claude-code" };
+}
 function resolveConnectorForGuidanceInput(input) {
   if (input.explicitConnector !== void 0) {
     return decision(input.explicitConnector, { source: "explicit" }, input.role);
@@ -38542,7 +38559,7 @@ function resolveConnectorForGuidanceInput(input) {
   if (relay.default !== "auto") {
     return decision(resolvedConnectorFromDefault(relay.default, relay), { source: "default" }, input.role);
   }
-  return decision({ kind: "builtin", name: "claude-code" }, { source: "auto" }, input.role);
+  return decision(autoConnectorForHost(input.hostKind ?? mergedHostKind(input.configLayers)), { source: "auto" }, input.role);
 }
 function expectedProvider(connectorName) {
   if (!isEnabledConnector(connectorName))
@@ -50104,12 +50121,14 @@ function resolveRelayGuidanceExecution(input) {
   }) ?? resolveConnectorForGuidanceInput({
     flowId: input.flowId,
     role,
-    ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers }
+    ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
+    ...input.hostKind === void 0 ? {} : { hostKind: input.hostKind }
   }) : resolveConnectorForGuidanceInput({
     flowId: input.flowId,
     role,
     ...input.configLayers === void 0 ? {} : { configLayers: input.configLayers },
-    explicitConnector
+    explicitConnector,
+    ...input.hostKind === void 0 ? {} : { hostKind: input.hostKind }
   });
   const resolvedConnector = resolved.connector;
   assertPolicyAllowsRelayExecutionInput({
@@ -50145,6 +50164,7 @@ function planRelayGuidanceDecision(input) {
     ...suppliedConnector === void 0 ? {} : { suppliedConnector },
     ...context.selectionConfigLayers === void 0 ? {} : { configLayers: context.selectionConfigLayers },
     ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
+    ...context.hostKind === void 0 ? {} : { hostKind: context.hostKind },
     ...step.connector === void 0 ? {} : { stepConnector: step.connector }
   });
   const resolvedSelection = deriveResolvedSelection({
@@ -51148,6 +51168,7 @@ async function executeSubRunFanoutBranch(step, context, branch, worktreeRunner, 
       worktreeRunner,
       ...context.relayConnector === void 0 ? {} : { relayConnector: context.relayConnector },
       ...context.relayer === void 0 ? {} : { relayer: context.relayer },
+      ...context.hostKind === void 0 ? {} : { hostKind: context.hostKind },
       ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers },
       ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
       ...context.progress === void 0 ? {} : { progress: context.progress }
@@ -51671,6 +51692,7 @@ async function executeSubRunInternal(step, context) {
       ...context.worktreeRunner === void 0 ? {} : { worktreeRunner: context.worktreeRunner },
       ...context.relayConnector === void 0 ? {} : { relayConnector: context.relayConnector },
       ...context.relayer === void 0 ? {} : { relayer: context.relayer },
+      ...context.hostKind === void 0 ? {} : { hostKind: context.hostKind },
       ...context.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: context.selectionConfigLayers },
       ...context.policyLayers === void 0 ? {} : { policyLayers: context.policyLayers },
       ...context.progress === void 0 ? {} : { progress: context.progress }
@@ -53612,6 +53634,7 @@ async function executeExecutableFlowOutcomeUnsafe(flow, options) {
     ...options.worktreeRunner === void 0 ? {} : { worktreeRunner: options.worktreeRunner },
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
+    ...options.hostKind === void 0 ? {} : { hostKind: options.hostKind },
     ...options.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: options.selectionConfigLayers },
     ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
@@ -53955,6 +53978,7 @@ async function runCompiledFlowWithWaiting(options) {
     ...options.worktreeRunner === void 0 ? {} : { worktreeRunner: options.worktreeRunner },
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
+    ...options.hostKind === void 0 ? {} : { hostKind: options.hostKind },
     ...options.selectionConfigLayers === void 0 ? {} : { selectionConfigLayers: options.selectionConfigLayers },
     ...options.policyLayers === void 0 ? {} : { policyLayers: options.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
@@ -54368,6 +54392,7 @@ async function resumeCompiledFlowResult(options) {
     ...options.worktreeRunner === void 0 ? {} : { worktreeRunner: options.worktreeRunner },
     ...options.relayConnector === void 0 ? {} : { relayConnector: options.relayConnector },
     ...options.relayer === void 0 ? {} : { relayer: options.relayer },
+    ...options.hostKind === void 0 ? {} : { hostKind: options.hostKind },
     ...requestContext.selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers: requestContext.selectionConfigLayers },
     ...requestContext.policyLayers.length === 0 ? {} : { policyLayers: requestContext.policyLayers },
     ...options.progress === void 0 ? {} : { progress: options.progress },
@@ -61833,6 +61858,15 @@ async function runRunsCommand(argv) {
 var DEFAULT_RUNS_BASE2 = ".circuit/runs";
 var AUTONOMOUS_LOOP_RELATIVE_PATH = "reports/autonomous-loop.json";
 var DEFAULT_DEV_VERSION = "0.0.0-dev";
+var CIRCUIT_HOST_KIND_ENV = "CIRCUIT_HOST_KIND";
+function runtimeHostKind(options) {
+  if (options.hostKind !== void 0)
+    return options.hostKind;
+  const raw = process.env[CIRCUIT_HOST_KIND_ENV];
+  if (raw === void 0 || raw.length === 0)
+    return void 0;
+  return HostKind.parse(raw);
+}
 function usage() {
   return [
     'usage: circuit run [flow-name] --goal "<goal>" [--rigor <lite|standard|deep>] [--tournament [--tournament-n <2|3|4>]] [--autonomous] [--run-folder <path>] [--fixture <path>] [--flow-root <path>] [--progress jsonl]',
@@ -62298,12 +62332,14 @@ async function runResumeCommand(args, options) {
   if (args.command === "resume" && args.runFolder !== void 0 && args.checkpointChoice !== void 0) {
     const runFolder = resolve19(args.runFolder);
     const progress = progressReporter(args.progress === "jsonl");
+    const hostKind = runtimeHostKind(options);
     if (await isRuntimeRunFolder(runFolder)) {
       const runtimeResult = await resumeCompiledFlow({
         runDir: runFolder,
         selection: args.checkpointChoice,
         now: options.now ?? (() => /* @__PURE__ */ new Date()),
         childCompiledFlowResolver: defaultChildCompiledFlowResolver(void 0),
+        ...hostKind === void 0 ? {} : { hostKind },
         ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
         ...options.relayer === void 0 ? {} : { relayer: options.relayer },
         ...progress === void 0 ? {} : { progress },
@@ -62434,6 +62470,7 @@ async function runExecutionCommand(args, options) {
     ...options.configCwd !== void 0 ? { cwd: options.configCwd } : {}
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
+  const hostKind = runtimeHostKind(options);
   const projectRoot = resolve19(options.configCwd ?? process.cwd());
   const runtimeSupport = classifyRuntimeSupport({
     flow,
@@ -62470,6 +62507,7 @@ async function runExecutionCommand(args, options) {
       ...entryModeSelection.entryModeName === void 0 ? {} : { entryModeName: entryModeSelection.entryModeName },
       ...options.relayer === void 0 ? {} : { relayer: options.relayer },
       ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
+      ...hostKind === void 0 ? {} : { hostKind },
       ...selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers },
       ...policyLayers.length === 0 ? {} : { policyLayers },
       ...progress === void 0 ? {} : { progress },
@@ -62666,6 +62704,7 @@ async function runExecutionCommand(args, options) {
               axes: recoveryAxes,
               ...options.relayer === void 0 ? {} : { relayer: options.relayer },
               ...options.runtimeExecutors === void 0 ? {} : { executors: options.runtimeExecutors },
+              ...hostKind === void 0 ? {} : { hostKind },
               ...selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers },
               ...policyLayers.length === 0 ? {} : { policyLayers }
             });
@@ -62768,6 +62807,7 @@ if (invokedDirectly) {
   });
 }
 export {
+  CIRCUIT_HOST_KIND_ENV,
   main,
   usage
 };

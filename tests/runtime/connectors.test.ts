@@ -71,6 +71,7 @@ describe('runtime connector safety', () => {
     readonly selection?: unknown;
     readonly stepConnector?: string;
     readonly suppliedConnector?: RelayConnector;
+    readonly hostKind?: RunContext['hostKind'];
     readonly configLayers?: readonly LayeredConfigValue[];
     readonly policyLayers?: readonly PolicyLayerValue[];
   }) {
@@ -150,6 +151,7 @@ describe('runtime connector safety', () => {
         stepsById: new Map([[step.id, compiledStep]]),
         reportPathBySchema: new Map(),
       },
+      hostKind: input.hostKind,
       selectionConfigLayers: input.configLayers,
       policyLayers: input.policyLayers,
     } as unknown as RunContext;
@@ -164,9 +166,112 @@ describe('runtime connector safety', () => {
     }).relayExecution;
   }
 
-  it('defaults auto relay resolution to claude-code', () => {
+  it('defaults auto relay resolution to claude-code for generic shell', () => {
     const decision = resolveConnectorForGuidanceInput({ flowId: 'review', role: 'reviewer' });
     expect(decision.connector).toEqual({ kind: 'builtin', name: 'claude-code' });
+    expect(decision.resolvedFrom).toEqual({ source: 'auto' });
+  });
+
+  it('defaults auto relay resolution to the current host connector', () => {
+    const codexDecision = relayGuidanceExecution({
+      flowId: 'build',
+      role: 'implementer',
+      hostKind: 'codex',
+      configLayers: [],
+    });
+    expect(codexDecision.connectorName).toBe('codex');
+    expect(codexDecision.resolvedFrom).toEqual({ source: 'auto' });
+
+    const claudeDecision = relayGuidanceExecution({
+      flowId: 'build',
+      role: 'implementer',
+      hostKind: 'claude-code',
+      configLayers: [],
+    });
+    expect(claudeDecision.connectorName).toBe('claude-code');
+    expect(claudeDecision.resolvedFrom).toEqual({ source: 'auto' });
+  });
+
+  it('lets a higher-precedence generic-shell host reset lower host config for auto routing', () => {
+    const userLayer = LayeredConfig.parse({
+      layer: 'user-global',
+      config: {
+        schema_version: 1,
+        host: { kind: 'codex' },
+        relay: {
+          default: 'auto',
+          roles: {},
+          circuits: {},
+          connectors: {},
+        },
+        circuits: {},
+        defaults: {},
+      },
+    });
+    const projectLayer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        host: { kind: 'generic-shell' },
+        relay: {
+          default: 'auto',
+          roles: {},
+          circuits: {},
+          connectors: {},
+        },
+        circuits: {},
+        defaults: {},
+      },
+    });
+
+    const decision = resolveConnectorForGuidanceInput({
+      flowId: 'build',
+      role: 'implementer',
+      configLayers: [userLayer, projectLayer],
+    });
+
+    expect(decision.connectorName).toBe('claude-code');
+    expect(decision.resolvedFrom).toEqual({ source: 'auto' });
+  });
+
+  it('does not let an omitted higher-precedence host reset lower host config', () => {
+    const userLayer = LayeredConfig.parse({
+      layer: 'user-global',
+      config: {
+        schema_version: 1,
+        host: { kind: 'codex' },
+        relay: {
+          default: 'auto',
+          roles: {},
+          circuits: {},
+          connectors: {},
+        },
+        circuits: {},
+        defaults: {},
+      },
+    });
+    const projectLayer = LayeredConfig.parse({
+      layer: 'project',
+      config: {
+        schema_version: 1,
+        relay: {
+          default: 'auto',
+          roles: {},
+          circuits: {},
+          connectors: {},
+        },
+        circuits: {},
+        defaults: {},
+      },
+    });
+
+    const decision = resolveConnectorForGuidanceInput({
+      flowId: 'build',
+      role: 'implementer',
+      configLayers: [userLayer, projectLayer],
+    });
+
+    expect(decision.connectorName).toBe('codex');
     expect(decision.resolvedFrom).toEqual({ source: 'auto' });
   });
 

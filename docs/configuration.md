@@ -17,9 +17,14 @@ skills, Circuit composes layers in this order:
 defaults < user-global < project < invocation
 ```
 
-Config can set models, effort, local skills, connector routing, and per-flow
-overrides under `circuits.<flow_id>`. Connector routing has its own precedence,
-described below.
+Config can set the current host, models, effort, local skills, connector
+routing, and per-flow overrides under `circuits.<flow_id>`. Connector routing
+has its own precedence, described below.
+
+`host` is optional in each config layer. Omitting it means that layer has no
+opinion about host selection. Setting `host: {}` or
+`host: {kind: generic-shell}` is an explicit generic-shell choice and can reset a
+lower-precedence host setting.
 
 Use `schema_version: 1`. The config contract is
 [`docs/contracts/config.md`](contracts/config.md).
@@ -149,7 +154,8 @@ each relay step in this order:
 1. `relay.roles.<role>` mapping for the step role.
 2. `relay.circuits.<flow_id>` mapping for the active flow.
 3. `relay.default`.
-4. Auto-detect, which currently selects `claude-code`.
+4. Auto, which uses the current host's matching worker connector when one
+   exists.
 
 Example:
 
@@ -170,7 +176,13 @@ relay:
 
 In that config, reviewer steps use `codex` first because role routing wins.
 Other Explore relays use `codex` because the flow-level route wins next. Any
-remaining relay uses `claude-code`.
+remaining relay uses `claude-code` because the explicit default wins over auto.
+
+When `relay.default` is `auto`, Circuit chooses the worker connector that
+matches the current host: Codex-hosted runs use `codex`, Claude Code-hosted
+runs use `claude-code`, and generic shell runs fall back to `claude-code`.
+Runtime host identity from the host wrapper wins first; layered `host` config is
+used only when the runtime does not supply a host.
 
 Built-in connectors:
 

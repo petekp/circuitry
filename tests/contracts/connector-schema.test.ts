@@ -73,11 +73,11 @@ describe('Config + connector registry', () => {
     expect(bad.success).toBe(false);
   });
 
-  it('Config with empty input applies all defaults', () => {
+  it('Config with empty input applies relay defaults while leaving host unset', () => {
     const c = Config.safeParse({ schema_version: 1 });
     expect(c.success).toBe(true);
     if (c.success) {
-      expect(c.data.host.kind).toBe('generic-shell');
+      expect(c.data.host).toBeUndefined();
       expect(c.data.relay.default).toBe('auto');
     }
   });
@@ -86,7 +86,7 @@ describe('Config + connector registry', () => {
     const c = Config.safeParse({ schema_version: 1, host: { kind: 'codex' } });
     expect(c.success).toBe(true);
     if (c.success) {
-      expect(c.data.host.kind).toBe('codex');
+      expect(c.data.host?.kind).toBe('codex');
     }
   });
 });

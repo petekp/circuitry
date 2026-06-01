@@ -193,6 +193,7 @@ async function executeSubRunInternal(step: SubRunStep, context: RunContext): Pro
       ...(context.worktreeRunner === undefined ? {} : { worktreeRunner: context.worktreeRunner }),
       ...(context.relayConnector === undefined ? {} : { relayConnector: context.relayConnector }),
       ...(context.relayer === undefined ? {} : { relayer: context.relayer }),
+      ...(context.hostKind === undefined ? {} : { hostKind: context.hostKind }),
       ...(context.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: context.selectionConfigLayers }),

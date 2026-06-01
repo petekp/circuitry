@@ -1,4 +1,5 @@
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
+import type { HostKind } from '../../schemas/host.js';
 import type { PolicyLayer as PolicyLayerValue } from '../../schemas/policy-envelope.js';
 import type {
   ProgressReporter,
@@ -57,6 +58,7 @@ export interface CompiledFlowRunOptions {
   readonly worktreeRunner?: WorktreeRunner;
   readonly relayConnector?: RelayConnector;
   readonly relayer?: RelayFn;
+  readonly hostKind?: HostKind;
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
   readonly policyLayers?: readonly PolicyLayerValue[];
   readonly progress?: ProgressReporter;

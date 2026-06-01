@@ -279,10 +279,15 @@ invariant; tested in `tests/contracts/connector-schema.test.ts`,
   4. **Default** — `RelayConfig.default` is consulted. If the
      default is a `EnabledConnector` name or a registered
      `ConnectorName`, relay uses it directly. If the default is the
-     sentinel `'auto'`, relay defers to the auto-detect heuristic
-     (Stage 2 — the heuristic uses the step's `role` and the
-     available built-ins to pick).
-  5. **Auto** — the Stage 2 heuristic selects.
+     sentinel `'auto'`, relay defers to the host-aware auto fallback.
+  5. **Auto** — the fallback selects the worker connector that matches
+     the current host when available: `codex` for the Codex host,
+     `claude-code` for the Claude Code host, and `claude-code` as the
+     generic-shell fallback. Runtime host identity wins before config.
+     If no runtime host is supplied, layered `host` config composes by
+     normal layer precedence; omitted `host` means "no opinion", while an
+     explicit `host: {kind: generic-shell}` resets lower-precedence host
+     config to the generic-shell fallback.
 
   The resolution record emitted on every `RelayStartedTraceEntry` is
   `resolved_from: RelayResolutionSource`, a discriminated union
@@ -317,11 +322,12 @@ invariant; tested in `tests/contracts/connector-schema.test.ts`,
   the original `--connector` CLI token is recoverable from the
   invocation trace_entry elsewhere in the run trace; promoting it onto
   `resolved_from` would duplicate provenance that already exists
-  out-of-band. For `auto`, the heuristic does not exist yet (Stage
-  2); promoting a `heuristic_id`/`rationale` field now would be
-  speculative. v0.2 revisits all three based on evidence from real
-  runs. The contract does NOT claim these three identify the
-  specific config layer or heuristic branch that won at v0.1.
+  out-of-band. For `auto`, the host branch is intentionally not
+  duplicated in `resolved_from`; it is available from the runtime host
+  context and the resolved connector itself. v0.2 revisits all three
+  based on evidence from real runs. The contract does NOT claim these
+  three identify the specific config layer or host branch that won at
+  v0.1.
 
   **Role ↔ resolved_from.role binding (closes Codex HIGH #4).** On a
   `RelayStartedTraceEntry`, when `resolved_from.source === 'role'`, the

@@ -106,6 +106,7 @@ export async function runCompiledFlowWithWaiting(
       ...(options.worktreeRunner === undefined ? {} : { worktreeRunner: options.worktreeRunner }),
       ...(options.relayConnector === undefined ? {} : { relayConnector: options.relayConnector }),
       ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
+      ...(options.hostKind === undefined ? {} : { hostKind: options.hostKind }),
       ...(options.selectionConfigLayers === undefined
         ? {}
         : { selectionConfigLayers: options.selectionConfigLayers }),

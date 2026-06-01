@@ -28,6 +28,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const pluginRoot = resolve(scriptDir, '..');
 const packagedFlowRoot = resolve(pluginRoot, 'skills');
 const bundledRuntimePath = resolve(pluginRoot, 'runtime/circuit.js');
+const CIRCUIT_HOST_KIND_ENV = 'CIRCUIT_HOST_KIND';
 const DOCTOR_SMOKE_TIMEOUT_MS = 120_000;
 
 type CheckResult = {
@@ -657,6 +658,7 @@ function forwardedInvocation(args: readonly string[]): ForwardedInvocation {
       : [...args];
 
   const childEnv = { ...process.env };
+  childEnv[CIRCUIT_HOST_KIND_ENV] = 'claude-code';
   if (injectPackagedFlowRoot) {
     childEnv[GENERATED_FLOW_MIRROR_ROOT_ENV] = packagedFlowRoot;
   } else {

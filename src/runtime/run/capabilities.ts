@@ -1,5 +1,6 @@
 import type { CompiledFlowProgressSurface } from '../../flows/types.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
+import type { HostKind } from '../../schemas/host.js';
 import type {
   HistoryRecallPrecisionV1 as HistoryRecallPrecisionValue,
   HistoryRecallReportV1 as HistoryRecallReportValue,
@@ -32,6 +33,7 @@ export const RUNTIME_CAPABILITY_NAMES = [
   'worktreeRunner',
   'relayConnector',
   'relayer',
+  'hostKind',
   'selectionConfigLayers',
   'policyLayers',
   'progress',
@@ -55,6 +57,7 @@ export interface RuntimeExecutionCapabilities {
   readonly worktreeRunner?: WorktreeRunner;
   readonly relayConnector?: RelayConnector;
   readonly relayer?: RelayFn;
+  readonly hostKind?: HostKind;
   readonly selectionConfigLayers?: readonly LayeredConfigValue[];
   readonly policyLayers?: readonly PolicyLayerValue[];
   readonly progress?: ProgressReporter;

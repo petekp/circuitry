@@ -340,7 +340,7 @@ describe('Claude Code host plugin package', () => {
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
           argvPath,
-        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null, cwd: process.cwd() }));\n`,
+        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null, host: process.env.CIRCUIT_HOST_KIND ?? null, cwd: process.cwd() }));\n`,
       );
       chmodSync(fakeBin, 0o755);
 
@@ -360,6 +360,7 @@ describe('Claude Code host plugin package', () => {
       const capture = JSON.parse(readFileSync(argvPath, 'utf8')) as {
         argv: string[];
         marker: string | null;
+        host: string | null;
         cwd: string;
       };
       expect(capture.argv).toEqual([
@@ -371,6 +372,7 @@ describe('Claude Code host plugin package', () => {
         resolve(PLUGIN_ROOT, 'skills'),
       ]);
       expect(capture.marker).toBe(resolve(PLUGIN_ROOT, 'skills'));
+      expect(capture.host).toBe('claude-code');
       expect(realpathSync(capture.cwd)).toBe(realpathSync(tempDir));
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

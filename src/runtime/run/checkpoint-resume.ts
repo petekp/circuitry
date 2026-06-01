@@ -15,6 +15,7 @@ import { Axes, type Axes as AxesValue } from '../../schemas/axes.js';
 import type { CompiledFlow } from '../../schemas/compiled-flow.js';
 import type { LayeredConfig as LayeredConfigValue } from '../../schemas/config.js';
 import { LayeredConfig } from '../../schemas/config.js';
+import type { HostKind } from '../../schemas/host.js';
 import { CompiledFlowId } from '../../schemas/ids.js';
 import {
   PolicyLayer,
@@ -59,6 +60,7 @@ export interface ResumeCompiledFlowOptions {
   readonly now?: () => Date;
   readonly relayConnector?: RelayConnector;
   readonly relayer?: RelayFn;
+  readonly hostKind?: HostKind;
   readonly childCompiledFlowResolver?: ChildCompiledFlowResolver;
   readonly childRunner?: CompiledFlowRunner;
   readonly externalFiles?: ExternalFileReader;
@@ -662,6 +664,7 @@ export async function resumeCompiledFlowResult(
     ...(options.worktreeRunner === undefined ? {} : { worktreeRunner: options.worktreeRunner }),
     ...(options.relayConnector === undefined ? {} : { relayConnector: options.relayConnector }),
     ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
+    ...(options.hostKind === undefined ? {} : { hostKind: options.hostKind }),
     ...(requestContext.selectionConfigLayers.length === 0
       ? {}
       : { selectionConfigLayers: requestContext.selectionConfigLayers }),

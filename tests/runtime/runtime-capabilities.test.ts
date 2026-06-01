@@ -16,6 +16,7 @@ describe('runtime capabilities', () => {
       'worktreeRunner',
       'relayConnector',
       'relayer',
+      'hostKind',
       'selectionConfigLayers',
       'policyLayers',
       'progress',

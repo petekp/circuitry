@@ -64,6 +64,7 @@ export function cleanPluginEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv
   const env = { ...process.env };
   env.CIRCUIT_CLI = undefined;
   env.CIRCUIT_DEV = undefined;
+  env.CIRCUIT_HOST_KIND = undefined;
   env.PATH = noAmbientCliPath();
   return { ...env, ...extra };
 }

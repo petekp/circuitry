@@ -11,6 +11,7 @@ import { runCompiledFlowWithWaiting } from '../runtime/run/compiled-flow-runner.
 import { isGraphCheckpointWaitingResult } from '../runtime/run/graph-runner.js';
 import { Axes, type Axes as AxesValue, TournamentN } from '../schemas/axes.js';
 import { CompiledFlow } from '../schemas/compiled-flow.js';
+import { HostKind, type HostKind as HostKindValue } from '../schemas/host.js';
 import { CompiledFlowId, RunId } from '../schemas/ids.js';
 import { computeManifestHash } from '../schemas/manifest.js';
 import {
@@ -139,8 +140,18 @@ export interface CliMainOptions {
   runId?: string;
   configHomeDir?: string;
   configCwd?: string;
+  hostKind?: HostKindValue;
   runtimeExecutors?: Partial<ExecutorRegistry>;
   historyRecall?: 'auto' | 'enabled' | 'disabled';
+}
+
+export const CIRCUIT_HOST_KIND_ENV = 'CIRCUIT_HOST_KIND';
+
+function runtimeHostKind(options: CliMainOptions): HostKindValue | undefined {
+  if (options.hostKind !== undefined) return options.hostKind;
+  const raw = process.env[CIRCUIT_HOST_KIND_ENV];
+  if (raw === undefined || raw.length === 0) return undefined;
+  return HostKind.parse(raw);
 }
 
 export function usage(): string {
@@ -733,12 +744,14 @@ async function runResumeCommand(args: ParsedArgs, options: CliMainOptions): Prom
   ) {
     const runFolder = resolve(args.runFolder);
     const progress = progressReporter(args.progress === 'jsonl');
+    const hostKind = runtimeHostKind(options);
     if (await isRuntimeRunFolder(runFolder)) {
       const runtimeResult = await resumeCompiledFlow({
         runDir: runFolder,
         selection: args.checkpointChoice,
         now: options.now ?? (() => new Date()),
         childCompiledFlowResolver: defaultChildCompiledFlowResolver(undefined),
+        ...(hostKind === undefined ? {} : { hostKind }),
         ...(options.runtimeExecutors === undefined ? {} : { executors: options.runtimeExecutors }),
         ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
         ...(progress === undefined ? {} : { progress }),
@@ -903,6 +916,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
     ...(options.configCwd !== undefined ? { cwd: options.configCwd } : {}),
   });
   const { policyLayers, selectionConfigLayers } = runtimeConfigLayers;
+  const hostKind = runtimeHostKind(options);
 
   const projectRoot = resolve(options.configCwd ?? process.cwd());
 
@@ -949,6 +963,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
         : { entryModeName: entryModeSelection.entryModeName }),
       ...(options.relayer === undefined ? {} : { relayer: options.relayer }),
       ...(options.runtimeExecutors === undefined ? {} : { executors: options.runtimeExecutors }),
+      ...(hostKind === undefined ? {} : { hostKind }),
       ...(selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers }),
       ...(policyLayers.length === 0 ? {} : { policyLayers }),
       ...(progress === undefined ? {} : { progress }),
@@ -1207,6 +1222,7 @@ async function runExecutionCommand(args: ParsedArgs, options: CliMainOptions): P
               ...(options.runtimeExecutors === undefined
                 ? {}
                 : { executors: options.runtimeExecutors }),
+              ...(hostKind === undefined ? {} : { hostKind }),
               ...(selectionConfigLayers.length === 0 ? {} : { selectionConfigLayers }),
               ...(policyLayers.length === 0 ? {} : { policyLayers }),
             });

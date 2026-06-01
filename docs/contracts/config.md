@@ -22,7 +22,7 @@ consumes before any relay step executes. The config contract governs
 three related surfaces:
 
 1. **`Config`** — the top-level shape a single layer contributes, combining
-   `schema_version`, a `RelayConfig` (see
+   `schema_version`, an optional `host` identity, a `RelayConfig` (see
    [docs/contracts/connector.md](connector.md)), a map of per-circuit overrides
    (`CircuitOverride`), a top-level `skills.bindings` map for skill
    slots, a `moments` policy surface for deterministic Skill Moment
@@ -148,17 +148,19 @@ The runtime MUST reject any `Config`, `LayeredConfig`, or
   behavior. Future bumps require an ADR. Enforced at
   `src/schemas/config.ts` via `z.literal(1)`.
 
-- **CONFIG-I7 — Bare `{schema_version: 1}` produces a fully-populated
-  default `Config` via schema-level `.default(...)` on every
-  non-version field.** `relay`, `skills`, `moments`, `circuits`, and `defaults` all
+- **CONFIG-I7 — Bare `{schema_version: 1}` produces a usable default
+  `Config` via schema-level `.default(...)` on required runtime
+  fields.** `relay`, `skills`, `moments`, `circuits`, and `defaults` all
   carry schema-level defaults (`RelayConfig` defaults to
   `{default: 'auto', roles: {}, circuits: {}, connectors: {}}`;
   `skills` defaults to `{bindings: {}}`; `moments` defaults to empty
   policy and detection records; `circuits` defaults to `{}`;
-  `defaults` defaults to `{}`). This preserves the existing ergonomic:
-  a minimal operator config file
-  that sets only the schema version parses successfully and produces
-  a reasonable runtime configuration. Without CONFIG-I7, a
+  `defaults` defaults to `{}`). `host` is intentionally optional so
+  layered composition can distinguish "this layer has no host opinion"
+  from an explicit generic-shell reset. This preserves the existing
+  ergonomic: a minimal operator config file that sets only the schema
+  version parses successfully and produces a reasonable runtime
+  configuration. Without CONFIG-I7, a
   minimal-config ergonomic would collide with CONFIG-I1's strictness
   (the parser would accept no surplus keys but also reject the bare
   form). The two are reconciled by schema-level defaults on required

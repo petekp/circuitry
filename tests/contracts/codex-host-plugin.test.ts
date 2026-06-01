@@ -420,7 +420,7 @@ describe('Codex host plugin package', () => {
         fakeBin,
         `#!/usr/bin/env node\nconst { writeFileSync } = require('node:fs');\nwriteFileSync(${JSON.stringify(
           argvPath,
-        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null }));\n`,
+        )}, JSON.stringify({ argv: process.argv.slice(2), marker: process.env.${GENERATED_FLOW_MIRROR_ROOT_ENV} ?? null, host: process.env.CIRCUIT_HOST_KIND ?? null }));\n`,
       );
       chmodSync(fakeBin, 0o755);
 
@@ -440,6 +440,7 @@ describe('Codex host plugin package', () => {
       const capture = JSON.parse(readFileSync(argvPath, 'utf8')) as {
         argv: string[];
         marker: string | null;
+        host: string | null;
       };
       expect(capture.argv).toEqual([
         'run',
@@ -450,6 +451,7 @@ describe('Codex host plugin package', () => {
         resolve(PLUGIN_ROOT, 'flows'),
       ]);
       expect(capture.marker).toBe(resolve(PLUGIN_ROOT, 'flows'));
+      expect(capture.host).toBe('codex');
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
